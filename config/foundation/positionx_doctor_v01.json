@@ -1,0 +1,94 @@
+{
+  "version": "0.1",
+  "python_version": "3.10.11",
+  "requirements_lock": "requirements.lock.txt",
+  "settings_candidates": [
+    "config/settings.yaml",
+    "config/settings.yml",
+    "settings.yaml",
+    "settings.yml"
+  ],
+  "safety_keys": {
+    "live_enabled": false,
+    "auto_execute": false
+  },
+  "domain_terms": {
+    "qmt_xtquant": [
+      "qmt",
+      "xtquant",
+      "xtdata",
+      "miniqmt"
+    ],
+    "broker_read_only": [
+      "broker",
+      "reconcile",
+      "account",
+      "position"
+    ],
+    "scheduler": [
+      "scheduler",
+      "scheduled",
+      "task"
+    ],
+    "deep_oversold": [
+      "deep_oversold",
+      "deepoversold"
+    ],
+    "ret120": [
+      "ret120"
+    ],
+    "portfolio_shadow": [
+      "portfolio_shadow",
+      "shadow_review"
+    ],
+    "g4_g7": [
+      "g4",
+      "g7",
+      "pilot"
+    ],
+    "optimus": [
+      "optimus",
+      "current22",
+      "steady_state"
+    ]
+  },
+  "data_evidence_terms": {
+    "deep_oversold": [
+      "deep_oversold",
+      "deepoversold"
+    ],
+    "ret120": [
+      "ret120"
+    ],
+    "portfolio_shadow": [
+      "portfolio_shadow",
+      "shadow"
+    ],
+    "g4_g7": [
+      "g4",
+      "g7",
+      "pilot"
+    ],
+    "optimus": [
+      "optimus",
+      "current22"
+    ]
+  },
+  "required_foundation_files": [
+    "ARCHITECTURE.md",
+    "OPERATIONS.md",
+    "RECOVERY.md",
+    "GOVERNANCE.md",
+    "AI_INDEPENDENCE.md",
+    "requirements.lock.txt",
+    ".python-version"
+  ],
+  "recovery_files": [
+    "RECOVERY.md",
+    "GOVERNANCE.md",
+    "docs/foundation/ENVIRONMENT.md",
+    "docs/foundation/P2_DEBT_REGISTER.md"
+  ],
+  "data_scan_max_files": 5000,
+  "subprocess_timeout_seconds": 20
+}
