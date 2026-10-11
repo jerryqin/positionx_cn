@@ -1,14 +1,22 @@
-# PositionX-CN Governance
+# PositionX-CN Governance — P2 Draft
 
-- Production research/governance mutations use PLAN -> human approval -> guarded APPLY.
+## Git baseline
+- Tag: `positionx-cn-baseline-20261011`
+- Commit: `0d174edc6c5e02d71132afa2be0381c8d4b6f121`
+- Tree: `13699795e80aaf7bf5fd345e37e386a1f8ef60cf`
+
+## Change control
+- `main` represents reviewed source state.
+- Production research/governance mutations use PLAN -> explicit human approval -> guarded APPLY.
 - Historical frozen APPLY/rebase packages are not routine commands.
-- Broker/execution actions require explicit manual approval.
-- A passing research/preview gate is not authorization to submit.
-- Raw source evidence is not automatically canonical truth.
-- Fail-closed behavior is preferred to silent fallback.
+- Secrets, broker credentials, runtime DBs, logs, QMT userdata and bulk data assets stay outside source Git.
 
-Git:
-- main represents reviewed source state.
-- Runtime data, credentials, logs, delivery payloads and backups stay out of Git.
-- Secrets must never be committed.
-- Commit/tag creation remains a human-approved step.
+## Trading control
+- Real order submission requires explicit manual approval.
+- Approval and submission are distinct states.
+- Broker/manual activity not produced by PositionX remains attributable as EXTERNAL.
+
+## Failure policy
+- Prefer fail-closed behavior to silent fallback.
+- Do not manufacture missing PIT/evidence data.
+- Do not lower evidence standards to force a green status.

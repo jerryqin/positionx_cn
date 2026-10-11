@@ -1,10 +1,8 @@
-# Changelog
+# Changelog — P2 Draft
 
-## 2026-10-11 — Initial Git baseline preparation
-
-- Foundation Hardening P0/P0B completed.
-- Initial Git baseline staging prepared before MiniQMT -> QMT migration.
-- User's standalone test_openai.py removed before staging.
-- Planned tracked baseline has no detected hard OpenAI/Anthropic runtime dependency.
-- MiniQMT/xtquant coupling and absolute-path portability debt remain follow-up work.
-- No trading/execution semantics changed.
+## 2026-10-11
+- Established initial governed Git baseline.
+- Completed P1 AI / Conversation Independence Audit.
+- P1 found no hard runtime AI-provider dependency and no tracked literal-secret blocker.
+- Recorded remaining gaps: dependency reproducibility, Python-version pinning, absolute-path portability, skeletal runbooks, missing global doctor, conversation-term review, and MiniQMT/xtquant coupling.
+- P2A generated documentation/environment hardening drafts without modifying the project.

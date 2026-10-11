@@ -1,14 +1,24 @@
-# AI Independence Contract
+# PositionX-CN AI Independence Contract — P2 Draft
 
-PositionX-CN must remain operational when ChatGPT or any other external AI assistant is unavailable.
+## P1 result
+- Hard runtime AI-provider dependencies: `0`.
+- Possible tracked secret assignments: `0`.
+- P1 conclusion: runtime operation does not require ChatGPT or another external AI provider.
 
-Without AI assistance the system must be able to start, run scheduled jobs, update/validate data,
-run forward/research pipelines, reconcile broker state, enforce risk/governance gates, expose
-human-review queues, restore governed state, and diagnose common local failures.
+## Contract
+Without ChatGPT or any external AI assistant, PositionX-CN must be able to:
+- start and run local operational workflows;
+- update/validate data;
+- run Deep/RET120/portfolio/Optimus workflows;
+- reconcile broker state;
+- enforce risk/governance gates;
+- expose human-review queues;
+- restore environment and governed data;
+- diagnose common failures using local documentation and the future global doctor.
 
-External AI APIs are not permitted to be hidden hard dependencies of core PositionX-CN runtime.
+## Conversation-dependency review
+- Tracked files containing conversation/ChatGPT terminology found by P2A: `4`.
+- Such terminology is not itself a runtime dependency. P2B should review each occurrence and ensure no operational rule exists only in chat history.
 
-The P0B planned tracked baseline reported zero hard OpenAI/Anthropic runtime-term hits after removal
-of the user's standalone test_openai.py.
-
-AI may remain an optional development, research, or audit assistant.
+## Allowed AI role
+AI assistants may help with research, development, independent audit, or drafting, but they must not be a hidden prerequisite for core runtime, recovery, or safety decisions.
