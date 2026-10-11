@@ -1,0 +1,76 @@
+{
+  "rebase_id": "OPTIMUS_STEADY_STATE_V0_7_4_1_POST_LEISAI_CANONICALIZATION_REBASE",
+  "previous_baseline": {
+    "path": "config/research/optimus_steady_state_baseline_v074.json",
+    "sha256": "97859e333c144bb0f5812bc5c67c54e6f5b809944df3217a7e2c718b3e1700f5",
+    "baseline_id": "OPTIMUS_STEADY_STATE_V0_7_4_FREEZE_BASELINE"
+  },
+  "post_apply": {
+    "approved_plan_sha256": "748c1ca8206ea355c2b42252817ec407d23ceca22ef2903c182e500733bfe4dc",
+    "batch_id": "CB_7e2476e590e0bbe674ac8848",
+    "fact_id": "CF_fe5714e699b2e5c1a34c979c",
+    "materialized_evidence_id": "CFE_ef6afb1d4f48e8166d81bfdb",
+    "result_manifest_sha256": "e79e591e4e0db9d1efbd379c74a4891042d2d57b9b613660913d11ed335965ba",
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "canonical_candidates": 22,
+    "needs_review_candidates": 2,
+    "evidence_count": 163,
+    "review_decision_count": 150,
+    "provisional_evidence_count": 2,
+    "canonical_fact_count": 25,
+    "canonical_symbol_count": 22,
+    "materialized_fact_evidence_count": 25,
+    "f_status_counts": {
+      "POSSIBLE": 20,
+      "SPECULATIVE": 4
+    },
+    "maintenance_counts": {
+      "seed_audit_debt": 0,
+      "stale_canonical": 0,
+      "discovery_only": 2,
+      "provisional_evidence": 2
+    },
+    "target": {
+      "symbol": "002979.SZ",
+      "lifecycle_state": "ACTIVE_CANONICAL",
+      "f_status": "POSSIBLE",
+      "max_evidence_level": 9,
+      "max_tesla_link_level": 0
+    },
+    "theme_stage_change": false,
+    "tesla_supplier_claim": false
+  },
+  "dependencies": {
+    "steady_checker": {
+      "path": "scripts/run_optimus_steady_state_v074.py",
+      "sha256": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da"
+    },
+    "registry_script": {
+      "path": "scripts/run_optimus_candidate_registry_v03.py",
+      "sha256": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+    },
+    "canonicalization_script": {
+      "path": "scripts/run_optimus_canonicalization_v05.py",
+      "sha256": "3e07d79ad34b5171618a59af50b3efda7b1836b1c9d697b76fcabbc63c988a1f"
+    },
+    "apply_script": {
+      "path": "scripts/run_optimus_leisai_canonical_fact_v054_apply.py",
+      "sha256": "0af8dc0a87860375bdeacbe99577151335466817d9942011a9b80c23cb7240d9"
+    }
+  },
+  "audit_output_root": "D:/positionx_data/research/big_opportunity/optimus/steady_state_rebase_v0_7_4_1",
+  "safety": {
+    "changes_only_steady_state_baseline_json": true,
+    "research_db_mutation": false,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

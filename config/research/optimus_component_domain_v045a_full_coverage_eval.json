@@ -1,0 +1,63 @@
+{
+  "evaluation_id": "OPTIMUS_COMPONENT_DOMAIN_V0_4_5A_FULL_COVERAGE_EVALUATION",
+  "mode": "READ_ONLY_AUDIT_ASSET_REPLAY",
+  "frozen_state": {
+    "baseline_id": "OPTIMUS_STEADY_STATE_V0_7_4_1_POST_LEISAI_CANONICALIZATION_FREEZE_BASELINE",
+    "baseline_sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a",
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa"
+  },
+  "audit_asset": {
+    "latest_summary_path": "D:/positionx_data/research/big_opportunity/optimus/component_domain_audit_v0_7_5/latest_summary.json",
+    "audit_id": "OPTIMUS_COMPONENT_DOMAIN_AUDIT_V0_7_5",
+    "manifest_payload_sha256": "789c79c1e505b6d9e68d5cac3dfff6fb56f558bfd5fa9e7263edc7447dc080c0",
+    "rows_sha256": "da7e49b69df9a0ceb2facc8dd27fba8d8e47eefccd7cac67cd615d74d09a4ad8",
+    "expected_counts": {
+      "evidence_rows_considered": 50,
+      "recomputed_rows": 50,
+      "missing_local_pdf_rows": 0,
+      "order_sensitive_rows": 27,
+      "first_match_minority_risk_rows": 8,
+      "stored_recompute_mismatch_rows": 0
+    }
+  },
+  "target": {
+    "evidence_id": "EACQ_5afda139f7d4dd9a1f33b7bb",
+    "old_domain": "reducers / precision transmission",
+    "expected_candidate_domain": "control / encoders"
+  },
+  "candidate_policy": {
+    "policy_id": "COMPONENT_DOMAIN_CONTEXT_WINDOW_DOMINANCE_V0_4_5_CANDIDATE",
+    "unknown_domain": "UNKNOWN_PENDING_REVIEW",
+    "ambiguous_domain": "AMBIGUOUS_MULTI_DOMAIN_PENDING_REVIEW",
+    "primary_metric": "context_window_hit_count",
+    "secondary_metric": "term_occurrence_count",
+    "minimum_window_margin_for_changed_domain": 2,
+    "minimum_ratio_for_changed_domain": 1.5,
+    "historical_reclassification": false,
+    "future_parser_version_if_adopted": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "human_review_for_ambiguous": true
+  },
+  "dependencies": {
+    "steady_checker": {
+      "path": "scripts/run_optimus_steady_state_v074.py",
+      "sha256": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da"
+    },
+    "steady_baseline": {
+      "path": "config/research/optimus_steady_state_baseline_v074.json",
+      "sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a"
+    }
+  },
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/component_domain_v0_4_5a_full_coverage_evaluation",
+  "safety": {
+    "read_only_audit_asset": true,
+    "no_pdf_reparse": true,
+    "no_production_classifier_change": true,
+    "no_historical_reclassification": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

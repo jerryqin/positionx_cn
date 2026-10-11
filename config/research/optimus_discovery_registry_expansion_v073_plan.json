@@ -1,0 +1,102 @@
+{
+  "plan_id": "OPTIMUS_DISCOVERY_REGISTRY_EXPANSION_V0_7_3_PLAN",
+  "mode": "PLAN_ONLY_NO_REGISTRY_MUTATION",
+  "output_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\discovery_registry_expansion_v0_7_3",
+  "dependency_paths": {
+    "registry_script": "scripts/run_optimus_candidate_registry_v03.py",
+    "b7_script": "scripts/run_optimus_external_classifier_v072b.py",
+    "b7_config": "config/research/optimus_external_classifier_v072b.json",
+    "c6_script": "scripts/run_optimus_candidate_discovery_v072c.py",
+    "c6_config": "config/research/optimus_candidate_discovery_v072c.json",
+    "v072a_config": "config/research/optimus_external_inbox_v072a.json"
+  },
+  "dependency_sha256": {
+    "registry_script": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884",
+    "b7_script": "258f7de4927781eba355e9a26f32a2dfb25ccd00de27e4e070fbfb9fa48b4add",
+    "b7_config": "ac0fe4d90c1f661179e427b280115cf54e2f03db86d02be84289866ff346c5e8",
+    "c6_script": "40f7b913c93f0087cab179a3f6eab048a6eb410ebf06ff9edb08949733129f1a",
+    "c6_config": "6e96d735433d4141cc006b19bf3f0044f583ffb3baf99ae5b2ff3bb57d7fc524",
+    "v072a_config": "5cff8af47b156063387ac98d8eb0141e60f9166c7ad39b0e869de41794998d85"
+  },
+  "registry_baseline": {
+    "registry_sha256": "da749d2c79b64695fddbbda575900d6e047be39e479e3a836eb73c0d1fbbe2ca",
+    "candidate_count": 22,
+    "active_canonical": 22,
+    "discovery_only": 0,
+    "active_seed": 0
+  },
+  "discovery_scan_baseline": {
+    "manifest_payload_sha256": "45c0c502d1e3cb0add7024e88f0c447050564dbae5498a550fb716b43850d650",
+    "queue_sha256": "9d49955bd008f7c55fc866fa3d65d2910dfb5342a1f238db00d4d15f88578345",
+    "proposal_count": 2,
+    "waiting_capture_repair_count": 2,
+    "scan_completeness": "PARTIAL_WAITING_CAPTURE_REPAIR"
+  },
+  "human_review_recommendations": [
+    {
+      "discovery_proposal_id": "DCP_76f4cd4cc5d98fabb519aa57",
+      "symbol": "603416.SH",
+      "company": "无锡信捷电气股份有限公司",
+      "recommended_decision": "APPROVE_DISCOVERY_ONLY",
+      "strength": "STRONG_DISCOVERY",
+      "component_domain": "frameless torque motors / humanoid joint components",
+      "source_url": "https://static.sse.com.cn/disclosure/listedinfo/announcement/c/new/2026-09-17/603416_20260917_NI0X.pdf",
+      "required_classifier_state": "HISTORICAL_BASELINE_ONLY",
+      "required_historical_context_only": true,
+      "required_tesla_robot_link_eligible": false,
+      "reason": "Official SSE historical disclosure shows humanoid-joint component industrialization signals including batch supply/capacity/ramp, but no Tesla↔robot binding."
+    },
+    {
+      "discovery_proposal_id": "DCP_f3d7f6b92ba6054bf13ee31c",
+      "symbol": "603809.SH",
+      "company": "成都豪能科技股份有限公司",
+      "recommended_decision": "APPROVE_DISCOVERY_ONLY",
+      "strength": "MEDIUM_DISCOVERY",
+      "component_domain": "precision robot reducers / joint drive assemblies",
+      "source_url": "https://big5.sse.com.cn/disclosure/listedinfo/announcement/c/new/2025-09-13/603809_20250913_ZVJZ.pdf",
+      "required_classifier_state": "HISTORICAL_BASELINE_ONLY",
+      "required_historical_context_only": true,
+      "required_tesla_robot_link_eligible": false,
+      "reason": "Official SSE historical disclosure shows humanoid/robot product validation and partial batch supply. Separate automotive Tesla business is explicitly not a Tesla↔robot link."
+    }
+  ],
+  "deferred_candidates": [
+    {
+      "symbol": "600353.SH",
+      "company": "成都旭光电子股份有限公司",
+      "state": "WAITING_CAPTURE_REPAIR",
+      "registry_action": "NONE",
+      "reason": "No machine-readable auditable official capture yet."
+    }
+  ],
+  "registry_bridge_contract": {
+    "review_state": "PROVISIONAL",
+    "evidence_level": 1,
+    "evidence_type": "APPROVED_DISCOVERY_ONLY",
+    "tesla_link_level": 0,
+    "source_type": "PRIMARY_SSE_OFFICIAL",
+    "expected_lifecycle_after_apply": "DISCOVERY_ONLY",
+    "expected_f_status_after_apply": "SPECULATIVE",
+    "canonical": false,
+    "separate_apply_approval_required": true,
+    "no_auto_canonicalization": true,
+    "no_theme_stage_effect": true
+  },
+  "expected_post_apply_preview": {
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "canonical_candidates": 22,
+    "new_provisional_evidence_count": 2
+  },
+  "safety": {
+    "plan_only": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

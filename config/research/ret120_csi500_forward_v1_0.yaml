@@ -1,0 +1,34 @@
+strategy_id: RET120_CSI500_FORWARD_V1_0
+mode: research_forward_only
+historical_cutoff: '20260930'
+universe: CSI500
+benchmark: 000905.SH
+feature:
+  name: ret120
+  dividend_type: back_ratio
+  lookback_sessions: 120
+  min_valid_cross_section: 400
+  ranking: symbol_asc_then_rank_first
+  buckets: 5
+  selected_bucket: Q5
+portfolio:
+  target_weight: 0.01
+  max_target_gross_at_entry: 0.30
+  max_positions: 30
+  one_position_per_symbol: true
+  fractional_shares: research_only
+  main_round_trip_cost: 0.002
+  shadow_round_trip_cost: 0.005
+exit:
+  planned: S120_CLOSE
+  missing_s120_close: DEFER_TO_NEXT_REAL_VALID_CLOSE
+review_gate:
+  completed_trades: 60
+  calendar_months: 12
+safety:
+  retro_snapshot: forbidden
+  missed_session: fail_closed
+  atomic_session_commit: true
+  broker: disabled
+  auto_execute: false
+  scheduler: not_created

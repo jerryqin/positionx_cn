@@ -1,0 +1,38 @@
+pilot_id: CNINFO_BLANK_QUERY_EXACT_DATE_PILOT_V0_1
+
+samples:
+  existing_keyword_miss: 'D:\positionx_data\research\data_audit\cninfo_commercial_query_expansion_plan_v0_2\existing_keyword_miss_official_diagnostic_sample_v0_2.csv'
+  unmatched_vocabulary_gap: 'D:\positionx_data\research\data_audit\cninfo_commercial_query_expansion_plan_v0_2\unmatched_gap_title_sample_v0_2.csv'
+
+sample_limits:
+  existing_keyword_miss: 40
+  unmatched_vocabulary_gap: 40
+
+cninfo:
+  api_urls:
+    - 'https://www.cninfo.com.cn/new/hisAnnouncement/query'
+    - 'http://www.cninfo.com.cn/new/hisAnnouncement/query'
+  referer: 'https://www.cninfo.com.cn/new/commonUrl?url=disclosure/list/notice'
+  page_size: 30
+  timeout_seconds: 30
+  retries: 5
+  retry_backoff_seconds: 1.0
+  delay_seconds: 0.25
+
+research_domain:
+  include: SH_SZ_A_SHARES_ONLY
+  exclude_bse: true
+  exclude_b_share: true
+
+decision:
+  exact_date_blank_query_recovery_min: 0.95
+
+output_dir: 'D:\positionx_data\research\data_audit\cninfo_blank_query_exact_date_pilot_v0_1'
+
+safety:
+  first_party_only: true
+  eva_used_only_to_define_diagnostic_ids: true
+  no_auto_import: true
+  no_market_outcomes: true
+  no_pdf_download: true
+  no_database_mutation: true

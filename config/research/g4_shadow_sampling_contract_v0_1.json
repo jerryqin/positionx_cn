@@ -1,0 +1,29 @@
+{
+  "policy_id": "G4_SHADOW_SAMPLING_CONTRACT_V0_1",
+  "shadow_economic_book_rmb": 12000000,
+  "pilot_policy_id": "EXECUTION_PILOT_POLICY_V0_2_600K",
+  "sampling_material": [
+    "trade_date",
+    "strategy_id",
+    "symbol",
+    "side",
+    "shadow_decision_id",
+    "source_key"
+  ],
+  "forbidden_sampling_inputs": [
+    "price",
+    "return",
+    "ADV",
+    "volatility",
+    "rank",
+    "PnL",
+    "future outcome"
+  ],
+  "canary_daily_samples": 1,
+  "expanded_daily_samples": 2,
+  "unique_symbol_per_session": true,
+  "pilot_target_notional": "min(50000, shadow_target_notional_rmb)",
+  "manual_approval_required": true,
+  "auto_execute": false,
+  "next_contract": "actual Forward shadow-order adapter after first common Deep+RET120 Forward session"
+}

@@ -1,0 +1,22 @@
+{
+  "policy_id": "EXECUTION_PILOT_POLICY_V0_1",
+  "pilot_type": "EXECUTION_ONLY",
+  "economic_evidence_eligible": false,
+  "execution_capital_envelope_rmb": 300000,
+  "max_target_gross_fraction": 0.3,
+  "max_total_gross_rmb": 90000,
+  "max_order_value_rmb": 50000,
+  "max_concurrent_positions": 2,
+  "max_new_entries_per_session": 1,
+  "max_actual_loss_budget_rmb": 50000,
+  "loss_ladder_rmb": {
+    "warning": 20000,
+    "stop_new_entries": 30000,
+    "emergency_exit_plan": 40000,
+    "budget_breach": 50000
+  },
+  "manual_approval_required": true,
+  "auto_execute": false,
+  "broker_holdings_source_of_truth": true,
+  "evidence_boundary": "Execution-chain evidence only; never use Pilot PnL as Deep/RET120 economic evidence."
+}

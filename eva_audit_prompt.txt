@@ -1,0 +1,41 @@
+请对 PositionX 当前 BreakoutRetest Portfolio Simulation v1 做一次“独立代码与账务审计”。
+
+审计目标只有一个：判断模拟器是否存在导致组合收益、回撤、容量跳过或复利结果失真的实现/口径问题。不要优化策略参数，不要新增策略，不要替我设计新的交易规则。
+
+请重点审计这些文件：
+1. research/portfolio_simulation.py
+2. scripts/run_portfolio_simulation.py
+3. research/backtest_gate.py（仅用于核对历史事件定义与 Simulation 输入的一致性）
+4. data/research/portfolio_simulation_latest.json
+
+当前已知结果：
+- signals executable = 2151
+- trades executed = 666
+- skipped_no_slot = 1405
+- skipped_duplicate_symbol = 80
+- capacity_skip_rate = 65.32%
+- avg_trade_return = +0.7491%
+- median_trade_return = -0.9040%
+- total_return = +12.02%
+- CAGR = +1.96%
+- max_drawdown = -34.79%
+- Sharpe = 0.198
+- average exposure = 86.16%
+- max concurrent positions = 10
+
+请逐项回答：
+A. 每个 slot 的现金、入场费、持仓市值、退出费和复利是否记账正确？
+B. 666 笔交易的 net_return 与最终 portfolio equity 是否可以严格对账？如果不能，误差来自哪里？
+C. total_return、CAGR、max_drawdown、Sharpe、turnover 的计算口径是否正确？特别检查第一天收益是否遗漏、turnover 是累计还是年化。
+D. 固定资本槽位独立复利是否会引入与“每次等权10%当前组合权益”不同的路径依赖？请明确区分“实现bug”与“模型选择”。
+E. SYMBOL_ASC + 10-slot capacity 在高信号重叠时是否构成明显选择偏差？如果仅凭现有输出无法判断，请明确指出需要增加什么审计字段。
+F. Signal T日 → T+1 open entry → T+20 close exit 的索引是否有 off-by-one 或未来函数风险？
+G. duplicate-symbol、same-day slot release、exit-at-close 的处理是否一致且无资金重复使用？
+H. 请列出所有发现，按 Critical / High / Medium / Low 分类；每条给出文件、逻辑位置、复现方式和最小修复建议。
+
+最后请给出结论：
+- ACCOUNTING_PASS / ACCOUNTING_FAIL
+- METRICS_PASS / METRICS_FAIL
+- CAPACITY_BIAS_UNRESOLVED / CAPACITY_BIAS_MATERIAL / CAPACITY_BIAS_LOW
+
+不要只给泛泛建议；尽量用具体数值和可复现检查证明结论。

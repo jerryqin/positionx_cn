@@ -1,0 +1,26 @@
+{
+  "policy_id": "PILOT_SUBLEDGER_ATTRIBUTION_V0_1",
+  "pilot_strategy_name": "PositionX:G4_EXECUTION_PILOT",
+  "capital_envelope_rmb": 600000,
+  "planned_gross_cap_rmb": 150000,
+  "hard_gross_guard_rmb": 180000,
+  "max_order_value_rmb": 50000,
+  "loss_ladder_rmb": {
+    "warning": 20000,
+    "stop_new_entries": 30000,
+    "emergency_exit_plan": 40000,
+    "budget_breach": 50000
+  },
+  "identity_chain": [
+    "trading_plan.strategy_name exact pilot tag",
+    "trading_plan.audit_json contains g4_shadow_decision_id",
+    "unique same trade_date+symbol order_intent",
+    "order_intents.broker_order_id == broker_orders.order_id",
+    "broker_orders remark == PX|YYYYMMDD|intent_key[:8]",
+    "broker_orders strategy_name starts PositionX",
+    "broker_trades.order_id == broker_orders.order_id"
+  ],
+  "legacy_positionx_exclusion": "No pilot-tagged trading_plan => never enter Pilot subledger",
+  "fees": "not available as first-class SQLite columns; pre-fee subledger plus early safety triggers only until fee source is added",
+  "production_db": "read-only audit only"
+}

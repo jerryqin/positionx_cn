@@ -1,0 +1,47 @@
+research_id: OPPORTUNITY_D1_CAPITULATION_RECOVERY_V0_1
+project_root: D:\positionx_cn
+market_catalog: D:\positionx_data\catalog\market_data.duckdb
+market_table: market.daily_bars_v1
+pit_panel: D:\positionx_data\research\opportunity_engine\full_market_replication_sweep_v0_1\universe\full_market_tradable_universe_yyyymmdd_v0_1.parquet
+output_dir: D:\positionx_data\research\opportunity_engine\full_market_replication_sweep_v0_1\d1_capitulation_recovery_v0_1
+mechanism:
+  family: D1_BOTTOM_REVERSAL
+  name: CAPITULATION_RECOVERY_3D
+  setup_time: T_CLOSE
+  setup_score_min: 0.75
+  shock_score:
+    components:
+    - inverse_same_day_rank_ret1
+    - inverse_same_day_rank_intraday_return
+    - inverse_same_day_rank_close_location
+    - same_day_rank_range_vs_prior20
+    aggregation: equal_weight_mean
+  confirmation_time: T_PLUS_3_CLOSE
+  confirmation: close(T+3) > close(T)
+  hypothetical_entry: T_PLUS_4_OPEN
+  no_parameter_scan: true
+labels:
+  primary:
+    name: D1_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.1
+  secondary:
+    name: D1_TREND40_120
+    target: 0.4
+    horizon_sessions: 120
+    mae_floor: -0.12
+  label_origin: RECOMPUTED_FROM_T_PLUS_4_OPEN
+gate:
+  baseline: ALL_D1_SETUP_ROWS_WITH_SAME_T_PLUS_4_ENTRY_TIMING
+  selected_min: 200
+  primary_lift_vs_setup_min: 1.25
+  primary_precision_minus_setup_min: 0.03
+  positive_years_min: 5
+  qualification_effect: mechanism survives to robustness only; NOT Strategy qualification
+safety:
+  research_only: true
+  market_catalog_read_only: true
+  production_db: false
+  broker: false
+  qmt: false

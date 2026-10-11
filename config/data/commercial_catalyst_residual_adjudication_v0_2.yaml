@@ -1,0 +1,36 @@
+audit_id: COMMERCIAL_CATALYST_RESIDUAL_ADJUDICATION_V0_2
+
+input:
+  exchange_detail: 'D:\positionx_data\research\data_audit\exchange_official_true_miss_audit_v0_1\exchange_official_true_miss_detail_v0_1.csv'
+  eva_events: 'D:\positionx_data\incoming\eva\commercial_catalyst_corpus_v0_1\commercial_catalyst_events.parquet'
+  eva_raw_index: 'D:\positionx_data\incoming\eva\commercial_catalyst_corpus_v0_1\raw_index.parquet'
+
+official:
+  cninfo_static_base: 'https://static.cninfo.com.cn/'
+  allowed_cninfo_hosts:
+    - static.cninfo.com.cn
+    - www.cninfo.com.cn
+  sse_api_url: 'https://query.sse.com.cn/security/stock/queryCompanyBulletin.do'
+  sse_referer: 'https://www.sse.com.cn/assortment/stock/list/info/announcement/'
+  szse_api_url: 'https://www.szse.cn/api/disc/announcement/annList'
+  szse_referer: 'https://www.szse.cn/disclosure/listed/notice/index.html'
+  szse_channel_code: 'listedNotice_disc'
+
+search:
+  exchange_day_window: 2
+  fuzzy_title_threshold: 0.94
+  page_size: 100
+  timeout_seconds: 35
+  retries: 6
+  backoff_seconds: 1.0
+
+output_dir: 'D:\positionx_data\research\data_audit\commercial_catalyst_residual_adjudication_v0_2'
+official_pdf_dir: 'D:\positionx_data\research\data_audit\commercial_catalyst_residual_adjudication_v0_2\official_pdf'
+
+safety:
+  sh_sz_only: true
+  eva_is_discovery_pointer_only: true
+  official_source_required_for_acceptance: true
+  no_market_outcomes: true
+  no_database_mutation: true
+  no_research_asset_promotion: true

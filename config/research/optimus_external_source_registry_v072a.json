@@ -1,0 +1,180 @@
+{
+  "registry_id": "OPTIMUS_EXTERNAL_SOURCE_REGISTRY_V0_7_2A",
+  "schema_version": "1.0",
+  "extension_policy": "SEPARATE_REVIEWED_CONFIG_UPDATE",
+  "unknown_source_policy": "SOURCE_REGISTRATION_REQUIRED",
+  "entries": [
+    {
+      "source_id": "SRC_TESLA_IR_OFFICIAL",
+      "name": "Tesla Investor Relations",
+      "authority_tier": 1,
+      "source_role": "NAMED_CUSTOMER_OFFICIAL",
+      "lanes": [
+        "THEME_OFFICIAL"
+      ],
+      "allowed_hosts": [
+        "ir.tesla.com"
+      ],
+      "allow_subdomains": false,
+      "required_url_substrings_any": [],
+      "entity_scope": [
+        "Tesla, Inc.",
+        "TSLA"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": true
+    },
+    {
+      "source_id": "SRC_TESLA_CORPORATE_OFFICIAL",
+      "name": "Tesla Corporate / AI & Robotics",
+      "authority_tier": 1,
+      "source_role": "NAMED_CUSTOMER_OFFICIAL",
+      "lanes": [
+        "THEME_OFFICIAL"
+      ],
+      "allowed_hosts": [
+        "tesla.com"
+      ],
+      "allow_subdomains": true,
+      "required_url_substrings_any": [],
+      "entity_scope": [
+        "Tesla, Inc.",
+        "TSLA",
+        "Optimus"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": true
+    },
+    {
+      "source_id": "SRC_SEC_TESLA_EDGAR",
+      "name": "SEC EDGAR — Tesla",
+      "authority_tier": 1,
+      "source_role": "NAMED_CUSTOMER_REGULATORY",
+      "lanes": [
+        "THEME_OFFICIAL"
+      ],
+      "allowed_hosts": [
+        "sec.gov"
+      ],
+      "allow_subdomains": true,
+      "required_url_substrings_any": [
+        "/data/1318605/",
+        "CIK=1318605",
+        "CIK=0001318605",
+        "CIK%3D1318605",
+        "CIK%3D0001318605"
+      ],
+      "entity_scope": [
+        "Tesla, Inc.",
+        "TSLA",
+        "CIK:0001318605"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": true
+    },
+    {
+      "source_id": "SRC_SEC_GENERIC",
+      "name": "SEC EDGAR — Generic Issuer",
+      "authority_tier": 1,
+      "source_role": "EXCHANGE_REGULATORY",
+      "lanes": [
+        "SUPPLIER_GLOBAL_OFFICIAL",
+        "NEW_CANDIDATE_DISCOVERY"
+      ],
+      "allowed_hosts": [
+        "sec.gov"
+      ],
+      "allow_subdomains": true,
+      "required_url_substrings_any": [
+        "/Archives/edgar/",
+        "/edgar/"
+      ],
+      "entity_scope": [
+        "ENTITY_MUST_BE_EXPLICIT_IN_CAPTURE"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": true
+    },
+    {
+      "source_id": "SRC_HKEXNEWS_OFFICIAL",
+      "name": "HKEXnews",
+      "authority_tier": 1,
+      "source_role": "EXCHANGE_REGULATORY",
+      "lanes": [
+        "SUPPLIER_GLOBAL_OFFICIAL",
+        "NEW_CANDIDATE_DISCOVERY"
+      ],
+      "allowed_hosts": [
+        "hkexnews.hk"
+      ],
+      "allow_subdomains": true,
+      "required_url_substrings_any": [],
+      "entity_scope": [
+        "ENTITY_MUST_BE_EXPLICIT_IN_CAPTURE"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": true
+    },
+    {
+      "source_id": "SRC_SSE_OFFICIAL",
+      "name": "Shanghai Stock Exchange",
+      "authority_tier": 1,
+      "source_role": "EXCHANGE_REGULATORY",
+      "lanes": [
+        "SUPPLIER_GLOBAL_OFFICIAL",
+        "NEW_CANDIDATE_DISCOVERY"
+      ],
+      "allowed_hosts": [
+        "sse.com.cn",
+        "sseinfo.com"
+      ],
+      "allow_subdomains": true,
+      "required_url_substrings_any": [],
+      "entity_scope": [
+        "ENTITY_MUST_BE_EXPLICIT_IN_CAPTURE"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": true
+    },
+    {
+      "source_id": "SRC_SZSE_OFFICIAL",
+      "name": "Shenzhen Stock Exchange",
+      "authority_tier": 1,
+      "source_role": "EXCHANGE_REGULATORY",
+      "lanes": [
+        "SUPPLIER_GLOBAL_OFFICIAL",
+        "NEW_CANDIDATE_DISCOVERY"
+      ],
+      "allowed_hosts": [
+        "szse.cn"
+      ],
+      "allow_subdomains": true,
+      "required_url_substrings_any": [],
+      "entity_scope": [
+        "ENTITY_MUST_BE_EXPLICIT_IN_CAPTURE"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": true
+    },
+    {
+      "source_id": "SRC_CNINFO_EXISTING_LANE",
+      "name": "CNINFO",
+      "authority_tier": 1,
+      "source_role": "EXCHANGE_OFFICIAL_DISCLOSURE",
+      "lanes": [
+        "SUPPLIER_GLOBAL_OFFICIAL"
+      ],
+      "allowed_hosts": [
+        "cninfo.com.cn"
+      ],
+      "allow_subdomains": true,
+      "required_url_substrings_any": [],
+      "entity_scope": [
+        "A_SHARE"
+      ],
+      "enabled": true,
+      "external_inbox_allowed": false,
+      "reason": "Covered by V0.7.1 CNINFO lane; avoid duplicate external ingestion."
+    }
+  ]
+}

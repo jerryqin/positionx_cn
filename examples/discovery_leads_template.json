@@ -1,0 +1,16 @@
+{
+  "lead_set_id": "OPTIMUS_DISCOVERY_LEADS_EXAMPLE",
+  "leads": [
+    {
+      "entity_name": "Example Robotics Supplier",
+      "symbol": null,
+      "entity_identifier": null,
+      "recall_source_type": "STRONG_NAMED_SOURCE_MEDIA",
+      "lead_url": "https://example.com/recall-only-lead",
+      "candidate_official_source_id": "SRC_SEC_GENERIC",
+      "candidate_official_url": "https://www.sec.gov/Archives/edgar/data/0000000000/example.htm",
+      "observed_at": "2026-10-10T10:15:00+08:00",
+      "rationale": "Recall lead only. Must resolve to a registered official source before discovery evidence review."
+    }
+  ]
+}

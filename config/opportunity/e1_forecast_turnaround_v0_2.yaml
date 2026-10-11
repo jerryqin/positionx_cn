@@ -1,0 +1,61 @@
+research_id: OPPORTUNITY_E1_FORECAST_TURNAROUND_V0_2
+
+identity_panel:
+  path: 'D:\positionx_data\research\opportunity_engine\e1_identity_qmt_verification_v0_2\e1_equity_identity_panel_v0_2.parquet'
+  sha256: '6d2c5e1fc848b9f798eb82422a6da8649f343e9c6e85b4fe6ce17960b36596c1'
+
+shadow_union:
+  path: 'D:\positionx_data\research\market\e1_historical_price_backfill_v0_1\e1_daily_bars_shadow_union.parquet'
+  sha256: '7da0c5b734bb520ba7471cfd509e44bd8373f18bfc5fab9884dc8b485bfefc09'
+
+trust_finalize:
+  path: 'D:\positionx_data\research\opportunity_engine\e1_identity_qmt_verification_v0_2\e1_backfill_trust_finalize_v0_2_summary.json'
+  required_verdict: ACCEPT_BACKFILL_FOR_E1_RESEARCH_ONLY
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\e1_forecast_turnaround_v0_2'
+
+mechanism:
+  family: E1_EVENT_FUNDAMENTAL
+  name: FORECAST_TURNAROUND_REPRICING
+  setup: 'frozen identity_eligible E1 setup universe'
+  signal: 'change_type=TURNAROUND'
+  entry: 'first tradable canonical equity session strictly after event calendar date, at open'
+  same_day_entry_allowed: false
+  outcome_conditioned_filtering: false
+
+baseline:
+  type: SIGNAL_WEIGHTED_MATCHED_SETUP
+  strata: [event_year, report_period_bucket]
+  min_setup_per_stratum: 30
+  setup_includes_signal: true
+
+labels:
+  primary:
+    name: E1_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    name: E1_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+  evaluation_population: MATURED_ONLY
+
+data_quality_gate:
+  entry_mapping_coverage_min: 0.95
+  market_factor_valid_rate_min: 0.99
+  canonicalization_conflict_rows_max: 0
+
+fast_reject:
+  selected_min: 200
+  primary_lift_vs_matched_setup_min: 1.25
+  primary_precision_minus_matched_setup_min: 0.03
+  positive_years_min: 5
+  pass_effect: 'advance only to robustness; NOT strategy qualification'
+
+safety:
+  research_only: true
+  canonical_market_promotion: false
+  broker: false
+  qmt_execution: false

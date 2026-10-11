@@ -1,0 +1,74 @@
+research_id: FULL_MARKET_RET120_QMT_SIGNAL_V0_2
+
+source:
+  frozen_ret120_panel: 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+  expected_frozen_ret120_panel_sha256: '66b358a54c33866dd03aae187c1d60379a0317df3c15fe3d453babb430b338f1'
+  frozen_source_trend_edge_scan: 'D:\positionx_cn\research\trend_edge_scan.py'
+  expected_trend_edge_scan_sha256: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+  frozen_source_replication_runner: 'D:\positionx_cn\scripts\run_edge_discovery_trend_replication_v022.py'
+  expected_replication_runner_sha256: '96dc4bcb8fdbbc3097338aa0f9b2b1c48fb2dcc0a235e0db29cccfd7c3f8e4d1'
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+
+signal_layer:
+  representation: QMT back_ratio
+  field: close
+  period: 1d
+  start_time: '20190101'
+  end_time: '20260930'
+  dividend_type: back_ratio
+  fill_data: false
+  batch_size: 150
+  cache_dir: 'D:\positionx_data\research\opportunity_engine\full_market_ret120_qmt_v0_2\qmt_batches'
+  merged_signal_history: 'D:\positionx_data\research\opportunity_engine\full_market_ret120_qmt_v0_2\qmt_back_ratio_close.parquet'
+  ret120_formula: 'close / close.shift(120) - 1 on each QMT-returned symbol series'
+  bucket_algorithm: 'signal-date symbol ASC -> rank(method=first) -> pd.qcut(5)'
+  exact_csi500_lineage_required_before_full_market_run: true
+
+window:
+  signal_start: '2020-08-03'
+  signal_cutoff_h120: '2026-04-08'
+  latest_market_session: '2026-09-30'
+
+frozen_folds:
+  F1: ['2020-08-03','2022-10-17']
+  F2: ['2022-10-18','2024-09-19']
+  F3: ['2024-09-20','2026-09-24']
+
+definition:
+  feature: ret120
+  signal_timestamp: 'T close'
+  entry: 'T+1 exact OPEN from canonical economic layer'
+  exits:
+    H20: 'S20 exact CLOSE from canonical economic layer'
+    H60: 'S60 exact CLOSE from canonical economic layer'
+    H120: 'S120 exact CLOSE from canonical economic layer'
+  signal_universe: 'SH/SZ full-market tradable universe keys'
+  market_adjustment: 'exact-window signal-date full-market member median canonical synthetic OPEN->CLOSE return'
+  no_transaction_cost_phase1: true
+  no_alpha_filters_added: true
+
+frozen_fast_reject_gate:
+  all_horizon_q5_minus_q1_positive: true
+  at_least_2_horizons_monotonicity_ge: 0.5
+  each_horizon_positive_folds_min: 2
+  fold_count: 3
+  decision:
+    CANDIDATE: 'all checks pass'
+    REJECT: 'otherwise; no threshold rescue'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\full_market_ret120_qmt_v0_2'
+
+safety:
+  research_only: true
+  qmt_signal_data_only: true
+  no_broker: true
+  no_orders: true
+  no_production_db_mutation: true
+  no_parameter_scan: true
+  existing_ret120_strategy2_unchanged: true
+  existing_ret120_forward_unchanged: true
+  canonical_signal_bridge_abandoned: true
+  signal_and_economic_layers_separated: true

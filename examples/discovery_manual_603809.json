@@ -1,0 +1,20 @@
+{
+  "manifest_id": "OPTIMUS_DISCOVERY_MANUAL_603809",
+  "captures": [
+    {
+      "source_id": "SRC_SSE_OFFICIAL",
+      "lane": "NEW_CANDIDATE_DISCOVERY",
+      "entity_name": "成都豪能科技股份有限公司",
+      "symbol": "603809.SH",
+      "source_url": "https://big5.sse.com.cn/disclosure/listedinfo/announcement/c/new/2025-09-13/603809_20250913_ZVJZ.pdf",
+      "document_title": "豪能股份官方投资者交流/公告材料（2025-09-13）",
+      "published_at": "2025-09-13T00:00:00+08:00",
+      "event_time": "2025-09-13T00:00:00+08:00",
+      "language": "zh-CN",
+      "search_recall": {
+        "role": "OFFICIAL_DISCOVERY",
+        "note": "Official SSE PDF; historical discovery evidence only."
+      }
+    }
+  ]
+}

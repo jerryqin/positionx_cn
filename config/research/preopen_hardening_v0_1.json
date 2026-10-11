@@ -1,0 +1,22 @@
+{
+  "policy_id": "PREOPEN_HARDENING_V0_1",
+  "official_expected_next_a_share_session": "20261008",
+  "g4_v03_ledger_rule": "unique BASE* ledger; count must equal state.active_positions; zero positions may have no ledger",
+  "current_observed_deep_ledgers": [
+    "BASE20",
+    "SHADOW50"
+  ],
+  "pilot_subledger": {
+    "capital_envelope_rmb": 600000,
+    "planned_gross_cap_rmb": 150000,
+    "hard_gross_guard_rmb": 180000,
+    "max_order_value_rmb": 50000,
+    "outer_account_risk_gate_remains_active": true,
+    "external_holdings_do_not_count_as_pilot_gross": true
+  },
+  "safety": {
+    "qmt": false,
+    "broker": false,
+    "production_sqlite": "read_only_schema_only"
+  }
+}

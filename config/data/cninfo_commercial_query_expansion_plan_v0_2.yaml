@@ -1,0 +1,88 @@
+plan_id: CNINFO_COMMERCIAL_QUERY_EXPANSION_PLAN_V0_2
+
+input:
+  gap_rows: 'D:\positionx_data\research\data_audit\cninfo_eva_commercial_cross_audit_v0_1\eva_only_query_gap_diagnostic_v0_1_2.csv'
+
+existing_queries:
+  - 中标
+  - 重大合同
+  - 签订合同
+  - 采购订单
+  - 销售订单
+  - 客户订单
+  - 定点
+  - 量产
+  - 批量供货
+  - 批量交付
+  - 框架协议
+  - 战略合作
+  - 合作意向
+  - 意向协议
+  - 备忘录
+
+candidate_query_terms:
+  HARD_CONFIRMATION:
+    - 预中标
+    - 中标候选人
+    - 中选
+    - 入围
+    - 成交候选人
+    - 成交结果
+    - 合同签署
+    - 签署合同
+    - 合同签订
+    - 销售合同
+    - 采购合同
+    - 供货合同
+    - 项目合同
+    - 工程合同
+    - 收到订单
+    - 获得订单
+    - 新增订单
+    - 项目订单
+    - 客户定点
+    - 项目定点
+    - 定点通知
+    - 供应商定点
+    - 选定供应商
+    - 供应商选定
+    - 批产
+    - 批量生产
+    - 量产供货
+    - 开始供货
+    - 正式供货
+    - 正式投产
+    - 投产运行
+    - 批量交付
+    - 开始交付
+    - 项目交付
+  SOFT_INTENT:
+    - 合作协议
+    - 战略协议
+    - 战略合作协议
+    - 框架合作
+    - 合作框架
+    - 合作意向书
+    - 意向书
+    - 合作备忘录
+    - 谅解备忘录
+    - MOU
+
+selection:
+  min_support: 20
+  max_terms: 20
+  target_gap_coverage: 0.80
+
+diagnostic_sample:
+  existing_keyword_miss_max: 84
+  unmatched_title_max: 200
+
+output_dir: 'D:\positionx_data\research\data_audit\cninfo_commercial_query_expansion_plan_v0_2'
+
+safety:
+  read_only: true
+  no_network: true
+  no_market_outcomes: true
+  eva_used_for_gap_discovery_only: true
+  no_auto_fetch: true
+  no_auto_import: true

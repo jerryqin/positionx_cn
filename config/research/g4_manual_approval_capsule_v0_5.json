@@ -1,0 +1,29 @@
+{
+  "policy_id": "G4_MANUAL_APPROVAL_CAPSULE_V0_5",
+  "approval_ttl_seconds": 300,
+  "daily_approval_limit": {
+    "CANARY": 1,
+    "EXPANDED": 2
+  },
+  "binds": [
+    "preview_file_sha256",
+    "shadow_decision_id",
+    "trade_date",
+    "signal_date",
+    "strategy_id",
+    "stage",
+    "symbol",
+    "intent_key",
+    "side",
+    "volume",
+    "limit_price",
+    "preview_notional_rmb",
+    "requested_pilot_notional_rmb",
+    "confirmed_shadow_notional_rmb"
+  ],
+  "approve_requires": "exact full 64-char token emitted by prepare",
+  "output": "immutable approval capsule in research area",
+  "production_db_write": false,
+  "broker_write": false,
+  "production_commit": "not included in V0.5; must revalidate capsule later"
+}

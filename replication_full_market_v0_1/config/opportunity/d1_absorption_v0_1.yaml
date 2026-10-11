@@ -1,0 +1,44 @@
+research_id: OPPORTUNITY_D1_ABSORPTION_V0_1
+project_root: D:\positionx_cn
+market_catalog: D:\positionx_data\catalog\market_data.duckdb
+market_table: market.daily_bars_v1
+pit_panel: D:\positionx_data\research\opportunity_engine\full_market_replication_sweep_v0_1\universe\full_market_tradable_universe_yyyymmdd_v0_1.parquet
+output_dir: D:\positionx_data\research\opportunity_engine\full_market_replication_sweep_v0_1\d1_absorption_v0_1
+mechanism:
+  family: D1_BOTTOM_REVERSAL
+  name: SELLING_PRESSURE_ABSORPTION_5D
+  signal_time: T_CLOSE
+  hypothetical_entry: T_PLUS_1_OPEN
+  window_sessions: 5
+  pressure_definition: mean(volume/prior20_median_volume) on negative-return days
+    over T-4..T
+  damage_definition: sum of negative close-to-close returns over T-4..T
+  damage_per_pressure_definition: downside_damage_5 / down_volume_intensity_5
+  pressure_rank_min: 0.75
+  absorption_rank_min_within_pressure: 0.75
+  no_parameter_scan: true
+labels:
+  primary:
+    name: D1A_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.1
+  secondary:
+    name: D1A_TREND40_120
+    target: 0.4
+    horizon_sessions: 120
+    mae_floor: -0.12
+  label_origin: RECOMPUTED_FROM_T_PLUS_1_OPEN
+gate:
+  baseline: ALL_HIGH_PRESSURE_SETUPS_WITH_SAME_T_PLUS_1_ENTRY_TIMING
+  selected_min: 200
+  primary_lift_vs_pressure_setup_min: 1.25
+  primary_precision_minus_pressure_setup_min: 0.03
+  positive_years_min: 5
+  qualification_effect: mechanism survives to robustness only; NOT Strategy qualification
+safety:
+  research_only: true
+  market_catalog_read_only: true
+  production_db: false
+  broker: false
+  qmt: false

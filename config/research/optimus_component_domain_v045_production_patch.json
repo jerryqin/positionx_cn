@@ -1,0 +1,114 @@
+{
+  "patch_id": "OPTIMUS_COMPONENT_DOMAIN_V0_4_5B_FUTURE_ONLY_PRODUCTION_PATCH",
+  "explicit_user_approval": "2026-10-10: future-only; no historical V0.4.4 reclassification; ambiguous multi-domain -> human review; B.8 review + downstream steady-state rebase",
+  "evaluation_gate": {
+    "latest_summary_path": "D:/positionx_data/research/big_opportunity/optimus/component_domain_v0_4_5a_full_coverage_evaluation/latest_summary.json",
+    "manifest_payload_sha256": "e60422d69675d9dcf3a0631c0e5f65c160b9e7b3af927af962c28aa2f6e80666",
+    "rows_sha256": "7f9bd284490141ce030d1ea7714c22d2b9d7f9f4b1d05af4c20f284cd92a4106",
+    "adoption_decision": "ELIGIBLE_FOR_HUMAN_REVIEW",
+    "evaluated_rows": 50,
+    "minority_risk_rows_still_old": 0
+  },
+  "frozen_registry": {
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "evidence_count": 163,
+    "review_decision_count": 150,
+    "canonical_fact_count": 25,
+    "materialized_fact_evidence_count": 25
+  },
+  "parser_contract": {
+    "new_parser_version": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "historical_v0_4_4_frozen": true,
+    "historical_reclassification": false,
+    "future_only": true,
+    "ambiguous_domain": "AMBIGUOUS_MULTI_DOMAIN_PENDING_REVIEW",
+    "ambiguous_queue_state": "HUMAN_REVIEW_REQUIRED",
+    "new_domain_min_window_margin": 2,
+    "new_domain_min_ratio": 1.5,
+    "cross_parser_source_dedupe": true
+  },
+  "b8_review": {
+    "version_remains": "V0_7_2B_8",
+    "result": "PASS_NO_CAPTURE_IDENTITY_CHANGE",
+    "capture_identity_includes_component_domain_parser_version": false,
+    "historical_capture_auto_reclassification": false,
+    "explicit_reclassify_required_for_historical": true
+  },
+  "files": {
+    "scripts/run_optimus_evidence_acquisition_v04.py": {
+      "old_sha256": "10e5a8288177c76e207fa264f74e18c3a878d95cf191585ca8a576643475a691",
+      "new_sha256": "61a5d6db83a5dfde69870366b4cad20521218138c9f0d6a847ca7630f467a99f"
+    },
+    "scripts/run_optimus_prospective_intake_v071.py": {
+      "old_sha256": "5b65733f479b8a3a9ef7831779ab540bc254a6d28a4d47f671799d5922824184",
+      "new_sha256": "0e0a707030b960f7f1e5530577cf1449071c29b0023b11fc13977d4b0d4d45df"
+    },
+    "config/research/optimus_prospective_intake_v071.json": {
+      "old_sha256": "170c298002e1950eb8736d325ed6d0d20c6e8f1a57ef11041ea2da83b23977f4",
+      "new_sha256": "efd4570054eb2de576639ab9f264970744204f550814fc22d29ecc5d77309f31"
+    },
+    "scripts/run_optimus_global_discovery_monitor_v072.py": {
+      "old_sha256": "49276bc53efe5d8fed746979f45932569f096fce083be4c3cd6f6a10be1cc7a9",
+      "new_sha256": "36d044485f631c142d03d8225c63b141db3ecf0c1fecd9d30a29861e23b37696"
+    },
+    "config/research/optimus_global_discovery_monitor_v072.json": {
+      "old_sha256": "f7dcacde587213e94810956decc7e27e916d8f3c950cf4bc5a87fdd126245bfb",
+      "new_sha256": "0e522b7b57df4694bf75e8c911cc6603c17931e3611059eb4a6ae42da2d8aff4"
+    },
+    "scripts/run_optimus_external_inbox_v072a.py": {
+      "old_sha256": "e1465a6b10eb36d384a20812d207ef3a7af7389e5bba1f4a5c23f0df3685a801",
+      "new_sha256": "3aa95d0137ca13c6f67ceb01013e0f7648670097fe1fec1b4df81a3cd0cb06ca"
+    },
+    "config/research/optimus_external_inbox_v072a.json": {
+      "old_sha256": "5d30d4bc0ce1a7c1763cb43416398c17975ab8940b01f85357a616d239002efd",
+      "new_sha256": "dc26aef5c3c68f50ecd934498ba67a79ccda84999a9776aef2df2c4fbe016a65"
+    },
+    "config/research/optimus_external_classifier_v072b.json": {
+      "old_sha256": "b2a342ef6381f2f6127d46c5227e0b63a76b00f442f0d16e149bb880e4f12ae9",
+      "new_sha256": "0906939b380a63f40e7e808ac71963e4547287ea311ae43982235a55fe98baab"
+    },
+    "config/research/optimus_candidate_discovery_v072c.json": {
+      "old_sha256": "9b6ca6fe5a8bb3807db0770bce12d90220e2cde09000770b035d8abb1c41f728",
+      "new_sha256": "4ca32fbcef10dc93352707760153f1af852c0b9b2e352a3f14c71efb896d1463"
+    },
+    "config/research/optimus_steady_state_baseline_v074.json": {
+      "old_sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a",
+      "new_sha256": "7ed350965ac08df8398aa2972b31d875dc8576e6ece08d16f79f4ad3473ba343"
+    }
+  },
+  "unchanged_frozen": {
+    "scripts/run_optimus_steady_state_v074.py": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da",
+    "scripts/run_optimus_prospective_monitor_v07.py": "ab8e7d190d75ebcc56dd6debaa0f55d01f6957f6e930ce064072c175166bea8d",
+    "config/research/optimus_prospective_monitor_v07.json": "d8b8020006db4722eb3ff9c468302771e8740df2f59b75c72b5486387cb28e2c",
+    "scripts/run_optimus_external_classifier_v072b.py": "ea2c07c34a4491d7da52a64338052cd6773d8b70a53a46a89aa222d8025f2a28",
+    "scripts/run_optimus_candidate_discovery_v072c.py": "dcfc008b0fb72028d47c6d844a2fec8dbca1e568153420a706f96370e9a46b23",
+    "config/research/optimus_external_source_registry_v072a.json": "e14163ef3023a82431451e21e157516a06c0ebaeae086069633f54a0bfcd65d2",
+    "scripts/run_optimus_candidate_registry_v03.py": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+  },
+  "payload_root": "patch_payload/optimus_component_domain_v045",
+  "expected_new_baseline_sha256": "7ed350965ac08df8398aa2972b31d875dc8576e6ece08d16f79f4ad3473ba343",
+  "backup_root": "D:/positionx_data/research/big_opportunity/optimus/component_domain_v0_4_5_production_patch/backup",
+  "audit_output_root": "D:/positionx_data/research/big_opportunity/optimus/component_domain_v0_4_5_production_patch/apply",
+  "safety": {
+    "runtime_code_config_only": true,
+    "research_db_mutation": false,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false,
+    "rollback_all_files_on_failed_validation": true
+  },
+  "delivery_hotfix": {
+    "version": "V0_4_5B",
+    "scope": "INSTALLER_AND_TEST_PAYLOAD_NAMESPACE_ONLY",
+    "root_cause": "Generic project payload/ path can contain stale payload from earlier governed packages; installer installed new tests before refusing differing existing payload, causing tests to read stale V0.7.4.1a payload.",
+    "production_runtime_semantics_changed": false,
+    "runtime_payload_bytes_changed": false,
+    "generic_payload_tree_ignored": true
+  }
+}

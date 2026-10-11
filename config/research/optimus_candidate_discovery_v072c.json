@@ -1,0 +1,155 @@
+{
+  "discovery_id": "OPTIMUS_CANDIDATE_DISCOVERY_V0_7_2C",
+  "mode": "READ_ONLY_NEW_CANDIDATE_DISCOVERY_QUEUE",
+  "output_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\candidate_discovery_v0_7_2c",
+  "dependency_paths": {
+    "v07_config": "config/research/optimus_prospective_monitor_v07.json",
+    "v072a_script": "scripts/run_optimus_external_inbox_v072a.py",
+    "v072a_config": "config/research/optimus_external_inbox_v072a.json",
+    "v072a_source_registry": "config/research/optimus_external_source_registry_v072a.json",
+    "v072b_script": "scripts/run_optimus_external_classifier_v072b.py",
+    "v072b_config": "config/research/optimus_external_classifier_v072b.json",
+    "registry_script": "scripts/run_optimus_candidate_registry_v03.py"
+  },
+  "dependency_sha256": {
+    "v07_config": "d8b8020006db4722eb3ff9c468302771e8740df2f59b75c72b5486387cb28e2c",
+    "v072a_script": "3aa95d0137ca13c6f67ceb01013e0f7648670097fe1fec1b4df81a3cd0cb06ca",
+    "v072a_config": "dc26aef5c3c68f50ecd934498ba67a79ccda84999a9776aef2df2c4fbe016a65",
+    "v072a_source_registry": "e14163ef3023a82431451e21e157516a06c0ebaeae086069633f54a0bfcd65d2",
+    "v072b_script": "ea2c07c34a4491d7da52a64338052cd6773d8b70a53a46a89aa222d8025f2a28",
+    "v072b_config": "0906939b380a63f40e7e808ac71963e4547287ea311ae43982235a55fe98baab",
+    "registry_script": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+  },
+  "baseline": {
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "active_seed": 0,
+    "b2_latest_clean_reclass_manifest_payload_sha256": "c7b0dff8636a25f2832827565b1adc728c62cb1062d28aaf9d1d5400bc43bf6a",
+    "b2_latest_clean_reclass_queue_count": 0,
+    "b2_latest_clean_reclass_error_count": 0,
+    "discovery_only": 2,
+    "provisional_evidence": 2,
+    "discovery_only_symbols": [
+      "603416.SH",
+      "603809.SH"
+    ],
+    "discovery_only_entities": [
+      {
+        "symbol": "603416.SH",
+        "company": "无锡信捷电气股份有限公司"
+      },
+      {
+        "symbol": "603809.SH",
+        "company": "成都豪能科技股份有限公司"
+      }
+    ]
+  },
+  "recall_contract": {
+    "search_and_media_are_leads_only": true,
+    "lead_never_equals_evidence": true,
+    "lead_required_fields": [
+      "entity_name",
+      "recall_source_type",
+      "lead_url",
+      "observed_at",
+      "candidate_official_source_id",
+      "candidate_official_url"
+    ],
+    "allowed_recall_source_types": [
+      "OFFICIAL_DISCOVERY",
+      "STRONG_NAMED_SOURCE_MEDIA",
+      "BROKER_OR_INDUSTRY_REPORT_LEAD"
+    ],
+    "reserved_inference_fields_rejected": [
+      "fact_id",
+      "fact_key",
+      "evidence_level",
+      "tesla_link_level",
+      "f_status",
+      "candidate_state",
+      "canonical_state",
+      "theme_stage"
+    ]
+  },
+  "candidate_contract": {
+    "current_22_are_excluded": true,
+    "company_identity_must_be_explicit": true,
+    "normalized_capture_lane_required": "NEW_CANDIDATE_DISCOVERY",
+    "material_robot_or_humanoid_context_required": true,
+    "cross_section_signal_only_is_rejected": true,
+    "historical_material_can_support_discovery_only": true,
+    "historical_material_never_moves_theme_stage": true,
+    "first_state": "DISCOVERY_PROPOSAL",
+    "human_review_required": true,
+    "automatic_registry_add": false,
+    "automatic_active_canonical": false,
+    "automatic_f_status": false,
+    "automatic_theme_stage_change": false,
+    "all_existing_registry_candidates_are_excluded": true,
+    "existing_discovery_only_are_not_rediscovered": true,
+    "preclassification_registry_membership_filter": true,
+    "registry_members_are_skipped_before_content_parse": true,
+    "unreadable_capture_of_existing_registry_member_does_not_degrade_discovery_scan": true
+  },
+  "discovery_state_machine": [
+    "DISCOVERY_PROPOSAL",
+    "HUMAN_REVIEW_REQUIRED",
+    "APPROVED_DISCOVERY_ONLY",
+    "SEPARATE_REGISTRY_PLAN_REQUIRED",
+    "REJECTED_DISCOVERY"
+  ],
+  "disposition_map": {
+    "NO_NEW_MATERIAL_EVIDENCE": "REJECTED_DISCOVERY",
+    "HISTORICAL_BASELINE_ONLY": "DISCOVERY_PROPOSAL",
+    "EVIDENCE_PROPOSAL": "DISCOVERY_PROPOSAL",
+    "HUMAN_REVIEW_REQUIRED": "DISCOVERY_PROPOSAL",
+    "STAGE2_GATE_CANDIDATE": "DISCOVERY_PROPOSAL",
+    "CONTRADICTION_ALERT": "HUMAN_REVIEW_REQUIRED"
+  },
+  "safety": {
+    "research_only": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  },
+  "dependency_rebase": {
+    "from_discovery": "V0.7.4_C7_REGISTRY_MEMBER_EXCLUSION",
+    "to_discovery": "V0.7.4_C8_PRECLASSIFICATION_REGISTRY_SKIP",
+    "reason": "After Registry expansion, old unreadable captures belonging to already-admitted Registry members must be skipped before content parsing; otherwise they incorrectly keep candidate discovery in WAITING_CAPTURE_REPAIR.",
+    "candidate_discovery_inference_changed": false,
+    "membership_filter_order_hardened": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false
+  },
+  "runtime_dependency_policy": {
+    "freeze_classifier_code_and_config_hashes": true,
+    "latest_classifier_error_count_must_be_zero": true,
+    "latest_classifier_queue_count_may_be_nonzero": true,
+    "latest_classifier_manifest_hash_is_not_frozen_after_activation": true,
+    "reason": "Operational evidence runs must be allowed to create new queues without being mistaken for dependency drift."
+  },
+  "scan_error_policy": {
+    "immutable_failed_capture_is_not_deleted": true,
+    "classification_failure_disposition": "WAITING_CAPTURE_REPAIR",
+    "continue_independent_captures": true,
+    "failed_capture_creates_no_discovery_inference": true,
+    "partial_scan_is_explicit": true
+  },
+  "tesla_link_audit_contract": {
+    "tesla_context_signal_tags": "document/local Tesla-business audit only",
+    "tesla_robot_context_signal_tags": "Tesla+robot bound milestone audit",
+    "tesla_robot_link_eligible": "only true when bound supplier-commercial milestone exists",
+    "no_t3_inference_from_generic_tesla_business": true
+  },
+  "component_domain_parser_contract": {
+    "current22_future_parser": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "historical_v0_4_4_frozen": true,
+    "discovery_preclassification_registry_skip_unchanged": true,
+    "b8_capture_identity_dedupe_unchanged": true
+  }
+}

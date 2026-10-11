@@ -1,0 +1,71 @@
+research_id: FULL_MARKET_52WH_GENERALIZATION_V0_1
+
+source:
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  market_catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+  market_table: 'market.daily_bars_v1'
+  trading_status: 'D:\positionx_data\incoming\eva\20260925_foundation_assets\data\research\px_assets\a_share_daily_trading_status.parquet'
+  expected_trading_status_sha256: 'bfe788d755fabb03986635d975cab22f1311af3a82ec533eb244ab85560c5bf2'
+
+research_domain:
+  description: 'SH/SZ full-market tradable A-share universe; BSE/BJ and B-shares excluded upstream'
+  signal_date_membership: true
+
+frozen_csi500_reference:
+  research_id: CSI500_ADJ_52WH_V0_1
+  phase1_summary_sha256: '81905965522e3de13aa17bdfe3b76014ee974165ffdf3d8608713cf25cce74ab'
+  verdict: STRONG_52WH_CANDIDATE
+  eligible_events: 13644
+  eligible_pos: 7396
+  eligible_neg: 6248
+  h60_min_group_n: 6236
+  h120_min_group_n: 6227
+
+definition:
+  mechanism: '52-week-high anchoring / underreaction'
+  price_state: 'synthetic adjusted index using cumulative close/pre_close'
+  positive: 'adj_close(T) > max(previous 250 valid symbol observations)'
+  negative_control: 'adj_close(T) < min(previous 250 valid symbol observations)'
+  lookback_observations: 250
+  signal_timestamp: 'T close'
+  entry: 'T+1 exact OPEN and can_buy_at_open=true'
+  h20: 'S20 exact CLOSE (diagnostic)'
+  h60: 'S60 exact CLOSE'
+  h120: 'S120 exact CLOSE'
+  same_h120_complete_cohort_for_all_horizons: true
+  known_st_excluded: true
+  known_new_listing_special_excluded: true
+  unknown_st_retained: true
+  repeated_same_symbol_events_not_deduped_phase1: true
+  no_alpha_factors_added: true
+
+window:
+  feature_start: '2020-01-01'
+  signal_start: '2024-01-01'
+  signal_cutoff_h120: '2026-04-08'
+  latest_market_session: '2026-09-30'
+
+market_adjustment:
+  method: 'exact-window signal-date full-market member median synthetic OPEN->CLOSE return'
+
+gate:
+  min_group_n: 200
+  positive_years_min: 2
+  spread_positive_years_min: 2
+  h60_h120_decision_only: true
+  strong: 'H60 and H120 pass all predeclared gates'
+  promising: 'Exactly one of H60/H120 passes'
+  fast_reject: 'Neither passes and both H60/H120 have non-positive POS trim5 OR both have non-positive date-equal spread'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt: true
+  no_broker: true
+  market_catalog_read_only: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  only_intended_change: 'CSI500 PIT signal-date universe -> SH/SZ full-market tradable signal-date universe'

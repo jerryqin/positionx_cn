@@ -1,0 +1,67 @@
+research_id: OPPORTUNITY_P2_TREND_PULLBACK_RECLAIM_V0_1
+source:
+  universe_panel: D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet
+  expected_universe_panel_sha256: 45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509
+  market_catalog: D:\positionx_data\catalog\market_data.duckdb
+  market_table: market.daily_bars_v1
+research_domain:
+  include_suffixes:
+  - .SH
+  - .SZ
+  exclude_bse: true
+  exclude_b_share: true
+  eligible_keys: symbol x trade_date keys present in the frozen Opportunity Engine
+    D2 panel
+mechanism:
+  family: P2_TREND_PULLBACK
+  name: FIRST_MA20_PULLBACK_THEN_NEXT_DAY_RECLAIM
+  setup_time: S CLOSE
+  setup:
+    established_trend:
+      ma20_above_ma60: true
+      ma60_rising_vs_20_sessions_ago: true
+    first_pullback:
+      prior_5_closes_at_or_above_ma20: true
+      close_S_below_ma20: true
+      close_S_above_ma60: true
+  decision_time: T = next symbol session after S, at CLOSE
+  signal: close(T) > MA20(T)
+  baseline: all eligible P2 setup episodes with same T+1 OPEN evaluation timing
+  hypothetical_entry: T+1 OPEN
+  no_parameter_scan: true
+price_adjustment:
+  daily_factor: close / pre_close
+  adj_close: cumprod(daily_factor)
+  adj_open: adj_close * open / close
+  adj_high: adj_close * high / close
+  adj_low: adj_close * low / close
+labels:
+  primary:
+    name: P2_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.1
+  secondary:
+    name: P2_TREND40_120
+    target: 0.4
+    horizon_sessions: 120
+    mae_floor: -0.12
+  evaluation_population: MATURED_ONLY
+gate:
+  selected_min: 200
+  primary_lift_vs_setup_min: 1.25
+  primary_precision_minus_setup_min: 0.03
+  positive_years_min: 5
+  pass_effect: mechanism survives to robustness only; NOT Strategy qualification
+output_dir: D:\positionx_data\research\opportunity_engine\full_market_replication_sweep_v0_1\p2_trend_pullback_reclaim_v0_1
+safety:
+  research_only: true
+  market_catalog_read_only: true
+  universe_panel_read_only: true
+  no_market_outcome_tuning: true
+  no_parameter_scan: true
+  not_a_d2_rescue: true
+  not_a_p1_rescue: true
+  production_db: false
+  broker: false
+  qmt: false

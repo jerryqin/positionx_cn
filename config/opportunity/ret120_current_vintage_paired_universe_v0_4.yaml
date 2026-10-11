@@ -1,0 +1,62 @@
+research_id: RET120_CURRENT_VINTAGE_PAIRED_UNIVERSE_V0_4
+
+source:
+  frozen_csi500_panel: 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+  expected_frozen_csi500_panel_sha256: '66b358a54c33866dd03aae187c1d60379a0317df3c15fe3d453babb430b338f1'
+  exact_scanner_source: 'D:\positionx_cn\research\trend_edge_scan.py'
+  expected_scanner_source_sha256: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+  current_qmt_back_ratio_close: 'D:\positionx_data\research\opportunity_engine\full_market_ret120_qmt_v0_2\qmt_back_ratio_close.parquet'
+  expected_current_qmt_sha256: '4d0e6dbef7bc8b3ac76f572acaeac66b26af794401c92f7b1ac4afe8e388bb58'
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+
+window:
+  signal_start: '2020-08-03'
+  signal_cutoff_h120: '2026-04-08'
+
+frozen_folds:
+  F1: ['2020-08-03','2022-10-17']
+  F2: ['2022-10-18','2024-09-19']
+  F3: ['2024-09-20','2026-09-24']
+
+signal:
+  representation: 'CURRENT_VINTAGE_QMT_BACK_RATIO'
+  ret120: 'close / close.shift(120) - 1'
+  bucket: 'symbol ASC deterministic row order, then exact frozen assign_quintiles(rank first + qcut 5)'
+  daily_feature_coverage_min_fraction: 0.80
+  daily_feature_coverage_min_absolute: 50
+  no_signal_parameter_change: true
+
+economic_measurement:
+  representation: 'canonical synthetic corporate-action-safe state'
+  entry: 'T+1 OPEN'
+  exits: ['S20 CLOSE','S60 CLOSE','S120 CLOSE']
+  common_date_benchmark: 'full-market same-date/horizon median raw return'
+  note: 'Frozen fast-reject uses Q5-Q1, monotonicity, and fold Q5-Q1. These are invariant to subtracting the same date-level benchmark from all buckets when bucket-date coverage is common.'
+
+paired_design:
+  control: 'CSI500 PIT symbol-date keys from frozen panel, but CURRENT QMT signal vintage'
+  treatment: 'SH/SZ full-market tradable PIT keys, same CURRENT QMT signal vintage'
+  interpretation_rule: 'Full-market universe effect may be interpreted only if current-vintage CSI500 control still passes the exact frozen fast-reject structure.'
+  existing_strategy2_unchanged: true
+  frozen_lineage_not_redefined: true
+
+frozen_csi500_reference:
+  H20: {q5_minus_q1: 0.0017721919167349184, monotonicity: 0.8, positive_folds: 2}
+  H60: {q5_minus_q1: 0.015298910842666998, monotonicity: 0.9, positive_folds: 3}
+  H120: {q5_minus_q1: 0.034991485560694965, monotonicity: 1.0, positive_folds: 3}
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\ret120_current_vintage_paired_universe_v0_4'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt_calls: true
+  no_broker: true
+  no_orders: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  do_not_modify_strategy2: true
+  do_not_modify_forward: true

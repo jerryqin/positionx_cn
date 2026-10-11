@@ -1,0 +1,72 @@
+research_id: OPPORTUNITY_P1_BREAKOUT_ACCEPTANCE_V0_1_1
+
+source:
+  d2_summary: 'D:\positionx_data\research\opportunity_engine\d2_compression_breakout_v0_1\d2_compression_breakout_v0_1_summary.json'
+  d2_panel: 'D:\positionx_data\research\opportunity_engine\d2_compression_breakout_v0_1\d2_compression_breakout_v0_1_panel.parquet'
+  expected_d2_panel_sha256: 'edbfc337f413d1d316d7bb1e9734873cb64ccee6d6743b106e97cd20a48ec38a'
+  market_catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+  market_table: 'market.daily_bars_v1'
+
+research_domain:
+  include_suffixes: ['.SH', '.SZ']
+  exclude_bse: true
+  exclude_b_share: true
+
+frozen_d2_parent:
+  compression_rank_max: 0.25
+  breakout_margin_min_exclusive: 0.0
+  range_release_ratio_min_exclusive: 1.0
+  rank_methods_to_identity_check: ['average','min','max','first','dense']
+  primary_label_column: D2_TREND25_60_label
+
+mechanism:
+  family: P1_PRICE_ACCEPTANCE
+  name: COMPRESSION_BREAKOUT_3D_ACCEPTANCE
+  parent_event: frozen D2 compression-expansion breakout at T close
+  observation_sessions_after_breakout: 3
+  acceptance: 'all closes T+1..T+3 >= frozen breakout level'
+  rejection: 'at least one close T+1..T+3 < frozen breakout level'
+  breakout_level: 'close(T) / (1 + frozen D2 breakout_margin(T))'
+  confirmation_time: 'T+3 CLOSE'
+  hypothetical_entry: 'T+4 OPEN'
+  retest_hold_diagnostic: 'accepted AND min(low T+1..T+3) <= breakout level'
+  no_touch_hold_diagnostic: 'accepted AND min(low T+1..T+3) > breakout level'
+  reacceleration_diagnostic: 'accepted AND close(T+3) > max(high(T+1), high(T+2))'
+  no_parameter_scan: true
+
+labels:
+  primary:
+    name: P1_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    name: P1_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+  origin: RECOMPUTED_FROM_T_PLUS_4_OPEN
+  evaluation_population: MATURED_ONLY
+
+gate:
+  baseline: REJECTED_3D_BREAKOUTS_WITH_SAME_T_PLUS_4_ENTRY_TIMING
+  selected_min: 200
+  primary_lift_vs_rejected_min: 1.25
+  primary_precision_minus_rejected_min: 0.03
+  positive_years_min: 5
+  diagnostics_do_not_affect_gate: true
+  pass_effect: mechanism survives to robustness only; NOT Strategy qualification
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\p1_breakout_acceptance_v0_1'
+
+safety:
+  research_only: true
+  market_catalog_read_only: true
+  no_market_outcome_tuning: true
+  parent_d2_not_rescued_or_retuned: true
+  d2_rank_semantics_identity_checked_against_frozen_summary: true
+  full_mechanism_parent_not_old_d2_maturity_filtered: true
+  original_d2_outcome_labels_not_reused_for_p1: true
+  production_db: false
+  broker: false
+  qmt: false

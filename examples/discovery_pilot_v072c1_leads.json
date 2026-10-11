@@ -1,0 +1,36 @@
+{
+  "lead_set_id": "OPTIMUS_DISCOVERY_PILOT_V0_7_2C_1_CN_OFFICIAL",
+  "purpose": "Controlled real discovery pilot using official SSE/SSEInfo sources only.",
+  "leads": [
+    {
+      "entity_name": "无锡信捷电气股份有限公司",
+      "symbol": "603416.SH",
+      "recall_source_type": "OFFICIAL_DISCOVERY",
+      "lead_url": "https://roadshow.sseinfo.com/stayTuned/41251",
+      "candidate_official_source_id": "SRC_SSE_OFFICIAL",
+      "candidate_official_url": "https://roadshow.sseinfo.com/stayTuned/41251",
+      "observed_at": "2026-10-10T10:30:00+08:00",
+      "rationale": "Official 2026 H1 results briefing states humanoid-robot joint parts; frameless torque motors achieved scaled batch supply. Historical pre-case discovery evidence only."
+    },
+    {
+      "entity_name": "成都豪能科技股份有限公司",
+      "symbol": "603809.SH",
+      "recall_source_type": "OFFICIAL_DISCOVERY",
+      "lead_url": "https://big5.sse.com.cn/disclosure/listedinfo/announcement/c/new/2025-09-13/603809_20250913_ZVJZ.pdf",
+      "candidate_official_source_id": "SRC_SSE_OFFICIAL",
+      "candidate_official_url": "https://big5.sse.com.cn/disclosure/listedinfo/announcement/c/new/2025-09-13/603809_20250913_ZVJZ.pdf",
+      "observed_at": "2026-10-10T10:30:00+08:00",
+      "rationale": "Official SSE PDF states robot reducer products used in humanoid robots/robot dogs/exoskeletons and some products achieved batch supply. Historical discovery evidence only."
+    },
+    {
+      "entity_name": "成都旭光电子股份有限公司",
+      "symbol": "600353.SH",
+      "recall_source_type": "OFFICIAL_DISCOVERY",
+      "lead_url": "https://roadshow.sseinfo.com/activityDetails/41419",
+      "candidate_official_source_id": "SRC_SSE_OFFICIAL",
+      "candidate_official_url": "https://roadshow.sseinfo.com/activityDetails/41419",
+      "observed_at": "2026-10-10T10:30:00+08:00",
+      "rationale": "Official 2026 H1 results briefing on 2026-10-08 states the company is advancing validation of humanoid-robot controllers. Prospective precommercial discovery lead."
+    }
+  ]
+}

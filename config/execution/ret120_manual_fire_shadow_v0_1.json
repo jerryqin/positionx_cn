@@ -1,0 +1,67 @@
+{
+  "module_id": "RET120_MANUAL_FIRE_SHADOW_V0_1",
+  "paths": {
+    "project_root": "D:\\positionx_cn",
+    "funnel_output_root": "D:\\positionx_data\\research\\opportunity_engine\\ret120_execution_funnel_v0_1_2",
+    "output_root": "D:\\positionx_data\\research\\opportunity_engine\\ret120_manual_fire_shadow_v0_1",
+    "ledger_path": "D:\\positionx_data\\research\\opportunity_engine\\ret120_manual_fire_shadow_v0_1\\ledger\\human_decision_ledger.jsonl"
+  },
+  "input_policy": {
+    "funnel_pass_status": "PASS_RET120_EXECUTION_FUNNEL_V0_1_2_RUN",
+    "prepare_status": "PREPARE_MANUAL",
+    "actual_open_source": "MANUAL_CSV_ONLY_V0_1",
+    "reason": "QMT live-quote freshness is not yet a qualified execution truth source; V0.1 does not duplicate or bypass the existing G4 open-confirmation chain."
+  },
+  "fire_gate": {
+    "inside_zone": "FIRE_MANUAL",
+    "above_zone": "CANCEL_WAIT_PULLBACK",
+    "below_zone": "CANCEL_WAIT_RECOVERY",
+    "missing_open": "BLOCKED_MISSING_OPEN",
+    "at_or_below_stop": "CANCEL_INVALIDATED",
+    "allow_boundary_equal": true
+  },
+  "sizing": {
+    "board_lot": 100,
+    "adv20_participation_max": 0.01,
+    "momentum_risk_fraction_nav": 0.0025,
+    "mean_reversion_risk_fraction_nav": 0.0015,
+    "momentum_max_weight": 0.05,
+    "mean_reversion_max_weight": 0.03,
+    "never_enlarge_beyond_prepare_preview_shares": true,
+    "t1_risk_model_status": "NOT_QUALIFIED_STRUCTURAL_STOP_ONLY"
+  },
+  "shadow": {
+    "shadow_entry_price": "ACTUAL_OPEN_INPUT",
+    "shadow_entry_only_when": "FIRE_MANUAL",
+    "no_broker": true,
+    "no_orders": true
+  },
+  "human_decisions": {
+    "allowed": [
+      "APPROVE",
+      "REJECT",
+      "SKIP"
+    ],
+    "append_only_hash_chain": true,
+    "approval_is_not_broker_submit": true
+  },
+  "guardrails": {
+    "research_only": true,
+    "no_broker": true,
+    "no_orders": true,
+    "no_production_db": true,
+    "no_strategy2_change": true,
+    "no_existing_g4_change": true,
+    "manual_open_input_required": true,
+    "manual_approval_required": true,
+    "no_parameter_scan": true,
+    "no_historical_optimization": true
+  },
+  "entry_fee_accounting_v0_1_1": {
+    "supported": true,
+    "argument": "--fees",
+    "field": "human_fill_fees",
+    "semantics": "Total actual transaction costs for the initial APPROVE fill; 0 when omitted.",
+    "selection_or_fire_semantics_changed": false
+  }
+}

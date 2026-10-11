@@ -1,0 +1,22 @@
+{
+  "policy_id": "G5_4M_NEAREST_LOT_ECONOMIC_REPLAY_V0_2",
+  "status": "PREDECLARED_4M_CAPITAL_CANDIDATE_BEFORE_RESULT",
+  "total_pilot_capital": 4000000,
+  "sleeves": {
+    "deep": 0.5,
+    "ret120": 0.5
+  },
+  "strategy_target_weight": 0.01,
+  "max_target_gross": 0.3,
+  "sizing": "NEAREST_EXECUTABLE_LOT_WITHIN_PLUS_MINUS_25PCT",
+  "fidelity_min": 0.9,
+  "economic_guardrails": {
+    "abs_cagr_drift_max": 0.005,
+    "abs_mdd_drift_max": 0.005,
+    "abs_sharpe_drift_max": 0.1
+  },
+  "stress": "50bps CAGR must remain positive for both strategies",
+  "portfolio_incremental_gate": "nearest-lot 50/50 vs nearest-lot Deep: dCAGR>0 AND dSharpe>0 AND dMDD>=0",
+  "no_post_result_threshold_change": true,
+  "note": "Only capital changed from failed 3M V0.1.1. All sizing/economic thresholds unchanged."
+}

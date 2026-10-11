@@ -1,0 +1,103 @@
+{
+  "rebase_id": "OPTIMUS_POST_LEISAI_FULL_REBASE_V0_7_4_1A",
+  "cause": {
+    "windows_newline_hotfix": "Previous V0.7.4.1 writer hashed LF bytes then used text-mode Path.write_text on Windows, so the installed bytes could be CRLF and fail the intended SHA check.",
+    "scope_correction": "Post-APPLY Registry/Canonical state is frozen in V0.7/V0.7.1/V0.7.2/V0.7.2A/B/C contracts as well as the top-level steady baseline."
+  },
+  "approved_apply": {
+    "plan_sha256": "748c1ca8206ea355c2b42252817ec407d23ceca22ef2903c182e500733bfe4dc",
+    "batch_id": "CB_7e2476e590e0bbe674ac8848",
+    "fact_id": "CF_fe5714e699b2e5c1a34c979c",
+    "materialized_evidence_id": "CFE_ef6afb1d4f48e8166d81bfdb",
+    "result_manifest_sha256": "e79e591e4e0db9d1efbd379c74a4891042d2d57b9b613660913d11ed335965ba",
+    "post_registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa"
+  },
+  "post_state": {
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "canonical_candidates": 22,
+    "needs_review_candidates": 2,
+    "evidence_count": 163,
+    "review_decision_count": 150,
+    "provisional_evidence_count": 2,
+    "canonical_fact_count": 25,
+    "canonical_symbol_count": 22,
+    "materialized_fact_evidence_count": 25
+  },
+  "payload_root": "payload",
+  "files": {
+    "config/research/optimus_prospective_monitor_v07.json": {
+      "old_sha256": "689c97fa2791e0c0068ece6640e4f870ad6476ef51b455ccb381ca162cd6506b",
+      "new_sha256": "d8b8020006db4722eb3ff9c468302771e8740df2f59b75c72b5486387cb28e2c",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "scripts/run_optimus_prospective_monitor_v07.py": {
+      "old_sha256": "f4cc8cbe03e4af7767ac747f424be76af42dd1ce294b26a20ae0e578da8e1660",
+      "new_sha256": "ab8e7d190d75ebcc56dd6debaa0f55d01f6957f6e930ce064072c175166bea8d",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "config/research/optimus_prospective_intake_v071.json": {
+      "old_sha256": "d985d4ffd2361cb94718e801b0575282f82a62981111af796722567123600f41",
+      "new_sha256": "170c298002e1950eb8736d325ed6d0d20c6e8f1a57ef11041ea2da83b23977f4",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "config/research/optimus_global_discovery_monitor_v072.json": {
+      "old_sha256": "216ad314b1b5b99809947323d6a61312826cad437d161854305dceb44709c4d0",
+      "new_sha256": "f7dcacde587213e94810956decc7e27e916d8f3c950cf4bc5a87fdd126245bfb",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "scripts/run_optimus_global_discovery_monitor_v072.py": {
+      "old_sha256": "217a679ea53d455e32712f276806fb25958945def0501d06df5cefa6ee57a2a1",
+      "new_sha256": "49276bc53efe5d8fed746979f45932569f096fce083be4c3cd6f6a10be1cc7a9",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "config/research/optimus_external_inbox_v072a.json": {
+      "old_sha256": "6bcacc28a2a418c84753e929dca23d5cc90c44a9d43d2bcf642132c2a94416ef",
+      "new_sha256": "5d30d4bc0ce1a7c1763cb43416398c17975ab8940b01f85357a616d239002efd",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "scripts/run_optimus_external_inbox_v072a.py": {
+      "old_sha256": "4e02dd48c722aca013fa1f2cfc8f58b217bb212c5b71e83827ec747dc59d9ea5",
+      "new_sha256": "e1465a6b10eb36d384a20812d207ef3a7af7389e5bba1f4a5c23f0df3685a801",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "config/research/optimus_external_classifier_v072b.json": {
+      "old_sha256": "ef52df05970af3cee77cd6ed2aca5b8a5dd5759f4ffe72d41e20bf98d8f54763",
+      "new_sha256": "b2a342ef6381f2f6127d46c5227e0b63a76b00f442f0d16e149bb880e4f12ae9",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "config/research/optimus_candidate_discovery_v072c.json": {
+      "old_sha256": "163f4ba716bd000a46388b63802ed78c223a9b0f99fff1b0aeef9df7e430f6ed",
+      "new_sha256": "9b6ca6fe5a8bb3807db0770bce12d90220e2cde09000770b035d8abb1c41f728",
+      "kind": "RUNTIME_CONTRACT"
+    },
+    "config/research/optimus_steady_state_baseline_v074.json": {
+      "old_sha256": "97859e333c144bb0f5812bc5c67c54e6f5b809944df3217a7e2c718b3e1700f5",
+      "new_sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a",
+      "kind": "STEADY_BASELINE"
+    }
+  },
+  "unchanged_frozen": {
+    "scripts/run_optimus_prospective_intake_v071.py": "5b65733f479b8a3a9ef7831779ab540bc254a6d28a4d47f671799d5922824184",
+    "scripts/run_optimus_external_classifier_v072b.py": "ea2c07c34a4491d7da52a64338052cd6773d8b70a53a46a89aa222d8025f2a28",
+    "scripts/run_optimus_candidate_discovery_v072c.py": "dcfc008b0fb72028d47c6d844a2fec8dbca1e568153420a706f96370e9a46b23",
+    "config/research/optimus_external_source_registry_v072a.json": "e14163ef3023a82431451e21e157516a06c0ebaeae086069633f54a0bfcd65d2",
+    "scripts/run_optimus_steady_state_v074.py": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da"
+  },
+  "expected_new_baseline_sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a",
+  "audit_output_root": "D:/positionx_data/research/big_opportunity/optimus/steady_state_rebase_v0_7_4_1a",
+  "safety": {
+    "deterministic_payload_bytes": true,
+    "windows_newline_translation_avoided": true,
+    "backup_all_mutated_contract_files": true,
+    "rollback_all_files_on_failed_final_check": true,
+    "research_db_mutation": false,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

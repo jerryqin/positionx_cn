@@ -1,0 +1,68 @@
+research_id: OPPORTUNITY_D4_SECTOR_IGNITION_V0_1
+
+market_catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+market_table: market.daily_bars_v1
+industry_table: research.sw_industry_membership_pit_v1
+industry_asset_id: SW_INDUSTRY_MEMBERSHIP_PIT_L1
+industry_asset_version: SW_INDUSTRY_PIT_L1_V20260927
+industry_source_sha256: df94c64e5365b82d3f76cff76c1465f4e1f39b257757ec01151d3291ceb7c8f9
+
+pit_panel: 'D:\positionx_data\research\opportunity_engine\trend_ignition_v0_1\trend_ignition_v0_1_panel.parquet'
+output_dir: 'D:\positionx_data\research\opportunity_engine\d4_sector_ignition_v0_1'
+
+mechanism:
+  family: D4_SECTOR_IGNITION
+  name: SECTOR_LOCAL_BREADTH_PROPAGATION
+  signal_time: T_CLOSE
+  hypothetical_entry: T_PLUS_1_OPEN
+
+  sector_level: L1
+  sector_min_members: 10
+
+  stock_setup:
+    description: 'sector-relative RET20 rank in [0.50, 0.80): participating second-tier names, not the hottest leaders'
+    sector_ret20_rank_min: 0.50
+    sector_ret20_rank_max_exclusive: 0.80
+
+  breadth:
+    stock_state: 'close(T) > MA20(T)'
+    sector_measure: 'share of PIT sector members above MA20'
+    market_measure: 'share of PIT universe above MA20'
+    delta_sessions: 5
+    excess_definition: 'sector_breadth_delta5 - market_breadth_delta5'
+    history_sessions: 126
+    ignition_quantile: 0.75
+    current_day_excluded_from_threshold: true
+
+  signal: 'second_tier_setup AND sector_ignition'
+  no_parameter_scan: true
+
+labels:
+  primary:
+    name: D4_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    name: D4_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+  label_origin: RECOMPUTED_FROM_T_PLUS_1_OPEN
+
+gate:
+  baseline: 'ALL_SECOND_TIER_SETUP_ROWS_WITH_SAME_T_PLUS_1_ENTRY_TIMING'
+  selected_min: 200
+  primary_lift_vs_setup_min: 1.25
+  primary_precision_minus_setup_min: 0.03
+  positive_years_min: 5
+  qualification_effect: 'PASS advances mechanism to robustness only; NOT Strategy qualification'
+
+operational_diagnostic:
+  desired_eventual_candidates_per_day: '5-20'
+  note: 'flow is reported but is not part of the frozen scientific Fast Reject gate'
+
+safety:
+  research_only: true
+  broker: false
+  qmt: false

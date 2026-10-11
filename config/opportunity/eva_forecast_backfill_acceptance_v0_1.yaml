@@ -1,0 +1,27 @@
+research_id: OPPORTUNITY_EVA_FORECAST_BACKFILL_ACCEPTANCE_V0_1
+
+incoming_candidates:
+  - 'D:\positionx_data\incoming\eva\forecast_semantic_backfill_2020_2023_v0_1\semantic_events_backfill.parquet'
+  - 'D:\positionx_data\incoming\eva\20261004_forecast_semantic_backfill\semantic_events_backfill.parquet'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\eva_forecast_backfill_acceptance_v0_1'
+
+requested_event_years:
+  - 2020
+  - 2021
+  - 2022
+  - 2023
+
+reference_canonical:
+  path: 'D:\positionx_data\events\forecast_semantic_corpus_v0_2_3\semantic_events_all.parquet'
+  sha256: '488c29b12ca9975c36005e9afcc2afb82516aae5bf0305a337c69a81060db0d4'
+
+gate:
+  event_time_nonnull_min: 0.99
+  symbol_nonempty_min: 0.99
+  announcement_id_nonempty_min: 0.99
+  duplicate_identity_max: 0
+  semantic_payload_min: 0.90
+  pdf_sha256_nonempty_min: 0.90
+  requested_year_coverage_required: true
+  out_of_requested_year_rate_max: 0.001

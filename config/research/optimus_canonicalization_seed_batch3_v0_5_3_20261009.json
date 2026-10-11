@@ -1,0 +1,136 @@
+{
+  "schema_version": "OPTIMUS_CANONICALIZATION_PLAN_V0_5",
+  "plan_id": "OPTIMUS_SEED_CANONICALIZATION_BATCH3_20261009_V0_5_3",
+  "basis": "Human review of the 21 effective V0.4.4-parser provisional evidence rows produced by the V0.4.5 exhaustive seed-audit-debt official-announcement backfill over the 180-day review window. The repaired 2026-08-25 gap completed with query_quality=COMPLETE and no evidence. Canonical unit remains a fact, not a PDF. No Tesla/Optimus identity is inferred from unnamed or generic customers.",
+  "expected_pre_state": {
+    "effective_v044_provisional_count": 21,
+    "seed_audit_debt": 9
+  },
+  "facts": [
+    {
+      "fact_key": "BEST_2026H1_HUMANOID_PLANETARY_ROLLER_SCREW_SAMPLE_REVENUE",
+      "symbol": "300580.SZ",
+      "company": "贝斯特",
+      "fact_type": "ROBOT_COMPONENT_SAMPLE_STAGE_COMMERCIAL_RELEVANCE",
+      "fact_text": "公司披露2026年上半年人形机器人用行星滚柱丝杠相关样品实现营收22.30万元，占公司营业收入约0.03%；该业务仍处样品阶段、规模较小，未来收益存在较大不确定性。",
+      "component_domain": "planetary roller screws / linear motion components",
+      "canonical_level": 2,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_f58eec8a9c202c0b874a7588",
+      "support_evidence_ids": [],
+      "decision_rationale": "Company-specific official disclosure establishes an actual human-robot component sample-stage revenue fact. It does not establish validation completion, order conversion, batch shipment, mass production, or a Tesla/Optimus relationship; retain L2/T0."
+    },
+    {
+      "fact_key": "SLING_2026_ROBOT_REDUCER_BEARING_PARTIAL_PRODUCTION_AND_CAPACITY_BUILD",
+      "symbol": "301550.SZ",
+      "company": "斯菱智驱",
+      "fact_type": "ROBOT_COMPONENT_PRODUCTION_AND_CAPACITY_BUILD",
+      "fact_text": "公司披露高精密机器人零部件业务已实现部分谐波减速器和减速器专用轴承投产，并已完成执行器模组等产品研发储备；同时持续推进机器人零部件智能化改造及新增智能制造产能建设，但机器人业务仍处起步阶段、收入贡献较低。",
+      "component_domain": "harmonic reducers / reducer bearings / actuator modules",
+      "canonical_level": 6,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_f8326b427dfc1f93b9c06d8c",
+      "support_evidence_ids": [
+        "EACQ_7be8c56864c17dfba8041d19",
+        "EACQ_116e9f9ce2d9e677669019e6",
+        "EACQ_556b14d017df8d8976922a65"
+      ],
+      "decision_rationale": "Human review confirms a company-owned production/capacity milestone, supporting L6. Generic company-wide order language is not treated as robot-specific orders, and the L9 parser hits are risk-text false positives. No Tesla/Optimus link is established."
+    },
+    {
+      "fact_key": "KELI_2025_2026_ROBOT_FORCE_SENSOR_SMALL_BATCH_TO_BATCH_SUPPLY",
+      "symbol": "603662.SH",
+      "company": "柯力传感",
+      "fact_type": "ROBOT_SENSOR_BATCH_DELIVERY_AND_SHIPMENT",
+      "fact_text": "公司披露机器人力学传感器已从研发验证跨越至小批量交付，2025年销量超过1500只、送样客户超过70家，部分人形机器人相关产品实现数百台批量出货；后续披露月出货量已突破千只，并处于由小批量生产向批量化供应过渡阶段。",
+      "component_domain": "6-axis force / torque / tactile sensing",
+      "canonical_level": 9,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_16a2a1a799566d048926da0f",
+      "support_evidence_ids": [
+        "EACQ_8a7b24e5e63d07f9f2c43002"
+      ],
+      "decision_rationale": "Two official company disclosures independently support actual small-batch delivery and continuing shipment scale, meeting the frozen L9 commercial milestone. Named downstream examples are not Tesla, so T0."
+    },
+    {
+      "fact_key": "WUZHOU_2025_ROBOT_SCREW_PRODUCTS_HEAD_NEW_FORCE_STRATEGIC_SUPPORT",
+      "symbol": "603667.SH",
+      "company": "五洲新春",
+      "fact_type": "ROBOT_COMPONENT_OPERATIONAL_RELEVANCE",
+      "fact_text": "公司披露在机器人领域，反向式行星滚柱丝杠、0301微型丝杠等新品已经落地并实现头部新势力战略配套；同时明确丝杠产品销售收入占比仍很小、产能有限，相关新业务仍处发展初期。",
+      "component_domain": "planetary roller screws / micro screws / bearings",
+      "canonical_level": 1,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_d94755f571d4cebd03731a35",
+      "support_evidence_ids": [],
+      "decision_rationale": "The official source establishes company-specific robot-domain operating relevance, but the frozen parser anchor is L1/T0 and V0.5 disallows silent level or Tesla-link override. 'Head new force' is therefore preserved in fact text without inferring Tesla or upgrading the link."
+    }
+  ],
+  "reject_only": [
+    {
+      "evidence_id": "EACQ_91be23dbd308676e8ff07450",
+      "symbol": "300580.SZ",
+      "reason_code": "CROSS_TOPIC_CAPACITY_COOCCURRENCE_NOT_ROBOT_MILESTONE"
+    },
+    {
+      "evidence_id": "EACQ_7fe4f46596594002fc0cafda",
+      "symbol": "300580.SZ",
+      "reason_code": "LOW_VALUE_GENERAL_BUSINESS_CONTEXT_SUPERSEDED_BY_STRONGER_FACT"
+    },
+    {
+      "evidence_id": "EACQ_a1a08b1a20577e6ce8e88776",
+      "symbol": "300580.SZ",
+      "reason_code": "GLOSSARY_OR_GENERAL_COMPONENT_CONTEXT_NOT_INCREMENTAL_FACT"
+    },
+    {
+      "evidence_id": "EACQ_4d784770d8074b9e82495a10",
+      "symbol": "301550.SZ",
+      "reason_code": "PROJECT_CONTEXT_SUPERSEDED_BY_PRODUCTION_MILESTONE_FACT"
+    },
+    {
+      "evidence_id": "EACQ_a1fb1a276507186f92ccd6ee",
+      "symbol": "301550.SZ",
+      "reason_code": "FINANCING_TABLE_CONTEXT_NOT_INCREMENTAL_COMMERCIAL_FACT"
+    },
+    {
+      "evidence_id": "EACQ_fe44436195f53d6058353fca",
+      "symbol": "301550.SZ",
+      "reason_code": "FINANCING_TABLE_CONTEXT_NOT_INCREMENTAL_COMMERCIAL_FACT"
+    },
+    {
+      "evidence_id": "EACQ_13fd32f94dfddf0e10721ff6",
+      "symbol": "301550.SZ",
+      "reason_code": "FUND_USAGE_CONTEXT_NOT_INCREMENTAL_COMMERCIAL_FACT"
+    },
+    {
+      "evidence_id": "EACQ_350b5f5f4bd8ed8d91ad1763",
+      "symbol": "301550.SZ",
+      "reason_code": "FUND_USAGE_CONTEXT_NOT_INCREMENTAL_COMMERCIAL_FACT"
+    },
+    {
+      "evidence_id": "EACQ_bd8066310653c13b436e70cc",
+      "symbol": "301550.SZ",
+      "reason_code": "FALSE_L9_RISK_TEXT_REVENUE_LOW_NOT_COMMERCIAL_MILESTONE"
+    },
+    {
+      "evidence_id": "EACQ_e7d8056f78ba3f6b4b2cfa84",
+      "symbol": "301550.SZ",
+      "reason_code": "FALSE_L9_RISK_TEXT_REVENUE_LOW_NOT_COMMERCIAL_MILESTONE"
+    },
+    {
+      "evidence_id": "EACQ_61de46ae995f91507104e3f2",
+      "symbol": "603119.SH",
+      "reason_code": "INDUSTRY_BACKGROUND_NOT_COMPANY_SPECIFIC_MILESTONE"
+    },
+    {
+      "evidence_id": "EACQ_9869c5489ac2733bbe21539a",
+      "symbol": "603667.SH",
+      "reason_code": "FINANCING_PROJECT_PROGRESS_NOT_INCREMENTAL_CUSTOMER_MILESTONE"
+    },
+    {
+      "evidence_id": "EACQ_ff7567a07e575ff079ac1cb4",
+      "symbol": "603667.SH",
+      "reason_code": "DUPLICATE_FINANCING_PROJECT_CONTEXT_NOT_INCREMENTAL_FACT"
+    }
+  ]
+}

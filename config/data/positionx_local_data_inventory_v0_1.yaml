@@ -1,0 +1,17 @@
+inventory_id: POSITIONX_LOCAL_DATA_INVENTORY_V0_1
+roots:
+  - 'D:\positionx_data'
+output_dir: 'D:\positionx_data\research\data_inventory\positionx_local_data_inventory_v0_1'
+keywords:
+  HARD_CONFIRMATION: ['中标','中标通知书','重大合同','签订合同','合同签署','采购订单','销售订单','客户订单','定点','定点通知','供应商选定','量产','批量供货','批量交付','正式投产']
+  SOFT_INTENT: ['框架协议','战略合作','合作意向','意向协议','备忘录','MOU']
+  EARNINGS_FORECAST: ['业绩预告','业绩快报']
+limits:
+  sample_rows: 200000
+  max_structured_file_bytes: 536870912
+safety:
+  read_only: true
+  no_network: true
+  no_pdf_text_parse: true
+  no_database_mutation: true
+  no_eva_dependency: true

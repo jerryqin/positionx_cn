@@ -1,0 +1,10 @@
+research_id: OPPORTUNITY_E1_MARKET_PRICE_COVERAGE_AUDIT_V0_2
+catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+event_table: research.forecast_semantic_events_pit_v1
+price_tables:
+  - market.daily_bars_v1
+  - market.daily_bars_base_v1
+  - market.daily_bars_incremental_v1
+primary_price_table: market.daily_bars_v1
+target_entry_mapping_coverage: 0.95
+output_dir: 'D:\positionx_data\research\opportunity_engine\e1_market_price_coverage_audit_v0_2'

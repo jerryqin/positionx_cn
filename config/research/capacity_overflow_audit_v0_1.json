@@ -1,0 +1,54 @@
+{
+  "module_id": "CAPACITY_OVERFLOW_AUDIT_V0_1",
+  "project_root": "D:\\positionx_cn",
+  "forward_db_candidates": [
+    "D:\\positionx_cn\\data\\research\\positionx_research.duckdb",
+    "D:\\positionx_min_live\\data\\research\\positionx_research.duckdb"
+  ],
+  "market_db": "D:\\positionx_data\\catalog\\market_data.duckdb",
+  "market_table": "market.daily_bars_v1",
+  "output_root": "D:\\positionx_data\\research\\capacity_overflow_audit_v0_1",
+  "strategies": {
+    "DEEP_OVERSOLD_CSI500_FORWARD_V1_1": {
+      "signal_table": "forward_signals",
+      "state_candidates": [
+        "D:\\positionx_cn\\data\\research\\forward_deep_oversold_csi500_v1_1\\state.json",
+        "D:\\positionx_min_live\\data\\research\\forward_deep_oversold_csi500_v1_1\\state.json"
+      ],
+      "signal_value_column": "ret20",
+      "signal_value_direction": "LOWER_IS_MORE_EXTREME",
+      "formal_hold_sessions": 20,
+      "capacity_rule": "MAX_GROSS_30PCT",
+      "max_gross": 0.30,
+      "max_positions": null
+    },
+    "RET120_CSI500_FORWARD_V1_0": {
+      "signal_table": "ret120_forward_signals",
+      "state_candidates": [
+        "D:\\positionx_cn\\data\\research\\forward_ret120_csi500_v1_0\\state.json",
+        "D:\\positionx_min_live\\data\\research\\forward_ret120_csi500_v1_0\\state.json"
+      ],
+      "signal_value_column": "ret120",
+      "signal_value_direction": "HIGHER_IS_STRONGER",
+      "formal_hold_sessions": 120,
+      "capacity_rule": "MAX_30_POSITIONS_AND_30PCT_GROSS",
+      "max_gross": 0.30,
+      "max_positions": 30
+    }
+  },
+  "capacity_reason_tokens": ["CAPACITY","GROSS","MAX_GROSS","SLOT","MAX_POSITION","MAX_POSITIONS","FULL","NO_ROOM","NO_CAPACITY"],
+  "horizons_sessions": [20,60,120],
+  "guardrails": {
+    "research_only": true,
+    "read_only_forward_db": true,
+    "read_only_market_db": true,
+    "no_forward_mutation": true,
+    "no_strategy_rule_change": true,
+    "no_broker": true,
+    "no_orders": true,
+    "no_production_db": true,
+    "no_retro_backfill": true,
+    "no_replacement_rule": true,
+    "no_parameter_optimization": true
+  }
+}

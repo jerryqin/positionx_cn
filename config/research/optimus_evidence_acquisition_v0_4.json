@@ -1,0 +1,75 @@
+{
+  "acquisition_id": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_3",
+  "registry_script": "scripts/run_optimus_candidate_registry_v03.py",
+  "registry_config": "config/research/optimus_candidate_registry_v0_3.json",
+  "seed_universe": "config/research/optimus_candidate_seed_v0_2.csv",
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/evidence_acquisition_v0_4",
+  "evidence_inbox": "D:/positionx_data/incoming/big_opportunity/optimus/evidence_inbox",
+  "cninfo": {
+    "api": "http://www.cninfo.com.cn/new/hisAnnouncement/query",
+    "static_root": "http://static.cninfo.com.cn/",
+    "page_size": 30,
+    "timeout_seconds": 30,
+    "tries": 4,
+    "delay_seconds": 0.45,
+    "keywords": [
+      "人形机器人",
+      "具身智能",
+      "Optimus",
+      "特斯拉机器人",
+      "机器人执行器",
+      "行星滚柱丝杠",
+      "滚柱丝杠",
+      "谐波减速器",
+      "无框力矩电机",
+      "空心杯电机",
+      "六维力传感器",
+      "力矩传感器",
+      "灵巧手",
+      "关节模组",
+      "机器人关节",
+      "人形力控"
+    ]
+  },
+  "pdf": {
+    "download": true,
+    "timeout_seconds": 45,
+    "tries": 3,
+    "max_pages": 260,
+    "max_snippets": 12,
+    "snippet_radius": 260
+  },
+  "backfill": {
+    "source_date_slop_days": 1,
+    "method": "ALL_ANNOUNCEMENTS_ON_SOURCE_DATES_THEN_LOCAL_PDF_RELEVANCE_GATE"
+  },
+  "policy": {
+    "initial_review_state": "PROVISIONAL",
+    "auto_canonical_upgrade": false,
+    "source_tiers": {
+      "T1": [
+        "CNINFO_PRIMARY_PDF",
+        "TESLA_OFFICIAL",
+        "SEC",
+        "COMPANY_IR"
+      ],
+      "T2": [
+        "EXCHANGE_QA",
+        "EARNINGS_CALL",
+        "INVESTOR_RELATIONS_RECORD"
+      ],
+      "T3": [
+        "QUALITY_MEDIA",
+        "SUPPLY_CHAIN_REPORT"
+      ],
+      "T4": [
+        "BROKER_RESEARCH",
+        "SOCIAL_MEDIA",
+        "THEME_LIST"
+      ]
+    },
+    "classifier": "CONTEXT_SCOPED_MILESTONE_STRICT_V0_4_3",
+    "legacy_v041_provisional_policy": "QUARANTINE_BY_APPEND_ONLY_REVIEW_DECISION",
+    "legacy_v042_provisional_policy": "QUARANTINE_BY_APPEND_ONLY_REVIEW_DECISION"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "policy_id": "G5_DEEP_FULL_TICKET_SYMBOL_ASC_V0_4",
+  "capital": 3000000,
+  "reason": "Original pro-rata semantics required RMB12m dynamic capital for >=90% Deep lot fidelity.",
+  "changed_semantics_only": "Deep same-day allocation",
+  "new_semantics": "full 1% tickets; capacity-limited subset; SYMBOL_ASC baseline; no backfill after selected lot infeasible",
+  "unchanged": {
+    "sleeves": "50/50",
+    "target_weight": 0.01,
+    "max_target_gross": 0.3,
+    "nearest_lot_tolerance": 0.25,
+    "fidelity_min": 0.9,
+    "max_abs_cagr_drift": 0.005,
+    "max_abs_mdd_drift": 0.005,
+    "max_abs_sharpe_drift": 0.1,
+    "main_cost": 0.002,
+    "stress_cost": 0.005
+  },
+  "random_tie_break": {
+    "seeds": 100,
+    "required_pass_fraction": 0.9
+  },
+  "no_post_result_threshold_change": true
+}

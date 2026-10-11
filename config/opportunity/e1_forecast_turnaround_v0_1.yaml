@@ -1,0 +1,65 @@
+research_id: OPPORTUNITY_E1_FORECAST_TURNAROUND_V0_1
+
+catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+event_table: research.forecast_semantic_events_pit_v1
+market_table: market.daily_bars_v1
+
+asset:
+  asset_id: FORECAST_SEMANTIC_EVENTS_PIT_CNINFO
+  asset_version: FORECAST_SEMANTIC_2020_2026_PARSER_V0_2_1
+  source_sha256: c11c116a4f7e103891e6ab08623bf5e3b8ae4ca8257e42c95ff477882d5b8a6a
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\e1_forecast_turnaround_v0_1'
+
+mechanism:
+  family: E1_EVENT_FUNDAMENTAL
+  name: FORECAST_TURNAROUND_REPRICING
+  setup: 'strategy_eligible=True AND event_kind=ORIGINAL_FORECAST AND change_type is known'
+  signal: 'setup AND change_type=TURNAROUND'
+  signal_time: EVENT_PUBLICATION
+  entry: 'first tradable symbol session strictly after event calendar date, at open'
+  same_day_entry_allowed: false
+  no_parameter_scan: true
+
+baseline:
+  type: SIGNAL_WEIGHTED_MATCHED_SETUP
+  strata:
+    - event_year
+    - report_period_bucket
+  report_period_buckets:
+    - ANNUAL
+    - H1
+    - Q1
+    - Q1_Q3
+    - OTHER
+  min_setup_per_stratum: 30
+  note: 'setup baseline includes signal rows; conservative'
+
+labels:
+  primary:
+    name: E1_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    name: E1_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+
+data_quality_gate:
+  event_asset_sha_exact: true
+  entry_mapping_coverage_min: 0.95
+  market_factor_valid_rate_min: 0.99
+
+fast_reject:
+  selected_min: 200
+  primary_lift_vs_matched_setup_min: 1.25
+  primary_precision_minus_matched_setup_min: 0.03
+  positive_years_min: 5
+  pass_effect: 'advance only to robustness; NOT strategy qualification'
+
+safety:
+  research_only: true
+  broker: false
+  qmt: false

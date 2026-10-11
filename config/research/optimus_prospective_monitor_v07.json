@@ -1,0 +1,207 @@
+{
+  "monitor_id": "OPTIMUS_PROSPECTIVE_MONITOR_V0_7_4_POST_EXPANSION",
+  "mode": "POST_EXPANSION_REBASE_CURRENT_22_MONITORING",
+  "baseline_observed_at": "2026-10-10T16:36:14+08:00",
+  "baseline": {
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "active_seed": 0,
+    "provisional_evidence": 2,
+    "seed_audit_debt": 0,
+    "stale_canonical": 0,
+    "discovery_only": 2,
+    "canonical_fact_count": 25,
+    "canonical_symbol_count": 22,
+    "materialized_fact_evidence_count": 25,
+    "latest_batch_id": "CB_7e2476e590e0bbe674ac8848",
+    "latest_plan_sha256": "748c1ca8206ea355c2b42252817ec407d23ceca22ef2903c182e500733bfe4dc",
+    "latest_result_manifest_sha256": "e79e591e4e0db9d1efbd379c74a4891042d2d57b9b613660913d11ed335965ba",
+    "needs_review_candidates": 2,
+    "f_status_counts": {
+      "POSSIBLE": 20,
+      "SPECULATIVE": 4
+    }
+  },
+  "theme": {
+    "case_id": "BOE_LIVE_OPTIMUS_V0_1",
+    "stage": 1,
+    "label": "Late Incubation",
+    "industrialization_state": "PRE-RAMP / INDUSTRIALIZATION",
+    "confidence": "HIGH",
+    "auto_stage_mutation": false
+  },
+  "universe": [
+    {
+      "symbol": "002050.SZ",
+      "company": "三花智控"
+    },
+    {
+      "symbol": "002472.SZ",
+      "company": "双环传动"
+    },
+    {
+      "symbol": "002979.SZ",
+      "company": "雷赛智能"
+    },
+    {
+      "symbol": "003021.SZ",
+      "company": "兆威机电"
+    },
+    {
+      "symbol": "300124.SZ",
+      "company": "汇川技术"
+    },
+    {
+      "symbol": "300115.SZ",
+      "company": "长盈精密"
+    },
+    {
+      "symbol": "300433.SZ",
+      "company": "蓝思科技"
+    },
+    {
+      "symbol": "300580.SZ",
+      "company": "贝斯特"
+    },
+    {
+      "symbol": "300660.SZ",
+      "company": "江苏雷利"
+    },
+    {
+      "symbol": "300748.SZ",
+      "company": "金力永磁"
+    },
+    {
+      "symbol": "301550.SZ",
+      "company": "斯菱智驱"
+    },
+    {
+      "symbol": "603662.SH",
+      "company": "柯力传感"
+    },
+    {
+      "symbol": "603667.SH",
+      "company": "五洲新春"
+    },
+    {
+      "symbol": "603728.SH",
+      "company": "鸣志电器"
+    },
+    {
+      "symbol": "688017.SH",
+      "company": "绿的谐波"
+    },
+    {
+      "symbol": "688160.SH",
+      "company": "步科股份"
+    },
+    {
+      "symbol": "688322.SH",
+      "company": "奥比中光"
+    },
+    {
+      "symbol": "601100.SH",
+      "company": "恒立液压"
+    },
+    {
+      "symbol": "603009.SH",
+      "company": "北特科技"
+    },
+    {
+      "symbol": "603119.SH",
+      "company": "浙江荣泰"
+    },
+    {
+      "symbol": "601689.SH",
+      "company": "拓普集团"
+    },
+    {
+      "symbol": "600699.SH",
+      "company": "均胜电子"
+    }
+  ],
+  "source_priority": [
+    "Tesla official / regulatory / earnings / direct company statement",
+    "Exchange / CNINFO official disclosure",
+    "Company official IR / official website",
+    "Strong named-source media",
+    "Broker / third-party research",
+    "Rumor / social mapping"
+  ],
+  "signal_families": {
+    "THEME_STAGE2_GATE": [
+      "Tesla/Optimus named supplier nomination or sourcing",
+      "Tesla/Optimus named validation milestone",
+      "Tesla/Optimus named tooling or capacity commitment",
+      "Tesla/Optimus named purchase order / PO",
+      "Tesla/Optimus named mass-production confirmation",
+      "Optimus build ramp",
+      "Optimus internal deployment",
+      "Optimus external deployment"
+    ],
+    "SUPPLIER_COMMERCIALIZATION": [
+      "company-specific small-batch delivery",
+      "batch supply / mass-production supply",
+      "customer validation / customer development",
+      "capacity construction tied to robot component",
+      "order scheduling / order-linked production",
+      "revenue or shipment milestone tied to robot component"
+    ],
+    "CONTRADICTION_OR_EXIT": [
+      "official denial of supply relationship",
+      "official statement that product is not for humanoid/robot application",
+      "business exit / project cancellation / capacity cancellation",
+      "material technical or commercial mismatch"
+    ],
+    "NOISE_ONLY": [
+      "share-price rise or fall",
+      "broker supply-chain map without primary evidence",
+      "media mapping without named primary evidence",
+      "generic robot product mention",
+      "policy support alone",
+      "T2 unnamed head-customer clue"
+    ]
+  },
+  "decision_contract": {
+    "new_evidence_default": "EVIDENCE_PROPOSAL",
+    "human_review_required": true,
+    "auto_canonical": false,
+    "auto_candidate_state_change": false,
+    "auto_theme_stage_change": false,
+    "tesla_link_requires_named_verifiable_evidence": true,
+    "canonical_unit": "FACT",
+    "append_only_review_history": true,
+    "no_hindsight": true,
+    "no_silent_override": true,
+    "no_hype_mapping": true,
+    "registry_expansion_does_not_expand_current22_lane": true
+  },
+  "output_states": [
+    "NO_NEW_MATERIAL_EVIDENCE",
+    "EVIDENCE_PROPOSAL",
+    "HUMAN_REVIEW_REQUIRED",
+    "STAGE2_GATE_CANDIDATE",
+    "CONTRADICTION_ALERT"
+  ],
+  "safety": {
+    "research_only": true,
+    "broker": false,
+    "orders": false,
+    "production_db": false,
+    "registry_mutation": false,
+    "canonicalization_mutation": false
+  },
+  "registry_partition": {
+    "registry_candidate_count": 24,
+    "current_canonical_monitor_universe_count": 22,
+    "discovery_only_count": 2,
+    "discovery_only_symbols": [
+      "603416.SH",
+      "603809.SH"
+    ],
+    "current_22_universe_remains_frozen": true,
+    "discovery_only_do_not_enter_v071_current22_lane": true,
+    "candidate_count_is_not_fixed": true
+  }
+}

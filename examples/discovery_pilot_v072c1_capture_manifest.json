@@ -1,0 +1,50 @@
+{
+  "manifest_id": "OPTIMUS_DISCOVERY_PILOT_V0_7_2C_1_CAPTURE",
+  "captures": [
+    {
+      "source_id": "SRC_SSE_OFFICIAL",
+      "lane": "NEW_CANDIDATE_DISCOVERY",
+      "entity_name": "无锡信捷电气股份有限公司",
+      "symbol": "603416.SH",
+      "source_url": "https://roadshow.sseinfo.com/stayTuned/41251",
+      "document_title": "信捷电气2026年半年度业绩说明会",
+      "published_at": "2026-09-16T10:01:30+08:00",
+      "event_time": "2026-09-16T10:01:30+08:00",
+      "language": "zh-CN",
+      "search_recall": {
+        "role": "OFFICIAL_DISCOVERY",
+        "note": "Official SSE Roadshow source; historical pre-case discovery evidence only."
+      }
+    },
+    {
+      "source_id": "SRC_SSE_OFFICIAL",
+      "lane": "NEW_CANDIDATE_DISCOVERY",
+      "entity_name": "成都豪能科技股份有限公司",
+      "symbol": "603809.SH",
+      "source_url": "https://big5.sse.com.cn/disclosure/listedinfo/announcement/c/new/2025-09-13/603809_20250913_ZVJZ.pdf",
+      "document_title": "豪能股份官方投资者交流/公告材料（2025-09-13）",
+      "published_at": "2025-09-13T00:00:00+08:00",
+      "event_time": "2025-09-13T00:00:00+08:00",
+      "language": "zh-CN",
+      "search_recall": {
+        "role": "OFFICIAL_DISCOVERY",
+        "note": "Official SSE PDF; historical discovery evidence only."
+      }
+    },
+    {
+      "source_id": "SRC_SSE_OFFICIAL",
+      "lane": "NEW_CANDIDATE_DISCOVERY",
+      "entity_name": "成都旭光电子股份有限公司",
+      "symbol": "600353.SH",
+      "source_url": "https://roadshow.sseinfo.com/activityDetails/41419",
+      "document_title": "旭光电子2026年半年度业绩说明会",
+      "published_at": "2026-10-08T16:14:31+08:00",
+      "event_time": "2026-10-08T16:14:31+08:00",
+      "language": "zh-CN",
+      "search_recall": {
+        "role": "OFFICIAL_DISCOVERY",
+        "note": "Official SSE Roadshow source; prospective candidate-validation evidence."
+      }
+    }
+  ]
+}

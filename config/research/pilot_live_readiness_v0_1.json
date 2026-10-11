@@ -1,0 +1,16 @@
+{
+  "policy_id": "PILOT_LIVE_READINESS_V0_1",
+  "status": "FROZEN_ENGINEERING_GATE_V0_1",
+  "gates": {
+    "G1_STRATEGY_EVIDENCE": "Deep #1 + RET120 #2 frozen historical/incremental evidence",
+    "G2_TRUE_FORWARD_BURN_IN": "20 common real Forward sessions; no retro reconstruction",
+    "G3_PORTFOLIO_SHADOW": "20 common Strategy Portfolio shadow sessions",
+    "G4_EXECUTION_EQUIVALENCE": "at least 20 shadow order decisions and frozen execution policy",
+    "G5_BOARD_LOT_CAPITAL_FLOOR": ">=90% target-order fidelity within +/-25% relative target-weight error",
+    "G6_RISK_AND_RECOVERY": "fail-closed risk/reconcile/backup/restore/duplicate-intent controls pass",
+    "G7_PILOT_POLICY_FREEZE": "capital amount, sleeve budgets, gross/symbol caps, manual approval, kill switch and max RMB loss frozen before first live order"
+  },
+  "pilot_mode": "MANUAL_APPROVAL_REQUIRED",
+  "auto_execute": false,
+  "note": "Formal strategy Forward review gates are not prerequisites for Pilot Live; Pilot is a controlled real-money execution validation stage."
+}

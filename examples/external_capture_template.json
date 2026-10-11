@@ -1,0 +1,24 @@
+{
+  "source_id": "SRC_TESLA_CORPORATE_OFFICIAL",
+  "lane": "THEME_OFFICIAL",
+  "entity_name": "Tesla, Inc.",
+  "symbol": "TSLA",
+  "entity_identifier": {
+    "scheme": "CIK",
+    "value": "0001318605"
+  },
+  "source_url": "https://www.tesla.com/AI",
+  "document_title": "AI & Robotics",
+  "published_at": null,
+  "event_time": null,
+  "observed_at": "2026-10-10T09:30:00+08:00",
+  "capture_method": "MANUAL_OR_EXTERNAL_CAPTURE",
+  "media_type": "text/html",
+  "language": "en",
+  "raw_file_path": "D:\\path\\to\\captured_tesla_ai.html",
+  "search_recall": {
+    "role": "RECALL_ONLY",
+    "query": "Tesla Optimus official",
+    "note": "Search metadata is not evidence and is never promoted to a Fact."
+  }
+}

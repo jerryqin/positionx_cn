@@ -1,0 +1,20 @@
+{
+  "manifest_id": "OPTIMUS_DISCOVERY_603416_STATIC_SSE_ANNOUNCEMENT",
+  "captures": [
+    {
+      "source_id": "SRC_SSE_OFFICIAL",
+      "lane": "NEW_CANDIDATE_DISCOVERY",
+      "entity_name": "无锡信捷电气股份有限公司",
+      "symbol": "603416.SH",
+      "source_url": "https://static.sse.com.cn/disclosure/listedinfo/announcement/c/new/2026-09-17/603416_20260917_NI0X.pdf",
+      "document_title": "无锡信捷电气股份有限公司关于2026年半年度业绩说明会召开情况的公告",
+      "published_at": "2026-09-17T00:00:00+08:00",
+      "event_time": "2026-09-16T10:01:30+08:00",
+      "language": "zh-CN",
+      "search_recall": {
+        "role": "OFFICIAL_DISCOVERY",
+        "note": "Static SSE post-event announcement; preferred over image-only browser print of SSEInfo roadshow."
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "research_id": "OPTIMUS_M_EVIDENCE_V0_1",
+  "market_catalog": "D:/positionx_data/catalog/market_data.duckdb",
+  "market_view": "market.daily_bars_v1",
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/m_evidence",
+  "candidates": [
+    {"symbol": "002050.SZ", "company": "三花智控", "f_status": "POSSIBLE", "component_domain": "actuators / thermal-mechatronics"},
+    {"symbol": "601689.SH", "company": "拓普集团", "f_status": "POSSIBLE", "component_domain": "actuators / dexterous hand / structure"},
+    {"symbol": "688017.SH", "company": "绿的谐波", "f_status": "POSSIBLE", "component_domain": "harmonic reducers / precision drive"},
+    {"symbol": "300433.SZ", "company": "蓝思科技", "f_status": "POSSIBLE", "component_domain": "joints / dexterous hand / structure / assembly"},
+    {"symbol": "300124.SZ", "company": "汇川技术", "f_status": "POSSIBLE", "component_domain": "motors / servo / joints / sensors"},
+    {"symbol": "603667.SH", "company": "五洲新春", "f_status": "POSSIBLE_INDIRECT", "component_domain": "bearings / screws"},
+    {"symbol": "600699.SH", "company": "均胜电子", "f_status": "SPECULATIVE", "component_domain": "controllers / energy / sensors / joints"}
+  ],
+  "rules": {
+    "min_history_sessions": 125,
+    "market_min_daily_symbols": 3000,
+    "near_high_pct": 0.03,
+    "amount_expansion_threshold": 1.10
+  }
+}

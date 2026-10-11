@@ -1,0 +1,79 @@
+{
+  "inbox_id": "OPTIMUS_NORMALIZED_EXTERNAL_INBOX_V0_7_2A",
+  "contract_id": "OPTIMUS_GLOBAL_DISCOVERY_MONITOR_V0_7_4_POST_EXPANSION",
+  "mode": "NORMALIZE_AND_STORE_RAW_SOURCE_CAPTURE_ONLY",
+  "output_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\external_inbox_v0_7_2a",
+  "source_registry_path": "config/research/optimus_external_source_registry_v072a.json",
+  "dependency_paths": {
+    "v072_script": "scripts/run_optimus_global_discovery_monitor_v072.py",
+    "v072_config": "config/research/optimus_global_discovery_monitor_v072.json"
+  },
+  "dependency_sha256": {
+    "v072_script": "36d044485f631c142d03d8225c63b141db3ecf0c1fecd9d30a29861e23b37696",
+    "v072_config": "0e522b7b57df4694bf75e8c911cc6603c17931e3611059eb4a6ae42da2d8aff4"
+  },
+  "input_contract": {
+    "required_fields": [
+      "source_id",
+      "lane",
+      "entity_name",
+      "source_url",
+      "document_title",
+      "observed_at",
+      "raw_file_path"
+    ],
+    "optional_fields": [
+      "symbol",
+      "entity_identifier",
+      "published_at",
+      "event_time",
+      "capture_method",
+      "media_type",
+      "language",
+      "search_recall"
+    ],
+    "reserved_inference_fields_rejected": [
+      "fact_id",
+      "fact_key",
+      "claim_text",
+      "evidence_level",
+      "tesla_link_level",
+      "f_status",
+      "candidate_state",
+      "theme_stage",
+      "canonical_state"
+    ],
+    "event_time_may_be_null": true,
+    "observed_at_must_be_timezone_aware": true,
+    "event_time_never_backfilled_from_observed_at": true,
+    "raw_bytes_required": true
+  },
+  "storage_contract": {
+    "capture_identity": "SHA256(source_id + canonical_url + raw_sha256)",
+    "same_identity_same_bytes": "ALREADY_INGESTED",
+    "same_url_new_bytes": "NEW_CAPTURE_VERSION",
+    "copy_raw_bytes": true,
+    "write_normalized_json": true,
+    "immutable_existing_capture": true
+  },
+  "safety": {
+    "research_only": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "fact_inference": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  },
+  "post_expansion_rebase": {
+    "registry_candidate_count": 24,
+    "storage_contract_changed": false,
+    "capture_identity_changed": false,
+    "source_registry_changed": false
+  },
+  "upstream_component_domain_contract": {
+    "current22_parser": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "external_capture_identity_unchanged": true
+  }
+}

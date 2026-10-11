@@ -1,0 +1,92 @@
+forward_id: RET120_UNIVERSE_PRIOR_FORWARD_V1_0_2
+
+paths:
+  project_root: 'D:\positionx_cn'
+  pit_root: 'D:\positionx_data\pit_live'
+  output_root: 'D:\positionx_data\pit_live\ret120_universe_prior_forward_v1_0_2'
+  exact_scanner_source: 'D:\positionx_cn\research\trend_edge_scan.py'
+
+hashes:
+  exact_scanner_source: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+
+signal:
+  representation: QMT_BACK_RATIO_CURRENT_FORWARD
+  feature: RET120
+  formula: 'close(T) / close.shift(120) - 1'
+  signal_time: T_CLOSE
+  bucket_method: 'exact frozen assign_quintiles(rank(method=first) then qcut5)'
+  min_valid_fraction: 0.80
+  min_valid_absolute:
+    CSI300: 50
+    CSI500: 50
+    CSI1000: 50
+    EX_CSI1800: 50
+
+membership:
+  source: DAILY_PIT_PREOPEN_QMT
+  expected_counts:
+    CSI300: 300
+    CSI500: 500
+    CSI1000: 1000
+  index_codes:
+    CSI300: '000300.SH'
+    CSI500: '000905.SH'
+    CSI1000: '000852.SH'
+  require_exact_signal_date_preopen_capture: true
+  require_cross_index_disjoint: true
+
+full_market:
+  qmt_sector_candidates: ['沪深A股', '沪A', '深A']
+  allowed_suffixes: ['.SH', '.SZ']
+  exclude_prefixes: ['200', '900']
+  min_symbol_count: 3000
+
+qmt_history:
+  lookback_calendar_days: 400
+  refresh_chunk_size: 100
+  refresh_only_incomplete_symbols: true
+  capture_auto_refresh: false
+  progress_callback: true
+  progress_print_min_seconds: 5
+  refresh_api: download_history_data2
+  read_api: get_local_data
+  dividend_type: back_ratio
+  fill_data: false
+
+interpretation_rules:
+  CSI300:
+    Q5:
+      momentum_candidate: true
+      momentum_confidence: STRONG
+      preferred_horizon: '60_120D'
+  CSI500:
+    Q5:
+      momentum_candidate: true
+      momentum_confidence: STRONG
+      preferred_horizon: '60_120D'
+  CSI1000:
+    Q5:
+      momentum_candidate: true
+      momentum_confidence: MEDIUM
+      preferred_horizon: '120D'
+  EX_CSI1800:
+    Q5:
+      momentum_candidate: false
+      momentum_penalty: true
+      preferred_horizon: '20_120D'
+    Q1:
+      mean_reversion_candidate: true
+      action_semantics: 'CANDIDATE_ONLY_NOT_BUY_SIGNAL'
+
+guardrails:
+  no_strategy2_change: true
+  no_existing_forward_change: true
+  research_only: true
+  no_broker: true
+  no_orders: true
+  no_production_db: true
+  immutable_capture: true
+  same_day_duplicate_capture: fail_closed
+  no_historical_reconstruction_from_current_membership: true
+  qmt_cache_refresh_allowed: true
+  qmt_cache_refresh_is_data_acquisition_not_trading: true

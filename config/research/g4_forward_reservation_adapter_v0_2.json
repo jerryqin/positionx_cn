@@ -1,0 +1,27 @@
+{
+  "policy_id": "G4_FORWARD_RESERVATION_ADAPTER_V0_2",
+  "purpose": "T-close reservation from actual Forward pending signals; no Pilot notional until T+1 open confirmation.",
+  "sources": {
+    "deep": {
+      "table": "forward_signals",
+      "state": "data/research/forward_deep_oversold_csi500_v1_1/state.json"
+    },
+    "ret120": {
+      "table": "ret120_forward_signals",
+      "state": "data/research/forward_ret120_csi500_v1_0/state.json"
+    }
+  },
+  "pending_status_mapping": "infer only by unique exact reconciliation to state.pending_signals; ambiguous/no solution fails closed",
+  "sampling": {
+    "CANARY": 1,
+    "EXPANDED": 2,
+    "unique_symbol_per_signal_date": true,
+    "price_blind": true
+  },
+  "reservation_status": "RESERVED_AWAIT_T1_OPEN_CONFIRMATION",
+  "pilot_notional_at_reservation": null,
+  "writes_research_duckdb_only": true,
+  "qmt": false,
+  "broker": false,
+  "production_db": false
+}

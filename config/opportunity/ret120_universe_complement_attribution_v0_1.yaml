@@ -1,0 +1,74 @@
+research_id: RET120_UNIVERSE_COMPLEMENT_ATTRIBUTION_V0_1
+
+source:
+  frozen_csi500_panel: 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+  expected_frozen_csi500_panel_sha256: '66b358a54c33866dd03aae187c1d60379a0317df3c15fe3d453babb430b338f1'
+  exact_scanner_source: 'D:\positionx_cn\research\trend_edge_scan.py'
+  expected_scanner_source_sha256: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+  current_qmt_ret120: 'D:\positionx_data\research\opportunity_engine\ret120_current_vintage_paired_universe_v0_4\current_qmt_ret120.parquet'
+  expected_current_qmt_ret120_sha256: '2fb3c7216e81749541e45d10f8c9cb0ce2b385b1fa1b9005e44c3499139ab4d2'
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+
+window:
+  signal_start: '2020-08-03'
+  signal_cutoff_h120: '2026-04-08'
+  market_data_through: '2026-09-30'
+  snapshot_acquired_on: '2026-10-06'
+
+frozen_folds:
+  F1: ['2020-08-03','2022-10-17']
+  F2: ['2022-10-18','2024-09-19']
+  F3: ['2024-09-20','2026-09-24']
+
+universes:
+  CSI500_CURRENT: 'historical CSI500 PIT symbol-date keys from frozen panel'
+  FULL_MARKET_CURRENT: 'SH/SZ full-market tradable PIT keys'
+  EX_CSI500_CURRENT: 'FULL_MARKET_CURRENT anti-join CSI500_CURRENT on signal_date,symbol'
+
+signal:
+  representation: 'CURRENT_VINTAGE_QMT_BACK_RATIO'
+  ret120: 'already materialized current_qmt_ret120 from V0.4'
+  bucket: 'exact hash-locked scanner assign_quintiles after signal-date,symbol ASC ordering'
+  daily_feature_coverage_min_fraction: 0.80
+  daily_feature_coverage_min_absolute: 50
+
+economic_measurement:
+  representation: 'canonical synthetic corporate-action-safe state'
+  entry: 'T+1 OPEN'
+  exits: ['S20 CLOSE','S60 CLOSE','S120 CLOSE']
+  common_date_benchmark: 'FULL_MARKET_CURRENT same-date/horizon median raw return'
+  purpose: 'descriptive attribution only; no portfolio simulation'
+
+v04_reproduction_reference:
+  CSI500_CURRENT:
+    H20: {q5_minus_q1: 0.0014284264868794031, monotonicity: 0.8, positive_folds: 1}
+    H60: {q5_minus_q1: 0.01712697281684292, monotonicity: 0.9, positive_folds: 3}
+    H120: {q5_minus_q1: 0.03289545243595762, monotonicity: 1.0, positive_folds: 3}
+  FULL_MARKET_CURRENT:
+    H20: {q5_minus_q1: -0.01068550345433044, monotonicity: -1.0, positive_folds: 0}
+    H60: {q5_minus_q1: -0.01345403146980895, monotonicity: -0.3, positive_folds: 1}
+    H120: {q5_minus_q1: -0.010468243162796848, monotonicity: -0.3, positive_folds: 1}
+  numeric_tolerance: 1.0e-10
+
+diagnostic_interpretation:
+  COMPLEMENT_INVERSE: 'EX_CSI500 has Q5-Q1 < 0 at all H20/H60/H120'
+  COMPLEMENT_MOSTLY_INVERSE: 'EX_CSI500 has Q5-Q1 < 0 at exactly two horizons'
+  NO_CLEAR_COMPLEMENT_INVERSION: 'otherwise'
+  no_strategy_qualification: true
+  no_filter_selection: true
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\ret120_universe_complement_attribution_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt_calls: true
+  no_broker: true
+  no_orders: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  existing_strategy2_unchanged: true
+  existing_forward_unchanged: true

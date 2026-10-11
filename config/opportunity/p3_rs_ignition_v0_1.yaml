@@ -1,0 +1,69 @@
+research_id: OPPORTUNITY_P3_RS_IGNITION_V0_1
+
+source:
+  universe_panel: 'D:\positionx_data\research\opportunity_engine\d2_compression_breakout_v0_1\d2_compression_breakout_v0_1_panel.parquet'
+  expected_universe_panel_sha256: 'edbfc337f413d1d316d7bb1e9734873cb64ccee6d6743b106e97cd20a48ec38a'
+  market_catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+  market_table: 'market.daily_bars_v1'
+
+research_domain:
+  include_suffixes: ['.SH', '.SZ']
+  exclude_bse: true
+  exclude_b_share: true
+  eligible_keys: 'symbol x trade_date keys present in the frozen Opportunity Engine D2 panel'
+
+mechanism:
+  family: P3_RELATIVE_STRENGTH_IGNITION
+  name: FRESH_TOP_DECILE_RS20_IGNITION_FROM_NON_LEADERSHIP
+  signal_time: 'T CLOSE'
+  setup:
+    baseline_event: 'fresh entry into top decile of same-day cross-sectional 20-session return rank'
+    crossing_rule: 'RS20_rank(T) >= 0.90 AND RS20_rank(T-1 symbol session) < 0.90'
+  signal:
+    ignition_rule: 'baseline_event AND RS20_rank(T-20 symbol sessions) <= 0.50'
+    interpretation: 'new leadership reached rapidly from non-leadership, rather than persistent leadership'
+  baseline: 'all fresh top-decile RS20 entrants with same T+1 OPEN evaluation timing'
+  hypothetical_entry: 'T+1 OPEN'
+  no_parameter_scan: true
+
+price_adjustment:
+  daily_factor: 'close / pre_close'
+  adj_close: 'cumprod(daily_factor)'
+  adj_open: 'adj_close * open / close'
+  adj_high: 'adj_close * high / close'
+  adj_low: 'adj_close * low / close'
+
+labels:
+  primary:
+    name: P3_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    name: P3_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+  evaluation_population: MATURED_ONLY
+
+gate:
+  selected_min: 200
+  primary_lift_vs_baseline_min: 1.25
+  primary_precision_minus_baseline_min: 0.03
+  positive_years_min: 5
+  pass_effect: mechanism survives to robustness only; NOT Strategy qualification
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\p3_rs_ignition_v0_1'
+
+safety:
+  research_only: true
+  market_catalog_read_only: true
+  universe_panel_read_only: true
+  no_market_outcome_tuning: true
+  no_parameter_scan: true
+  not_a_d2_rescue: true
+  not_a_p1_rescue: true
+  not_a_p2_rescue: true
+  production_db: false
+  broker: false
+  qmt: false

@@ -1,0 +1,100 @@
+{
+  "apply_id": "OPTIMUS_DISCOVERY_REGISTRY_EXPANSION_V0_7_3_APPLY",
+  "mode": "GUARDED_APPLY_AFTER_EXPLICIT_HUMAN_APPROVAL",
+  "approval": {
+    "approved": true,
+    "approval_text": "批准 V0.7.3 APPLY：603416.SH + 603809.SH，均以 DISCOVERY_ONLY / SPECULATIVE / tesla_link_level=0 加入 Registry。",
+    "approval_token": "V0.7.3_603416_603809_APPROVED"
+  },
+  "dependency_paths": {
+    "registry_script": "scripts/run_optimus_candidate_registry_v03.py",
+    "registry_config": "config/research/optimus_candidate_registry_v0_3.json",
+    "plan_script": "scripts/run_optimus_discovery_registry_expansion_v073.py",
+    "plan_config": "config/research/optimus_discovery_registry_expansion_v073_plan.json"
+  },
+  "dependency_sha256": {
+    "registry_script": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884",
+    "registry_config": "72534bc362f86ebfbae5436a7c871e849b048130860337ea4b242e3c589eb66e",
+    "plan_script": "1938c56543ef604f2b33c5080a8bc0f5844c03ca738b93a46dd7d5863a9be423",
+    "plan_config": "fa2235cc1d557e81a5db7871592eed1ca2d709a7592bf53436c98a65c8c3b965"
+  },
+  "approved_plan": {
+    "manifest_path": "D:\\positionx_data\\research\\big_opportunity\\optimus\\discovery_registry_expansion_v0_7_3\\20261010\\20261010T112828+0800_plan\\manifest.json",
+    "manifest_payload_sha256": "cf6dad84cb60e67d3e27962b5b8dcf80da0ae862b561abb25c148143d0d5142e",
+    "planned_evidence_sha256": "72c351f96216b69d2161e24d376a834c35fcac1a1eef5d1cb4be37184686a91f",
+    "human_review_sha256": "856c335676669507a0ec2f3b0c2460d6c8ac7029847ba22cf3c2a6459d06b27a",
+    "symbols": [
+      "603416.SH",
+      "603809.SH"
+    ],
+    "evidence_count": 2,
+    "lifecycle": "DISCOVERY_ONLY",
+    "f_status": "SPECULATIVE",
+    "review_state": "PROVISIONAL",
+    "tesla_link_level": 0
+  },
+  "registry_precondition": {
+    "registry_sha256": "da749d2c79b64695fddbbda575900d6e047be39e479e3a836eb73c0d1fbbe2ca",
+    "candidate_count": 22,
+    "active_canonical": 22,
+    "discovery_only": 0,
+    "active_seed": 0,
+    "canonical_candidates": 22
+  },
+  "postconditions": {
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "canonical_candidates": 22,
+    "evidence_count_delta": 2,
+    "provisional_evidence_count_delta": 2,
+    "review_decision_count_delta": 0,
+    "symbols": {
+      "603416.SH": {
+        "company": "无锡信捷电气股份有限公司",
+        "component_domain": "frameless torque motors / humanoid joint components",
+        "lifecycle_state": "DISCOVERY_ONLY",
+        "f_status": "SPECULATIVE",
+        "canonical": false,
+        "needs_review": true,
+        "freshness_state": "PROVISIONAL_ONLY",
+        "origin": "EVIDENCE_DISCOVERY",
+        "state_basis": "PROVISIONAL_EVIDENCE_ONLY",
+        "max_evidence_level": 0,
+        "max_tesla_link_level": 0,
+        "positive_evidence_count": 0,
+        "provisional_evidence_count": 1,
+        "contradiction_count": 0
+      },
+      "603809.SH": {
+        "company": "成都豪能科技股份有限公司",
+        "component_domain": "precision robot reducers / joint drive assemblies",
+        "lifecycle_state": "DISCOVERY_ONLY",
+        "f_status": "SPECULATIVE",
+        "canonical": false,
+        "needs_review": true,
+        "freshness_state": "PROVISIONAL_ONLY",
+        "origin": "EVIDENCE_DISCOVERY",
+        "state_basis": "PROVISIONAL_EVIDENCE_ONLY",
+        "max_evidence_level": 0,
+        "max_tesla_link_level": 0,
+        "positive_evidence_count": 0,
+        "provisional_evidence_count": 1,
+        "contradiction_count": 0
+      }
+    }
+  },
+  "output_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\discovery_registry_expansion_v0_7_3_apply",
+  "safety": {
+    "explicit_approval_required": true,
+    "simulation_before_real_apply": true,
+    "database_backup_before_real_apply": true,
+    "restore_on_postcondition_failure": true,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

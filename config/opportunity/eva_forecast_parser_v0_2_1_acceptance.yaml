@@ -1,0 +1,47 @@
+research_id: OPPORTUNITY_EVA_FORECAST_PARSER_V0_2_1_ACCEPTANCE
+
+baseline_v02:
+  path: 'D:\positionx_data\incoming\eva\forecast_semantic_corpus_2020_2026_parser_v0_2\semantic_events_2020_2026_v0_2.parquet'
+  sha256: 'fca87ddf942f6e28d05cae2eadad965b89b6f2f7de2acd62780edff069870c4e'
+
+candidate_paths:
+  - 'D:\positionx_data\incoming\eva\forecast_semantic_corpus_2020_2026_parser_v0_2_1\semantic_events_2020_2026_v0_2_1.parquet'
+  - 'D:\positionx_data\incoming\eva\20261004_forecast_semantic_corpus_2020_2026_parser_v0_2_1\semantic_events_2020_2026_v0_2_1.parquet'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\eva_forecast_parser_v0_2_1_acceptance'
+
+gate:
+  row_count_exact: 32916
+  identity_coverage_min: 1.0
+  identity_extra_max: 0
+  duplicate_identity_max: 0
+  event_time_exact_match_min: 1.0
+  event_precision_exact_match_min: 1.0
+  pdf_sha256_exact_match_min: 1.0
+  title_normalized_match_min: 0.99
+
+  event_kind_exact_match_min: 1.0
+  explicit_st_exact_match_min: 1.0
+  strategy_eligible_exact_match_min: 1.0
+  exclusion_reason_exact_match_min: 1.0
+
+  eligible_strict_payload_min: 0.99
+  eligible_yearly_strict_payload_min: 0.99
+
+  eligible_current_profit_min_coverage_min: 0.95
+  eligible_current_profit_max_coverage_min: 0.95
+  eligible_yearly_current_profit_min_coverage_min: 0.95
+  eligible_yearly_current_profit_max_coverage_min: 0.95
+
+  payload_regression_rows_max: 0
+  current_profit_min_regression_rows_max: 0
+  current_profit_max_regression_rows_max: 0
+
+  event_years_exact:
+    - 2020
+    - 2021
+    - 2022
+    - 2023
+    - 2024
+    - 2025
+    - 2026

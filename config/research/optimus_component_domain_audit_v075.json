@@ -1,0 +1,73 @@
+{
+  "audit_id": "OPTIMUS_COMPONENT_DOMAIN_AUDIT_V0_7_5",
+  "mode": "READ_ONLY_DIAGNOSTIC",
+  "target": {
+    "symbol": "002979.SZ",
+    "company": "雷赛智能",
+    "source_evidence_id": "EACQ_5afda139f7d4dd9a1f33b7bb",
+    "canonical_evidence_id": "CFE_ef6afb1d4f48e8166d81bfdb",
+    "expected_source_domain": "reducers / precision transmission",
+    "expected_canonical_domain": "motion control core components / humanoid robotics"
+  },
+  "post_rebase_contract": {
+    "baseline_id": "OPTIMUS_STEADY_STATE_V0_7_4_1_POST_LEISAI_CANONICALIZATION_FREEZE_BASELINE",
+    "baseline_sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a",
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "current_monitor_universe_count": 22,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "canonical_fact_count": 25,
+    "materialized_fact_evidence_count": 25
+  },
+  "dependencies": {
+    "steady_checker": {
+      "path": "scripts/run_optimus_steady_state_v074.py",
+      "sha256": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da"
+    },
+    "steady_baseline": {
+      "path": "config/research/optimus_steady_state_baseline_v074.json",
+      "sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a"
+    },
+    "v071_config": {
+      "path": "config/research/optimus_prospective_intake_v071.json",
+      "sha256": "170c298002e1950eb8736d325ed6d0d20c6e8f1a57ef11041ea2da83b23977f4"
+    },
+    "evidence_script": {
+      "path": "scripts/run_optimus_evidence_acquisition_v04.py",
+      "sha256": "10e5a8288177c76e207fa264f74e18c3a878d95cf191585ca8a576643475a691"
+    },
+    "registry_script": {
+      "path": "scripts/run_optimus_candidate_registry_v03.py",
+      "sha256": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+    }
+  },
+  "scope": {
+    "parser_version": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_4",
+    "include_registry_evidence": true,
+    "include_v071_proposal_queues": true,
+    "requires_local_pdf_for_recompute": true,
+    "no_ocr": true,
+    "diagnostic_only": true,
+    "proposal_search_root": "D:/positionx_data/research/big_opportunity/optimus/prospective_monitor_v0_7_1"
+  },
+  "diagnostic_policy": {
+    "order_sensitive": "two_or_more_component_domains_have_hits_in_context_windows",
+    "first_match_minority_risk": "stored_or_recomputed_first_match_domain_has_fewer_hit_windows_than_another_domain",
+    "source_canonical_divergence": "source_anchor_domain_differs_from_materialized_canonical_evidence_domain",
+    "no_auto_reclassification": true,
+    "no_registry_change": true,
+    "no_canonicalization_change": true
+  },
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/component_domain_audit_v0_7_5",
+  "safety": {
+    "research_only": true,
+    "read_only_db": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

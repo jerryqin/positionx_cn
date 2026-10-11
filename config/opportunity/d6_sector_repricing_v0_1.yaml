@@ -1,0 +1,66 @@
+research_id: OPPORTUNITY_D6_SECTOR_REPRICING_V0_1
+
+source_panel: 'D:\positionx_data\research\opportunity_engine\d4_sector_ignition_v0_1\d4_sector_ignition_v0_1_panel.parquet'
+source_panel_sha256: d91fee83811c28205efef5643f9c8378fadb17ff7241f96f5e51dcd4206b774e
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\d6_sector_repricing_v0_1'
+
+mechanism:
+  family: D6_SECTOR_REPRICING
+  name: SECTOR_RELATIVE_REPRICING_TO_FOLLOWER_CONTINUATION
+  signal_time: T_CLOSE
+  hypothetical_entry: T_PLUS_1_OPEN
+
+  sector_min_members: 10
+
+  follower_setup:
+    sector_ret20_rank_min: 0.40
+    sector_ret20_rank_max_exclusive: 0.70
+    description: 'same follower baseline as D5; held fixed to isolate the sector trigger'
+
+  sector_state:
+    sector_ret20: 'median RET20 of PIT sector members'
+    market_ret20: 'median RET20 of PIT market universe'
+    excess_definition: 'sector median RET20 - market median RET20'
+
+  repricing_impulse:
+    delta_sessions: 5
+    definition: 'sector_excess_ret20(T) - sector_excess_ret20(T-5)'
+    history_sessions: 126
+    ignition_quantile: 0.75
+    current_day_excluded_from_threshold: true
+
+  signal: 'follower_setup AND sector_repricing_ignition'
+  no_parameter_scan: true
+
+labels:
+  primary:
+    source_column: D4_TREND25_60_label
+    name: D6_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    source_column: D4_TREND40_120_label
+    name: D6_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+  label_origin: 'REUSED_FROM_D4_PANEL_BECAUSE_SIGNAL_TIME_AND_ENTRY_TIMING_ARE_IDENTICAL'
+
+gate:
+  baseline: 'ALL_FOLLOWER_SETUP_ROWS_WITH_SAME_T_PLUS_1_ENTRY_TIMING'
+  selected_min: 200
+  primary_lift_vs_setup_min: 1.25
+  primary_precision_minus_setup_min: 0.03
+  positive_years_min: 5
+  qualification_effect: 'PASS advances only to robustness; NOT Strategy qualification'
+
+operational_diagnostic:
+  desired_eventual_candidates_per_day: '5-20'
+  note: 'reported separately; never used to rescue the scientific mechanism'
+
+safety:
+  research_only: true
+  broker: false
+  qmt: false

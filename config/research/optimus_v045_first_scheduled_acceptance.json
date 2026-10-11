@@ -1,0 +1,60 @@
+{
+  "acceptance_id": "OPTIMUS_V0_4_5_FIRST_SCHEDULED_RUN_ACCEPTANCE",
+  "target_date": "2026-10-11",
+  "scheduled_data_root": "D:/positionx_data/research/big_opportunity/optimus/scheduled_current22_v0_7_4",
+  "task_name": "PositionX Optimus Current22 0830",
+  "frozen_contract": {
+    "baseline_id": "OPTIMUS_STEADY_STATE_V0_7_4_2_COMPONENT_DOMAIN_V0_4_5_FREEZE_BASELINE",
+    "baseline_sha256": "7ed350965ac08df8398aa2972b31d875dc8576e6ece08d16f79f4ad3473ba343",
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "current_monitor_universe_count": 22,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "parser_version": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "b8_dedupe_version": "V0_7_2B_8"
+  },
+  "dependencies": {
+    "scheduler_script": {
+      "path": "scripts/run_optimus_current22_scheduled_v074.py",
+      "sha256": "eedd75b1073d8db55bc2cf9a66595216c43e59baf807e7f61c916689eabddbcd"
+    },
+    "steady_checker": {
+      "path": "scripts/run_optimus_steady_state_v074.py",
+      "sha256": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da"
+    },
+    "evidence_script": {
+      "path": "scripts/run_optimus_evidence_acquisition_v04.py",
+      "sha256": "61a5d6db83a5dfde69870366b4cad20521218138c9f0d6a847ca7630f467a99f"
+    },
+    "v071_script": {
+      "path": "scripts/run_optimus_prospective_intake_v071.py",
+      "sha256": "0e0a707030b960f7f1e5530577cf1449071c29b0023b11fc13977d4b0d4d45df"
+    },
+    "v071_config": {
+      "path": "config/research/optimus_prospective_intake_v071.json",
+      "sha256": "efd4570054eb2de576639ab9f264970744204f550814fc22d29ecc5d77309f31"
+    }
+  },
+  "acceptance_policy": {
+    "scheduled_status": "PASS_OPTIMUS_CURRENT22_SCHEDULED_V0_7_4",
+    "steady_status": "PASS_OPTIMUS_STEADY_STATE_V0_7_4_CHECK",
+    "intake_status": "PASS_OPTIMUS_PROSPECTIVE_INTAKE_V0_7_1",
+    "intake_quality": "PASS",
+    "query_errors_must_be_empty": true,
+    "all_mutation_flags_false": true,
+    "proposal_parser_must_be_v045": true,
+    "ambiguous_proposal_queue_state": "HUMAN_REVIEW_REQUIRED",
+    "cross_parser_skip_counters_must_exist": true
+  },
+  "safety": {
+    "read_only": true,
+    "writes_files": false,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "OPTIMUS_CANONICALIZATION_V0_5",
+  "research_db": "D:/positionx_cn/data/research/positionx_research.duckdb",
+  "registry_script": "scripts/run_optimus_candidate_registry_v03.py",
+  "registry_config": "config/research/optimus_candidate_registry_v0_3.json",
+  "evidence_script": "scripts/run_optimus_evidence_acquisition_v04.py",
+  "default_plan": "config/research/optimus_canonicalization_seed_batch_v0_5_20261009.json",
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/canonicalization_v0_5",
+  "policy": {
+    "expected_source_parser": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_4",
+    "required_effective_review_state": "PROVISIONAL",
+    "require_full_parser_scope_coverage": true,
+    "auto_apply": false,
+    "apply_requires_exact_plan_sha256": true,
+    "one_anchor_per_fact": true,
+    "silent_level_override_allowed": false,
+    "silent_tesla_link_override_allowed": false,
+    "support_sources_rejected_as_duplicate_corroboration": true,
+    "physical_delete": false
+  }
+}

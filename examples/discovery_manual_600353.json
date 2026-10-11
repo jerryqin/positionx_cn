@@ -1,0 +1,20 @@
+{
+  "manifest_id": "OPTIMUS_DISCOVERY_MANUAL_600353",
+  "captures": [
+    {
+      "source_id": "SRC_SSE_OFFICIAL",
+      "lane": "NEW_CANDIDATE_DISCOVERY",
+      "entity_name": "成都旭光电子股份有限公司",
+      "symbol": "600353.SH",
+      "source_url": "https://roadshow.sseinfo.com/activityDetails/41419",
+      "document_title": "旭光电子2026年半年度业绩说明会",
+      "published_at": "2026-10-08T16:14:31+08:00",
+      "event_time": "2026-10-08T16:14:31+08:00",
+      "language": "zh-CN",
+      "search_recall": {
+        "role": "OFFICIAL_DISCOVERY",
+        "note": "Official SSE Roadshow source; prospective candidate-validation evidence."
+      }
+    }
+  ]
+}

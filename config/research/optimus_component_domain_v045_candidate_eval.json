@@ -1,0 +1,77 @@
+{
+  "evaluation_id": "OPTIMUS_COMPONENT_DOMAIN_V0_4_5_CANDIDATE_EVALUATION",
+  "mode": "READ_ONLY_CANDIDATE_EVALUATION",
+  "frozen_state": {
+    "baseline_id": "OPTIMUS_STEADY_STATE_V0_7_4_1_POST_LEISAI_CANONICALIZATION_FREEZE_BASELINE",
+    "baseline_sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a",
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "current_monitor_universe_count": 22,
+    "canonical_fact_count": 25,
+    "materialized_fact_evidence_count": 25
+  },
+  "audit_basis": {
+    "audit_manifest_payload_sha256": "789c79c1e505b6d9e68d5cac3dfff6fb56f558bfd5fa9e7263edc7447dc080c0",
+    "evidence_rows_considered": 50,
+    "recomputed_rows": 50,
+    "order_sensitive_rows": 27,
+    "first_match_minority_risk_rows": 8,
+    "stored_recompute_mismatch_rows": 0,
+    "target_evidence_id": "EACQ_5afda139f7d4dd9a1f33b7bb",
+    "target_current_domain": "reducers / precision transmission",
+    "target_expected_dominant_domain": "control / encoders"
+  },
+  "dependencies": {
+    "steady_checker": {
+      "path": "scripts/run_optimus_steady_state_v074.py",
+      "sha256": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da"
+    },
+    "steady_baseline": {
+      "path": "config/research/optimus_steady_state_baseline_v074.json",
+      "sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a"
+    },
+    "v071_config": {
+      "path": "config/research/optimus_prospective_intake_v071.json",
+      "sha256": "170c298002e1950eb8736d325ed6d0d20c6e8f1a57ef11041ea2da83b23977f4"
+    },
+    "evidence_script_v044": {
+      "path": "scripts/run_optimus_evidence_acquisition_v04.py",
+      "sha256": "10e5a8288177c76e207fa264f74e18c3a878d95cf191585ca8a576643475a691"
+    },
+    "registry_script": {
+      "path": "scripts/run_optimus_candidate_registry_v03.py",
+      "sha256": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+    }
+  },
+  "proposal_search_root": "D:/positionx_data/research/big_opportunity/optimus/prospective_monitor_v0_7_1",
+  "candidate_policy": {
+    "policy_id": "COMPONENT_DOMAIN_CONTEXT_WINDOW_DOMINANCE_V0_4_5_CANDIDATE",
+    "unknown_domain": "UNKNOWN_PENDING_REVIEW",
+    "ambiguous_domain": "AMBIGUOUS_MULTI_DOMAIN_PENDING_REVIEW",
+    "primary_metric": "context_window_hit_count",
+    "secondary_metric": "term_occurrence_count",
+    "minimum_window_margin_for_changed_domain": 2,
+    "minimum_ratio_for_changed_domain": 1.5,
+    "rules": [
+      "NO_HITS -> UNKNOWN_PENDING_REVIEW",
+      "ONE_DOMAIN -> THAT_DOMAIN",
+      "MULTI_DOMAIN_AND_OLD_DOMAIN_IS_UNIQUE_TOP -> KEEP_OLD_DOMAIN",
+      "MULTI_DOMAIN_AND_NEW_UNIQUE_TOP_WITH_MARGIN>=2_AND_RATIO>=1.5 -> UNIQUE_TOP_DOMAIN",
+      "OTHER_MULTI_DOMAIN_CASES -> AMBIGUOUS_MULTI_DOMAIN_PENDING_REVIEW"
+    ],
+    "historical_reclassification": false,
+    "future_parser_version_if_adopted": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "human_review_for_ambiguous": true
+  },
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/component_domain_v0_4_5_candidate_evaluation",
+  "safety": {
+    "read_only_db": true,
+    "no_production_classifier_change": true,
+    "no_historical_reclassification": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

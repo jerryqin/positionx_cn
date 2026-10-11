@@ -1,0 +1,52 @@
+
+research_id: OPPORTUNITY_D5_LEADER_LAGGARD_PROPAGATION_V0_1
+source_panel: 'D:\positionx_data\research\opportunity_engine\d4_sector_ignition_v0_1\d4_sector_ignition_v0_1_panel.parquet'
+source_panel_sha256: d91fee83811c28205efef5643f9c8378fadb17ff7241f96f5e51dcd4206b774e
+output_dir: 'D:\positionx_data\research\opportunity_engine\d5_leader_laggard_propagation_v0_1'
+
+mechanism:
+  family: D5_LEADER_LAGGARD_PROPAGATION
+  name: SECTOR_LEADER_IMPULSE_TO_FOLLOWER_PROPAGATION
+  signal_time: T_CLOSE
+  hypothetical_entry: T_PLUS_1_OPEN
+  sector_min_members: 10
+  leader:
+    sector_ret20_rank_min: 0.80
+    strength_definition: 'mean RET20 of top-quintile leaders minus sector median RET20'
+  follower_setup:
+    sector_ret20_rank_min: 0.40
+    sector_ret20_rank_max_exclusive: 0.70
+    description: 'middle-tier sector stocks that have not yet become leaders'
+  impulse:
+    delta_sessions: 5
+    definition: 'leader_spread20(T) - leader_spread20(T-5)'
+    history_sessions: 126
+    ignition_quantile: 0.75
+    current_day_excluded_from_threshold: true
+  signal: 'follower_setup AND leader_ignition'
+  no_parameter_scan: true
+
+labels:
+  primary:
+    source_column: D4_TREND25_60_label
+    name: D5_TREND25_60
+  secondary:
+    source_column: D4_TREND40_120_label
+    name: D5_TREND40_120
+  label_origin: 'REUSED_FROM_D4_PANEL_BECAUSE_ENTRY_TIMING_IS_IDENTICAL_T_PLUS_1_OPEN'
+
+gate:
+  baseline: 'ALL_FOLLOWER_SETUP_ROWS_WITH_SAME_T_PLUS_1_ENTRY_TIMING'
+  selected_min: 200
+  primary_lift_vs_setup_min: 1.25
+  primary_precision_minus_setup_min: 0.03
+  positive_years_min: 5
+  qualification_effect: 'PASS advances only to robustness'
+
+operational_diagnostic:
+  desired_eventual_candidates_per_day: '5-20'
+
+safety:
+  research_only: true
+  broker: false
+  qmt: false

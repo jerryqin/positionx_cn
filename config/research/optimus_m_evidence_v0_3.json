@@ -1,0 +1,15 @@
+{
+  "research_id": "OPTIMUS_M_EVIDENCE_V0_3",
+  "registry_db": "D:/positionx_cn/data/research/positionx_research.duckdb",
+  "registry_table": "optimus_candidate_registry_v03",
+  "market_catalog": "D:/positionx_data/catalog/market_data.duckdb",
+  "market_view": "market.daily_bars_v1",
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/m_evidence_v0_3",
+  "rules": {
+    "active_lifecycle_states": ["ACTIVE_SEED", "ACTIVE_CANONICAL"],
+    "min_history_sessions": 125,
+    "market_min_daily_symbols": 3000,
+    "near_high_pct": 0.03,
+    "amount_expansion_threshold": 1.10
+  }
+}

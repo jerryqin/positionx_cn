@@ -1,0 +1,124 @@
+{
+  "research_id": "RET120_EXIT_POLICY_QUALIFICATION_V0_1",
+  "paths": {
+    "project_root": "D:\\positionx_cn",
+    "market_db": "D:\\positionx_data\\catalog\\market_data.duckdb",
+    "market_table": "market.daily_bars_v1",
+    "fire_root": "D:\\positionx_data\\research\\opportunity_engine\\ret120_manual_fire_shadow_v0_1",
+    "output_root": "D:\\positionx_data\\research\\opportunity_engine\\ret120_exit_policy_qualification_v0_1"
+  },
+  "formal_forward": {
+    "formal_signal_start": "2026-10-08",
+    "meaning": "9/30 baseline/rehearsal may be diagnosed but is excluded from formal exit-policy qualification. First formal candidates are signal_date >= 2026-10-08.",
+    "entry_funnel_status": "FORWARD_ONLY_NOT_HISTORICALLY_QUALIFIED_AS_RET120_FILTER"
+  },
+  "structural_invalidation": {
+    "frozen_source": "Execution Funnel stop_raw derived from breakout level * (1 - 0.015)",
+    "comparison_space": "SYNTHETIC_ADJUSTED_PRICE",
+    "rule": "first post-entry session whose adjusted CLOSE is strictly below the frozen adjusted stop",
+    "equality": "close == stop remains valid",
+    "execution": "next tradable session OPEN; if suspended/missing valid open, defer until first valid open",
+    "intraday_wick_only": "does not invalidate if close recovers above stop",
+    "ma20_loss_alone": "diagnostic warning only; not an exit rule in V0.1"
+  },
+  "policies": {
+    "MOMENTUM": [
+      {
+        "policy_id": "M_FIXED_H60",
+        "type": "FIXED_HORIZON",
+        "horizon_sessions": 60,
+        "winner_candidate": true
+      },
+      {
+        "policy_id": "M_FIXED_H120",
+        "type": "FIXED_HORIZON",
+        "horizon_sessions": 120,
+        "winner_candidate": true
+      },
+      {
+        "policy_id": "M_STRUCT_ONLY",
+        "type": "STRUCTURAL_ONLY",
+        "winner_candidate": false
+      },
+      {
+        "policy_id": "M_HYBRID_STRUCT_H120",
+        "type": "HYBRID",
+        "horizon_sessions": 120,
+        "winner_candidate": true
+      }
+    ],
+    "MEAN_REVERSION": [
+      {
+        "policy_id": "R_FIXED_H20",
+        "type": "FIXED_HORIZON",
+        "horizon_sessions": 20,
+        "winner_candidate": true
+      },
+      {
+        "policy_id": "R_FIXED_H60",
+        "type": "FIXED_HORIZON",
+        "horizon_sessions": 60,
+        "winner_candidate": true
+      },
+      {
+        "policy_id": "R_STRUCT_ONLY",
+        "type": "STRUCTURAL_ONLY",
+        "winner_candidate": false
+      },
+      {
+        "policy_id": "R_HYBRID_STRUCT_H60",
+        "type": "HYBRID",
+        "horizon_sessions": 60,
+        "winner_candidate": true
+      }
+    ]
+  },
+  "fixed_horizon_execution": {
+    "scheduled_exit": "exact CLOSE on the Nth subsequent market session after fire_date",
+    "if_suspended_or_missing_close": "defer to first subsequent valid close"
+  },
+  "hybrid_priority": {
+    "rule": "structural exit wins only when structural trigger_date is strictly before the scheduled horizon date; otherwise use horizon close",
+    "same_day": "if trigger occurs on the scheduled horizon date, predetermined horizon CLOSE wins because structural signal is only known at that close"
+  },
+  "cost_stress": {
+    "round_trip_bps": [
+      0,
+      20,
+      50
+    ],
+    "formula": "net = (exit_adj / entry_adj) * (1 - round_trip_bps/10000) - 1"
+  },
+  "review_gate": {
+    "formal_completed_per_winner_policy_min": 60,
+    "calendar_months_from_first_formal_fire_min": 6,
+    "automatic_winner_selection": false,
+    "reason": "collect evidence first; do not invent a weighted score after observing results"
+  },
+  "metrics": [
+    "completed_n",
+    "avg_gross_return",
+    "median_gross_return",
+    "win_rate_gross",
+    "avg_net20",
+    "avg_net50",
+    "p10_net20",
+    "worst_net20",
+    "best_net20",
+    "avg_holding_sessions",
+    "structural_exit_fraction"
+  ],
+  "guardrails": {
+    "research_only": true,
+    "no_broker": true,
+    "no_orders": true,
+    "no_production_db": true,
+    "no_strategy2_change": true,
+    "no_existing_forward_change": true,
+    "no_execution_funnel_change": true,
+    "no_historical_entry_filter_replay": true,
+    "no_parameter_scan": true,
+    "no_exit_threshold_tuning": true,
+    "formal_verdict_uses_only_signal_date_on_or_after_formal_signal_start": true
+  }
+}

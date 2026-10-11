@@ -1,0 +1,26 @@
+pilot_id: CNINFO_BLANK_QUERY_EXACT_DATE_PILOT_V0_1_1
+input:
+  prior_summary: 'D:\positionx_data\research\data_audit\cninfo_blank_query_exact_date_pilot_v0_1\cninfo_blank_query_exact_date_pilot_v0_1_summary.json'
+  prior_detail: 'D:\positionx_data\research\data_audit\cninfo_blank_query_exact_date_pilot_v0_1\blank_query_pilot_detail_v0_1.csv'
+  prior_raw_dir: 'D:\positionx_data\research\data_audit\cninfo_blank_query_exact_date_pilot_v0_1\raw'
+cninfo:
+  api_urls:
+    - 'https://www.cninfo.com.cn/new/hisAnnouncement/query'
+    - 'http://www.cninfo.com.cn/new/hisAnnouncement/query'
+  referer: 'https://www.cninfo.com.cn/new/commonUrl?url=disclosure/list/notice'
+  page_size: 30
+  timeout_seconds: 45
+  attempts_per_page: 12
+  initial_backoff_seconds: 1.0
+  max_backoff_seconds: 10.0
+  inter_page_delay_seconds: 0.6
+decision:
+  recovery_min_each_cohort: 0.95
+output_dir: 'D:\positionx_data\research\data_audit\cninfo_blank_query_exact_date_pilot_v0_1_1'
+safety:
+  first_party_only: true
+  retry_failed_queries_only: true
+  no_market_outcomes: true
+  no_pdf_download: true
+  no_database_mutation: true
+  no_query_vocabulary_change: true

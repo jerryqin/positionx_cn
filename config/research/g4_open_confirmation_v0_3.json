@@ -1,0 +1,20 @@
+{
+  "policy_id": "G4_OPEN_CONFIRMATION_V0_3",
+  "shadow_book_rmb": 12000000,
+  "sleeves": {
+    "deep_rmb_initial": 6000000,
+    "ret120_rmb_initial": 6000000
+  },
+  "source_forward_base_equity_rmb": 1000000,
+  "linear_scale_factor": 6.0,
+  "timing": "T+1 continuous session, before Forward runner advances last_processed_date",
+  "market_guard": "production MarketDataService fresh tick + openInt/openInterest=13",
+  "entry_fillability": "STANDARD_OPEN_V1 conservative live mapping",
+  "deep_open_allocation": "fillable same-day candidates; pro-rata remaining 30% gross/cash",
+  "ret120_open_allocation": "fillable candidates SYMBOL_ASC; max30 positions; full1% while slot/gross/cash permit",
+  "pilot_target": "min(50000, confirmed_shadow_notional)",
+  "writes": "research DuckDB reservation confirmation only",
+  "broker": false,
+  "production_db": false,
+  "auto_execute": false
+}

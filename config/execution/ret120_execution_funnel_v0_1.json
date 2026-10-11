@@ -1,0 +1,112 @@
+{
+  "execution_funnel_id": "RET120_EXECUTION_FUNNEL_V0_1_2",
+  "paths": {
+    "project_root": "D:\\positionx_cn",
+    "snapshot_root": "D:\\positionx_data\\pit_live\\ret120_universe_prior_forward_v1_0_2",
+    "market_catalog": "D:\\positionx_data\\catalog\\market_data.duckdb",
+    "market_table": "market.daily_bars_v1",
+    "output_root": "D:\\positionx_data\\research\\opportunity_engine\\ret120_execution_funnel_v0_1_2"
+  },
+  "candidate_lanes": {
+    "MOMENTUM": {
+      "source_flag": "momentum_candidate",
+      "allowed_tiers": [
+        "CSI300",
+        "CSI500",
+        "CSI1000"
+      ]
+    },
+    "MEAN_REVERSION": {
+      "source_flag": "mean_reversion_candidate",
+      "allowed_tiers": [
+        "EX_CSI1800"
+      ]
+    }
+  },
+  "structure_proxy": {
+    "name": "BREAKOUT_RETEST_TRANSPARENT_PROXY_V0_1",
+    "status": "FORWARD_ONLY_NOT_HISTORICALLY_QUALIFIED_AS_RET120_FILTER",
+    "lookback": 20,
+    "breakout_buffer": 0.003,
+    "volume_lookback": 20,
+    "min_volume_ratio": 1.1,
+    "retest_tolerance": 0.01,
+    "retest_upper": 0.005,
+    "max_retest_sessions": 5,
+    "invalidation": 0.015,
+    "note": "Uses the frozen BreakoutRetest parameter values already documented in PositionX, but does not claim source-code identity with the historical class implementation."
+  },
+  "mean_reversion_extra_confirmation": {
+    "close_above_ma20": true,
+    "ma20_rising_5_sessions": true,
+    "note": "Forward-only confirmation layer; no historical rescue/tuning."
+  },
+  "selection_caps": {
+    "watch_per_lane": 10,
+    "ready_per_lane": 5,
+    "prepare_manual_momentum": 3,
+    "prepare_manual_mean_reversion": 2
+  },
+  "risk_preview": {
+    "board_lot": 100,
+    "adv20_participation_max": 0.01,
+    "momentum_risk_fraction_nav": 0.0025,
+    "mean_reversion_risk_fraction_nav": 0.0015,
+    "momentum_max_weight": 0.05,
+    "mean_reversion_max_weight": 0.03,
+    "note": "Preview only. Shares must be recalculated at the actual next-session entry price."
+  },
+  "ranking": {
+    "method": "LEXICOGRAPHIC_NO_WEIGHT_OPTIMIZATION",
+    "momentum": [
+      "setup_state",
+      "universe_confidence",
+      "risk_distance_pct",
+      "adv20_amount",
+      "symbol"
+    ],
+    "mean_reversion": [
+      "setup_state",
+      "trend_recovered",
+      "risk_distance_pct",
+      "adv20_amount",
+      "symbol"
+    ],
+    "ret120_magnitude_used_for_ranking": false
+  },
+  "next_open_policy": {
+    "fire_state_in_v0_1": "NOT_EMITTED",
+    "prepare_manual_only": true,
+    "valid_open_zone": "[breakout_level*(1-retest_tolerance), breakout_level*(1+retest_upper)]",
+    "outside_zone": "CANCEL_AND_WAIT",
+    "inside_zone": "RECALCULATE_SHARES_THEN_HUMAN_APPROVAL",
+    "reason": "V0.1 is a post-close recommendation system; actual T+1 open is unknown at recommendation time."
+  },
+  "guardrails": {
+    "research_only": true,
+    "no_broker": true,
+    "no_orders": true,
+    "no_production_db": true,
+    "no_strategy2_change": true,
+    "no_existing_forward_change": true,
+    "no_parameter_scan": true,
+    "no_historical_filter_optimization": true,
+    "manual_approval_required": true
+  },
+  "observability_v0_1_1": {
+    "selection_semantics_changed": false,
+    "exact_signal_date_name_board_enrichment": true,
+    "entry_condition_state_added": true,
+    "purpose": "Human-readable/actionability diagnostics only; no ranking or selection change after seeing V0.1 output."
+  },
+  "observability_v0_1_2": {
+    "selection_semantics_changed": false,
+    "ranking_semantics_changed": false,
+    "risk_semantics_changed": false,
+    "fixes": [
+      "JSON-safe prepare_entry_condition_counts (no tuple keys)",
+      "Remove pandas bool fillna FutureWarning without changing boolean semantics",
+      "Pre-serialize summary before artifact writes to avoid the exact partial-output failure mode"
+    ]
+  }
+}

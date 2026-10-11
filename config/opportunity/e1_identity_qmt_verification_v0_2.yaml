@@ -1,0 +1,41 @@
+research_id: E1_IDENTITY_QMT_VERIFICATION_V0_2
+
+catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+event_table: research.forecast_semantic_events_pit_v1
+
+request_csv: 'D:\positionx_data\research\opportunity_engine\e1_historical_price_backfill_v0_1\request\E1_HISTORICAL_PRICE_BACKFILL_REQUEST_V0_1.csv'
+source_manifest: 'D:\positionx_data\incoming\eva\e1_historical_price_backfill_v0_1\SOURCE_MANIFEST.json'
+shadow_union: 'D:\positionx_data\research\market\e1_historical_price_backfill_v0_1\e1_daily_bars_shadow_union.parquet'
+independent_price_request: 'D:\positionx_data\research\opportunity_engine\e1_backfill_trust_audit_v0_1\independent_price_check_request_v0_1.csv'
+
+expected:
+  independent_price_request_sha256: 980dee28f8ec8ac78611e39401e925767fb5d530dcbfe6a2138bf9d7374e22a5
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\e1_identity_qmt_verification_v0_2'
+
+identity_policy:
+  include_a_share_prefixes: ['00','30','60','68']
+  include_bse_prefixes: ['43','83','87','88','92']
+  exclude_b_share_prefixes: ['20','90']
+  exclude_request_board_bucket: OTHER
+  bse_suffix: BJ
+
+qmt_verification:
+  dividend_type: none
+  fill_data: false
+  fields: ['open','high','low','close','preClose']
+  abs_tolerance: 0.011
+  relative_tolerance: 0.0002
+  catastrophic_relative_error: 0.005
+  comparable_symbols_min: 70
+  comparable_points_min: 300
+  all_fields_row_pass_rate_min: 0.995
+  each_field_pass_rate_min: 0.995
+  catastrophic_rows_max: 0
+  bse_comparable_symbols_min: 15
+  bse_all_fields_row_pass_rate_min: 0.995
+
+safety:
+  e1_outcomes_read: false
+  e1_rerun_before_finalize: false
+  canonical_promotion: false

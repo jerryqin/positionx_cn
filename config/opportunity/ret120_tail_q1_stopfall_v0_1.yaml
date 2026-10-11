@@ -1,0 +1,87 @@
+research_id: RET120_TAIL_Q1_STOPFALL_V0_1
+
+source:
+  exact_scanner_source: 'D:\positionx_cn\research\trend_edge_scan.py'
+  expected_scanner_source_sha256: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+  current_qmt_ret120: 'D:\positionx_data\research\opportunity_engine\ret120_current_vintage_paired_universe_v0_4\current_qmt_ret120.parquet'
+  expected_current_qmt_ret120_sha256: '2fb3c7216e81749541e45d10f8c9cb0ce2b385b1fa1b9005e44c3499139ab4d2'
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+  causal_regime_summary: 'D:\positionx_data\research\opportunity_engine\ret120_causal_regime_detector_v0_1\ret120_causal_regime_detector_v0_1_summary.json'
+  csi300_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi300_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi300_panel_v0221.parquet'
+  csi500_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+  csi1000_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi1000_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi1000_panel_v0221.parquet'
+
+window:
+  signal_start: '2020-08-03'
+  market_data_through: '2026-09-30'
+  prior_research_cut: '2026-04-08'
+
+candidate_pool:
+  universe: 'EX_CSI1800_CURRENT'
+  factor: 'RET120'
+  bucket: 'Q1'
+  meaning: 'Bottom 20% of trailing-120-session return inside the non-CSI1800 tail universe.'
+  exact_scanner_assign_quintiles: true
+  daily_feature_coverage_min_fraction: 0.80
+  daily_feature_coverage_min_absolute: 50
+
+confirmation:
+  name: 'PRIOR_20D_CLOSE_LOW_THEN_UP'
+  timestamp: 'T close'
+  rule:
+    prior_day_is_20_session_closing_low: 'adj_close(T-1) == min(adj_close(T-20..T-1)), requiring 20 valid prior closes'
+    current_day_bounces: 'adj_close(T) > adj_close(T-1)'
+  entry: 'T+1 exact OPEN'
+  rationale: 'A simple stop-falling confirmation with no fitted percentage threshold.'
+  no_parameter_scan: true
+
+measurement:
+  horizons: [20,60]
+  exits: ['S20 exact CLOSE','S60 exact CLOSE']
+  separate_complete_cohort_per_horizon: true
+  primary_baseline: 'All EX_CSI1800 RET120-Q1 stocks on the same signal dates'
+  date_equal_weighting: true
+  transaction_cost_phase: 'none; mechanism Fast-Reject only'
+
+frozen_folds:
+  F1: ['2020-08-03','2022-10-17']
+  F2: ['2022-10-18','2024-09-19']
+  F3: ['2024-09-20','2026-09-30']
+
+fast_reject_gate:
+  selected_events_min_each_horizon: 200
+  selected_signal_dates_min_each_horizon: 100
+  selected_date_equal_raw_mean_positive_each_horizon: true
+  selected_minus_q1_baseline_date_equal_lift_positive_each_horizon: true
+  positive_lift_folds_min_each_horizon: 2
+  decision:
+    CANDIDATE: 'all checks pass'
+    REJECT: 'otherwise; no threshold rescue'
+
+interpretation:
+  pass: 'A single predeclared stop-falling confirmation improves the independently discovered EX_CSI1800 RET120-Q1 pool. Advance only to immutable Forward capture, not Strategy qualification.'
+  fail: 'Freeze this confirmation mechanism. Do not tune the 20-day window or bounce threshold to rescue it.'
+  post_2026_04_08_segment_is_not_independent_holdout: true
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\ret120_tail_q1_stopfall_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt_calls: true
+  no_broker: true
+  no_orders: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  no_threshold_rescue: true
+  no_strategy2_change: true
+  no_forward_change: true

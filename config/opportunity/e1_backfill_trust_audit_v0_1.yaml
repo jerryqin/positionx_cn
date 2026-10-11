@@ -1,0 +1,23 @@
+research_id: E1_BACKFILL_TRUST_AUDIT_V0_1
+
+request_csv: 'D:\positionx_data\research\opportunity_engine\e1_historical_price_backfill_v0_1\request\E1_HISTORICAL_PRICE_BACKFILL_REQUEST_V0_1.csv'
+backfill_parquet: 'D:\positionx_data\incoming\eva\e1_historical_price_backfill_v0_1\daily_bars_backfill.parquet'
+source_manifest: 'D:\positionx_data\incoming\eva\e1_historical_price_backfill_v0_1\SOURCE_MANIFEST.json'
+
+expected:
+  request_sha256: d4b64630130a560e62e11240c03637a684465817c2e13b1a877bc94c813d97b3
+  backfill_sha256: 4e1d7c9892573437ddbc1e4482b763e6de0448f3dd631e290524a8c6b4c6af35
+  manifest_sha256: b04985b135a0db0a5b13b4c4f0b88963df6fd2444b774ebc1305318082b5ceac
+  requested_symbols: 411
+  successful_symbols: 364
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\e1_backfill_trust_audit_v0_1'
+
+reference_sample:
+  max_symbols: 100
+  dates_per_symbol: 5
+
+policy:
+  canonical_promotion_requires_independent_price_verification: true
+  e1_rerun_requires_identity_resolution: true
+  non_equity_security_codes_not_valid_equity_price_keys: true

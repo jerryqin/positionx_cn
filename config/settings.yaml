@@ -1,0 +1,54 @@
+app:
+  name: "PositionX Minimal Live"
+  timezone: "Asia/Shanghai"
+  db_path: "data/positionx.db"
+  log_dir: "logs"
+
+qmt:
+  mini_path: "D:\\qmt\\userdata_mini"
+  account_id: "30266292"              # 必填：证券资金账号。不要提交到公共代码仓库。
+  account_type: "STOCK"
+  session_id: 0                # 0 = 启动时自动生成
+
+market:
+  symbols:
+    - "603986.SH"
+  history_bars: 260
+  stale_tick_seconds: 30
+  default_price_tick: 0.01
+
+strategy:
+  class: "strategies.ma_trend:MATrendTargetStrategy"
+  params:
+    fast_ma: 20
+    slow_ma: 60
+    target_weight: 0.20
+
+risk:
+  max_total_weight: 0.80
+  max_symbol_weight: 0.25
+  min_cash_reserve: 0.10
+  max_order_pct_of_asset: 0.25
+  min_order_value: 3000
+  rebalance_threshold_pct: 0.01
+  buy_lot: 100
+  allow_buy: true
+  allow_sell: true
+  stop_on_external_active_order: true
+
+execution:
+  live_enabled: false          # 首次联调必须保持 false；确认无误后人工改 true
+  auto_execute: false          # true 才会在计划交易日 09:35 自动执行
+  order_type: "limit"
+  limit_offset_bps: 20         # 买单略高于卖一/最新价，卖单略低于买一/最新价
+  cancel_unfilled_after_seconds: 90
+  pilot_mode: true             # Pilot阶段只允许人工触发；自动执行被禁用
+  pilot_max_order_value: 50000 # 单笔最大名义金额；603986约400元时可容纳1手
+  pilot_max_orders_per_day: 1  # fail-closed：当天任何已持久化实盘intent都计入
+
+schedule:
+  readiness_time: "08:45"
+  execute_time: "09:35"
+  plan_time: "15:05"
+  reconcile_time: "15:15"
+  poll_seconds: 5

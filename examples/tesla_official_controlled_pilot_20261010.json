@@ -1,0 +1,24 @@
+{
+  "manifest_id": "OPTIMUS_V0_7_2B_TESLA_OFFICIAL_CONTROLLED_PILOT_20261010",
+  "captures": [
+    {
+      "source_id": "SRC_TESLA_CORPORATE_OFFICIAL",
+      "lane": "THEME_OFFICIAL",
+      "entity_name": "Tesla, Inc.",
+      "symbol": "TSLA",
+      "entity_identifier": {
+        "scheme": "CIK",
+        "value": "0001318605"
+      },
+      "source_url": "https://www.tesla.com/AI",
+      "document_title": "AI & Robotics | Tesla",
+      "published_at": null,
+      "event_time": null,
+      "language": "en",
+      "search_recall": {
+        "role": "RECALL_ONLY",
+        "note": "Official URL is the source. Search discovery/snippets are not evidence."
+      }
+    }
+  ]
+}

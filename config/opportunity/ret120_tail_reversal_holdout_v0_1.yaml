@@ -1,0 +1,77 @@
+research_id: RET120_TAIL_REVERSAL_HOLDOUT_V0_1
+
+source:
+  exact_scanner_source: 'D:\positionx_cn\research\trend_edge_scan.py'
+  expected_scanner_source_sha256: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+  current_qmt_ret120: 'D:\positionx_data\research\opportunity_engine\ret120_current_vintage_paired_universe_v0_4\current_qmt_ret120.parquet'
+  expected_current_qmt_ret120_sha256: '2fb3c7216e81749541e45d10f8c9cb0ce2b385b1fa1b9005e44c3499139ab4d2'
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+  csi300_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi300_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi300_panel_v0221.parquet'
+  csi500_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+  csi1000_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi1000_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi1000_panel_v0221.parquet'
+
+discovery_sample:
+  signal_end_inclusive: '2026-04-08'
+  finding: 'EX_CSI1800 RET120 Q5-Q1 was negative at H20/H60/H120'
+  ex_csi1800:
+    H20: {spread: -0.01604269891194354, monotonicity: -1.0}
+    H60: {spread: -0.029886324422109995, monotonicity: -0.7}
+    H120: {spread: -0.03750021493906949, monotonicity: -0.7}
+  use_in_holdout_gate: false
+
+holdout:
+  signal_start_exclusive: '2026-04-08'
+  market_data_through: '2026-09-30'
+  horizons: [20,60]
+  separate_complete_cohort_per_horizon: true
+  no_h120_due_to_insufficient_post_discovery_followup: true
+
+hypothesis:
+  name: 'TAIL_RET120_REVERSAL'
+  universe: 'EX_CSI1800_CURRENT = Full Market minus CSI300/CSI500/CSI1000 PIT members'
+  direction: 'Q1 future return > Q5 future return'
+  predeclared_gate:
+    both_h20_h60_q5_minus_q1_negative: true
+    both_h20_h60_monotonicity_negative: true
+    tail_spread_less_than_csi1800_same_horizon: true
+  interpretation:
+    SUPPORT: 'All predeclared sign/relative checks pass on strictly post-discovery signal dates.'
+    NOT_SUPPORT: 'Any predeclared check fails.'
+  qualification_effect: 'diagnostic holdout only; never Strategy qualification'
+
+signal:
+  representation: 'CURRENT_VINTAGE_QMT_BACK_RATIO'
+  ret120: 'materialized before hypothesis holdout'
+  bucket: 'exact hash-locked scanner assign_quintiles'
+  daily_feature_coverage_min_fraction: 0.80
+  daily_feature_coverage_min_absolute: 50
+
+economic_measurement:
+  entry: 'T+1 OPEN'
+  exit_H20: 'S20 CLOSE'
+  exit_H60: 'S60 CLOSE'
+  benchmark: 'FULL_MARKET same signal-date/horizon median raw return'
+  transaction_cost: 'none; cross-sectional diagnostic only'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\ret120_tail_reversal_holdout_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt_calls: true
+  no_broker: true
+  no_orders: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  no_threshold_rescue: true
+  no_strategy2_change: true
+  no_forward_change: true

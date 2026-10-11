@@ -1,0 +1,23 @@
+symbol,company,admission_tier,f_status,component_domain,robot_commercial_stage,tesla_link_strength,source_date,source_type,source_title,evidence_note
+002050.SZ,三花智控,CORE,PROBABLE,actuators / thermal-mechatronics,R4_BATCH_RAMP,LEGACY_TESLA_AUTO_RELATION_ROBOT_CUSTOMER_UNNAMED,2026-08-27,PRIMARY_REPORT,2026年半年度报告,仿生机器人机电执行器核心产品稳步推进批量交付与产线爬坡；未公开确认Tesla/Optimus客户身份
+601689.SH,拓普集团,CORE,PROBABLE,actuators / mechatronic modules,R4_REVENUE,LEGACY_TESLA_AUTO_RELATION_ROBOT_CUSTOMER_UNNAMED,2026-08-28,PRIMARY_REPORT,2026年半年度报告,机器人执行器已形成收入且同比增长；未公开确认Tesla/Optimus客户身份
+688017.SH,绿的谐波,CORE,POSSIBLE,harmonic reducers / precision drive,R4_REVENUE,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-27,PRIMARY_REPORT,2026年半年度报告,具身智能相关需求推动减速器与机电一体化业务增长；未公开确认Tesla/Optimus客户身份
+300433.SZ,蓝思科技,CORE,POSSIBLE,dexterous hand / joints / structure / assembly,R4_BATCH_SHIPMENT,OVERSEAS_HEAD_ROBOT_CUSTOMER_UNNAMED,2026-08-22,PRIMARY_REPORT,2026年半年度报告,灵巧手关节模组整机组装已批量交付并向海外大客户小批量出货；客户未具名
+300124.SZ,汇川技术,CORE,POSSIBLE,motors / servo / joints / encoders / screws,R3_DESIGNATION_SMALL_BATCH,HEAD_HUMANOID_CUSTOMERS_UNNAMED,2026-08-28,PRIMARY_REPORT,2026年半年度报告,人形机器人核心部件全栈布局；获得零部件定点且无框电机在头部整机厂小批量应用
+603667.SH,五洲新春,CORE,POSSIBLE,bearings / planetary roller screws / micro screws,R4_REVENUE,DOMESTIC_AND_OVERSEAS_ROBOT_CUSTOMERS_UNNAMED,2026-08-27,PRIMARY_REPORT,2026年半年度报告,机器人零部件约2000万元收入，多款产品验证评审及小批量交付；部分合作客户公开但无Tesla确认
+603009.SH,北特科技,CORE,POSSIBLE,planetary roller screws / ball screws,R2_VALIDATION,OVERSEAS_HEAD_HUMANOID_CUSTOMER_UNNAMED,2026-08-26,PRIMARY_REPORT_PLUS_OFFERING,2026年半年度报告及募集说明书,行星滚柱丝杠面向人形机器人线性执行器；具备规模化量产基础，海外头部客户验证信息未具名
+603728.SH,鸣志电器,CORE,POSSIBLE,coreless motors / frameless motors / drives / reducers,R4_BATCH_CAPABILITY,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-26,PRIMARY_REPORT,2026年半年度报告,人形机器人运动控制核心部件形成全栈产品平台并具备批量供货能力；未公开确认Tesla/Optimus客户身份
+003021.SZ,兆威机电,CORE,POSSIBLE,dexterous hand / micro drive modules,R3_COMMERCIALIZATION,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-15,PRIMARY_REPORT,2026年半年度报告,灵巧手及核心驱动模组商业化持续推进，覆盖全驱动与欠驱动产品矩阵
+300115.SZ,长盈精密,CORE,POSSIBLE,precision parts / dexterous hand / actuator parts / assembly,R4_BATCH_SHIPMENT,OVERSEAS_HEAD_ROBOT_CUSTOMER_UNNAMED,2026-08-27,PRIMARY_REPORT,2026年半年度报告,上半年交付约86万件人形机器人精密零组件并承接整机组装订单；海外头部客户未具名
+603662.SH,柯力传感,CORE,POSSIBLE,6-axis force / torque / tactile sensing,R4_BATCH_ORDERS,INDIRECT_AUTO_SUPPLY_CHAIN_UNNAMED,2026-08-28,PRIMARY_REPORT,2026年半年度报告,上半年机器人力学传感器销售超2000只，90+机器人企业送样，部分客户批量订单，人形机器人场景批量出货
+688322.SH,奥比中光,CORE,POSSIBLE,3D vision / depth sensing,R4_REVENUE_GROWTH,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-22,PRIMARY_REPORT,2026年半年度报告,累计服务全球超千家机器人客户，机器人视觉方案收入同比2倍以上；对特定客户合作不作选择性披露
+300748.SZ,金力永磁,CORE,POSSIBLE,NdFeB magnets / motor rotors,R3_DESIGNATION,WORLD_KNOWN_TECH_CUSTOMER_UNNAMED,2026-08-21,PRIMARY_REPORT,2026年半年度报告,机器人及工业伺服电机收入增长，获得世界知名科技公司具身机器人电机转子项目定点；客户未具名
+002979.SZ,雷赛智能,CORE,POSSIBLE,frameless motors / coreless motors / joint modules / dexterous hands,R4_LARGE_ORDER_BOOK,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-27,PRIMARY_REPORT,2026年半年度报告,无框力矩电机在手订单超100万台，关节模组与灵巧手已批量供应并获得近百家机器人客户订单
+300660.SZ,江苏雷利,CORE,POSSIBLE,motors / joint modules / dexterous hands / linear drive,R4_REVENUE,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-29,PRIMARY_REPORT,2026年半年度报告,机器人相关零部件收入1784万元同比增长115.51%，进入多家国内外机器人本体与模组厂供应链
+603119.SH,浙江荣泰,CORE,POSSIBLE,precision transmission / robot parts,R3_SHIPMENT,OVERSEAS_ROBOT_CUSTOMERS_UNNAMED,2026-08-25,PRIMARY_IR,投资者关系活动记录表2026-003,上半年已向国内外客户交付机器人零部件并按订单排产，泰国产能按海外客户需求建设；Tesla订单未公开确认
+688160.SH,步科股份,WATCH,SPECULATIVE,frameless torque motors / joint motors,R2_PRODUCT_LAUNCHED,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-26,PRIMARY_REPORT,2026年半年度报告,人形无框电机已有部分产品/型号上市，具身机器人关节模组电机仍在研；缺少明确客户/批量证据
+002472.SZ,双环传动,WATCH,SPECULATIVE,RV reducers / precision gears,R2_ROBOT_EXPOSURE,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-26,PRIMARY_REPORT,2026年半年度报告,精密传动具备机器人应用基础但公开材料未形成Tesla/Optimus客户确认或单独批量证据
+301550.SZ,斯菱股份,WATCH,SPECULATIVE,harmonic reducers / reducer bearings / actuator modules,R2_PRODUCTION_RAMP,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-26,PRIMARY_REPORT,2026年半年度报告,谐波减速器和专用轴承已投产并完成执行器模组研发储备；客户和人形机器人量产贡献尚不清晰
+601100.SH,恒立液压,WATCH,POSSIBLE,planetary roller screws / linear drive,R2_SAMPLE_INITIAL_PRODUCTION,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-25,PRIMARY_REPORT_PLUS_PUBLIC_RESEARCH,2026年半年度报告及公开跟踪,行星滚柱丝杠已完成送样并进入初步量产；公开Tesla/Optimus客户证据不足
+300580.SZ,贝斯特,WATCH,SPECULATIVE,planetary roller screws,R1_SAMPLE,NO_PUBLIC_TESLA_CONFIRMATION,2026-08-03,PRIMARY_COMPANY_RESPONSE,股票交易异常波动公告/互动回复,2026H1人形机器人行星滚柱丝杠仍处样品阶段，相关样品收入22.30万元
+600699.SH,均胜电子,WATCH,SPECULATIVE,controllers / sensing / joints / automotive electronics,R1_STRATEGIC_ADJACENCY,LEGACY_TESLA_AUTO_RELATION_NO_PUBLIC_OPTIMUS_EVIDENCE,2026-08-26,PRIMARY_REPORT,2026年半年度报告,具备汽车电子与机器人相关能力但缺少可核验的Optimus商业化证据，保留为观察项不作为核心供应链判断

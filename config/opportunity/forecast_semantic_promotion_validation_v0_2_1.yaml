@@ -1,0 +1,34 @@
+asset:
+  asset_id: FORECAST_SEMANTIC_EVENTS_PIT_CNINFO
+  asset_version: FORECAST_SEMANTIC_2020_2026_PARSER_V0_2_1
+
+source:
+  path: 'D:\positionx_data\incoming\eva\forecast_semantic_corpus_2020_2026_parser_v0_2_1\semantic_events_2020_2026_v0_2_1.parquet'
+  sha256: 'c11c116a4f7e103891e6ab08623bf5e3b8ae4ca8257e42c95ff477882d5b8a6a'
+  expected_rows: 32916
+  parser_version: 'v0.2.1'
+
+acceptance:
+  summary_path: 'D:\positionx_data\research\opportunity_engine\eva_forecast_parser_v0_2_1_acceptance\eva_forecast_parser_v0_2_1_acceptance_summary.json'
+  required_verdict: ACCEPT_FORECAST_SEMANTIC_PARSER_V0_2_1_FULL_2020_2026
+
+durable:
+  directory: 'D:\positionx_data\research\events\forecast_semantic\FORECAST_SEMANTIC_2020_2026_PARSER_V0_2_1'
+  parquet_name: semantic_events.parquet
+  manifest_name: ASSET_MANIFEST.json
+
+catalog:
+  path: 'D:\positionx_data\catalog\market_data.duckdb'
+  table: research.forecast_semantic_events_pit_v1
+  registry_table: research.asset_registry_v1
+
+research_gate:
+  identity_rows_exact: 32916
+  event_years_exact: [2020, 2021, 2022, 2023, 2024, 2025, 2026]
+  eligible_strict_payload_min: 0.99
+  eligible_yearly_strict_payload_min: 0.99
+  eligible_current_profit_min_coverage_min: 0.95
+  eligible_current_profit_max_coverage_min: 0.95
+  eligible_yearly_current_profit_min_coverage_min: 0.95
+  eligible_yearly_current_profit_max_coverage_min: 0.95
+  formal_history_years_min: 5

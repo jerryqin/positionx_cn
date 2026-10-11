@@ -1,0 +1,39 @@
+{
+  "registry_id": "OPTIMUS_CANDIDATE_REGISTRY_V0_3",
+  "research_db": "D:/positionx_cn/data/research/positionx_research.duckdb",
+  "seed_universe": "config/research/optimus_candidate_seed_v0_2.csv",
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/candidate_registry_v0_3",
+  "evidence_inbox": "D:/positionx_data/incoming/big_opportunity/optimus/evidence_inbox",
+  "evidence_archive_root": "D:/positionx_data/research/big_opportunity/optimus/evidence_raw",
+  "stale_review_days": 180,
+  "cninfo": {
+    "api": "http://www.cninfo.com.cn/new/hisAnnouncement/query",
+    "static_root": "http://static.cninfo.com.cn/",
+    "page_size": 30,
+    "timeout_seconds": 30,
+    "tries": 4,
+    "delay_seconds": 0.5,
+    "keywords": [
+      "人形机器人",
+      "具身智能",
+      "Optimus",
+      "特斯拉机器人",
+      "机器人执行器",
+      "滚柱丝杠",
+      "谐波减速器",
+      "无框力矩电机",
+      "六维力传感器",
+      "灵巧手",
+      "关节模组"
+    ]
+  },
+  "rules": {
+    "active_m_evidence_lifecycle_states": ["ACTIVE_SEED", "ACTIVE_CANONICAL"],
+    "confirmed_min_level": 7,
+    "confirmed_min_tesla_link_level": 4,
+    "probable_min_level": 4,
+    "probable_min_tesla_link_level": 3,
+    "possible_min_level": 2,
+    "hard_removal_severities": ["HARD"]
+  }
+}

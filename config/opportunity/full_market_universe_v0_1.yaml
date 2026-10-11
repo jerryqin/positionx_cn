@@ -1,0 +1,38 @@
+asset_id: OPPORTUNITY_FULL_MARKET_TRADABLE_UNIVERSE_V0_1
+research_domain: SH_SZ_A_SHARES_ONLY
+start_date: '2020-01-01'
+
+source:
+  market_catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+  market_table: 'market.daily_bars_v1'
+  csi500_testbed_panel: 'D:\positionx_data\research\opportunity_engine\d2_compression_breakout_v0_1\d2_compression_breakout_v0_1_panel.parquet'
+  expected_csi500_panel_sha256: 'edbfc337f413d1d316d7bb1e9734873cb64ccee6d6743b106e97cd20a48ec38a'
+
+eligibility:
+  sh_prefixes: ['600','601','603','605','688','689']
+  sz_prefixes: ['000','001','002','003','300','301']
+  require_positive_ohlc_preclose: true
+  require_volume_positive: true
+  require_amount_positive: true
+  require_not_suspended: true
+
+readiness_gate:
+  duplicate_symbol_date_rows_max: 0
+  unique_symbols_min: 4000
+  latest_session_eligible_symbols_min: 4000
+  first_session_on_or_before: '2020-01-03'
+  latest_252_session_median_symbols_min: 4000
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1'
+
+safety:
+  research_only: true
+  source_read_only: true
+  no_network: true
+  no_qmt: true
+  no_bse: true
+  no_b_shares: true
+  no_funds_bonds_convertibles: true
+  no_outcome_labels: true
+  no_strategy_test: true
+  no_production_db_mutation: true

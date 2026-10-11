@@ -1,0 +1,67 @@
+research_id: RET120_INDEX_LADDER_ATTRIBUTION_V0_1
+
+source:
+  exact_scanner_source: 'D:\positionx_cn\research\trend_edge_scan.py'
+  expected_scanner_source_sha256: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+  current_qmt_ret120: 'D:\positionx_data\research\opportunity_engine\ret120_current_vintage_paired_universe_v0_4\current_qmt_ret120.parquet'
+  expected_current_qmt_ret120_sha256: '2fb3c7216e81749541e45d10f8c9cb0ce2b385b1fa1b9005e44c3499139ab4d2'
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+  csi300_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi300_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi300_panel_v0221.parquet'
+  csi500_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+  csi1000_panel_candidates:
+    - 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi1000_panel_v0221.parquet'
+    - 'D:\positionx_min_live\data\research\edge_discovery\trend_persistence_scan_csi1000_panel_v0221.parquet'
+
+window:
+  signal_start: '2020-08-03'
+  signal_cutoff_h120: '2026-04-08'
+  market_data_through: '2026-09-30'
+  snapshot_acquired_on: '2026-10-06'
+
+expected_members:
+  CSI300_CURRENT: 300
+  CSI500_CURRENT: 500
+  CSI1000_CURRENT: 1000
+
+frozen_folds:
+  F1: ['2020-08-03','2022-10-17']
+  F2: ['2022-10-18','2024-09-19']
+  F3: ['2024-09-20','2026-09-24']
+
+signal:
+  representation: CURRENT_VINTAGE_QMT_BACK_RATIO
+  bucket: exact hash-locked scanner assign_quintiles
+  coverage_fraction_min: 0.80
+  coverage_absolute_min: 50
+
+v04_reproduction_reference:
+  CSI500_CURRENT:
+    H20: {spread: 0.0014284264868794031, mono: 0.8, folds: 1}
+    H60: {spread: 0.01712697281684292, mono: 0.9, folds: 3}
+    H120: {spread: 0.03289545243595762, mono: 1.0, folds: 3}
+  FULL_MARKET_CURRENT:
+    H20: {spread: -0.01068550345433044, mono: -1.0, folds: 0}
+    H60: {spread: -0.01345403146980895, mono: -0.3, folds: 1}
+    H120: {spread: -0.010468243162796848, mono: -0.3, folds: 1}
+  tolerance: 1.0e-10
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\ret120_index_ladder_attribution_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt_calls: true
+  no_broker: true
+  no_orders: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  no_new_filter_selection: true
+  strategy2_unchanged: true
+  forward_unchanged: true

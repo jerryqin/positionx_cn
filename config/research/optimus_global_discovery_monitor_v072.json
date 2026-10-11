@@ -1,0 +1,157 @@
+{
+  "monitor_id": "OPTIMUS_GLOBAL_DISCOVERY_MONITOR_V0_7_4_POST_EXPANSION",
+  "mode": "PLAN_ONLY",
+  "baseline": {
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "active_seed": 0,
+    "canonical_fact_count": 25,
+    "materialized_fact_evidence_count": 25,
+    "latest_batch_id": "CB_7e2476e590e0bbe674ac8848",
+    "v071_first_controlled_capture_manifest_payload_sha256": "6c2c04a2297118d448f357b76be4a38f29cb8a7a7950b8c04a0784c3510217e4",
+    "v071_first_controlled_capture_proposal_count": 0,
+    "v071_first_controlled_capture_query_errors": 0,
+    "discovery_only": 2,
+    "provisional_evidence": 2
+  },
+  "dependencies": {
+    "v07_script_sha256": "ab8e7d190d75ebcc56dd6debaa0f55d01f6957f6e930ce064072c175166bea8d",
+    "v07_config_sha256": "d8b8020006db4722eb3ff9c468302771e8740df2f59b75c72b5486387cb28e2c",
+    "v071_script_sha256": "0e0a707030b960f7f1e5530577cf1449071c29b0023b11fc13977d4b0d4d45df",
+    "v071_config_sha256": "efd4570054eb2de576639ab9f264970744204f550814fc22d29ecc5d77309f31"
+  },
+  "lanes": {
+    "THEME_OFFICIAL": {
+      "purpose": "Find evidence that can actually move Tesla Optimus Theme Stage1 toward Stage2.",
+      "source_roles": [
+        "Tesla official IR / shareholder deck / earnings transcript published by Tesla",
+        "Tesla official blog / Optimus product or engineering page",
+        "SEC filing or other Tesla regulatory filing",
+        "Tesla official social post only when attributable to Tesla/Optimus account or named executive"
+      ],
+      "accepted_signal_types": [
+        "Optimus named supplier nomination or sourcing",
+        "Optimus named supplier validation milestone",
+        "Optimus named tooling or capacity commitment",
+        "Optimus named purchase order / PO",
+        "Optimus named mass-production confirmation",
+        "Optimus build ramp",
+        "Optimus internal deployment",
+        "Optimus external deployment",
+        "material official contradiction or delay"
+      ],
+      "search_engine_role": "RECALL_ONLY",
+      "search_result_is_fact": false,
+      "automatic_stage_change": false
+    },
+    "SUPPLIER_GLOBAL_OFFICIAL": {
+      "purpose": "Monitor official company/exchange/IR evidence outside the CNINFO-only V0.7.1 lane.",
+      "source_roles": [
+        "company official IR / annual report / interim report / exchange filing",
+        "official company website / press release",
+        "HKEX / SEC / overseas exchange filing",
+        "named official customer/supplier disclosure"
+      ],
+      "outputs": [
+        "EVIDENCE_PROPOSAL",
+        "HUMAN_REVIEW_REQUIRED",
+        "STAGE2_GATE_CANDIDATE",
+        "CONTRADICTION_ALERT"
+      ],
+      "automatic_registry_write": false,
+      "automatic_canonicalization": false
+    },
+    "NEW_CANDIDATE_DISCOVERY": {
+      "purpose": "Discover names outside the current Registry 24 without polluting either the canonical 22 or the existing DISCOVERY_ONLY pool.",
+      "recall_sources": [
+        "official company/exchange disclosure",
+        "strong named-source media",
+        "high-quality broker/industry report as lead only"
+      ],
+      "discovery_rules": [
+        "company identity must be explicit",
+        "robot/humanoid component or commercialization context must be company-specific",
+        "generic sector discussion is insufficient",
+        "supply-chain diagram alone is insufficient",
+        "share-price action is insufficient",
+        "unnamed 'head customer' clue cannot be mapped to Tesla",
+        "any symbol/company already present anywhere in Registry, including DISCOVERY_ONLY, is excluded from NEW_CANDIDATE_DISCOVERY"
+      ],
+      "first_state": "DISCOVERY_PROPOSAL",
+      "human_review_required": true,
+      "automatic_registry_add": false,
+      "automatic_active_canonical": false
+    }
+  },
+  "evidence_contract": {
+    "canonical_unit": "FACT",
+    "event_time_separate_from_observed_at": true,
+    "named_tesla_link_required_for_t3_plus": true,
+    "t2_not_tesla_confirmation": true,
+    "append_only_review_history": true,
+    "no_hindsight": true,
+    "no_silent_override": true,
+    "no_hype_mapping": true,
+    "source_priority": [
+      "Tesla / named customer official or regulatory",
+      "exchange / CNINFO / HKEX / SEC",
+      "company official IR / official website",
+      "strong named-source media",
+      "broker / third-party research",
+      "rumor / social mapping"
+    ]
+  },
+  "discovery_state_machine": [
+    "DISCOVERY_PROPOSAL",
+    "HUMAN_REVIEW_REQUIRED",
+    "APPROVED_DISCOVERY_ONLY",
+    "SEPARATE_REGISTRY_PLAN_REQUIRED",
+    "REJECTED_DISCOVERY"
+  ],
+  "theme_gate_state_machine": [
+    "NO_STAGE2_GATE_EVIDENCE",
+    "STAGE2_GATE_CANDIDATE",
+    "HUMAN_REVIEW_REQUIRED",
+    "SEPARATE_THEME_STAGE_PLAN_REQUIRED"
+  ],
+  "implementation_phases": [
+    {
+      "phase": "V0.7.2A",
+      "name": "SOURCE_REGISTRY_AND_NORMALIZED_EXTERNAL_INBOX",
+      "mutation": false
+    },
+    {
+      "phase": "V0.7.2B",
+      "name": "THEME_OFFICIAL_AND_SUPPLIER_GLOBAL_READ_ONLY_CAPTURE",
+      "mutation": false
+    },
+    {
+      "phase": "V0.7.2C",
+      "name": "NEW_CANDIDATE_DISCOVERY_QUEUE",
+      "mutation": false
+    }
+  ],
+  "safety": {
+    "research_only": true,
+    "broker": false,
+    "orders": false,
+    "production_db": false,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false
+  },
+  "registry_partition": {
+    "registry_count": 24,
+    "active_canonical_count": 22,
+    "discovery_only_count": 2,
+    "current22_cninfo_lane_stays_22": true,
+    "existing_discovery_only_are_not_new_candidates": true
+  },
+  "component_domain_parser_contract": {
+    "current22_future_parser": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "historical_v0_4_4_frozen": true,
+    "historical_reclassification": false,
+    "ambiguous_component_domain_requires_human_review": true
+  }
+}

@@ -1,0 +1,80 @@
+asset_id: CNINFO_COMMERCIAL_CATALYST_METADATA_V0_1
+
+source:
+  name: CNINFO
+  api_urls:
+    - 'https://www.cninfo.com.cn/new/hisAnnouncement/query'
+    - 'http://www.cninfo.com.cn/new/hisAnnouncement/query'
+  static_base: 'https://static.cninfo.com.cn/'
+  referer: 'https://www.cninfo.com.cn/new/commonUrl?url=disclosure/list/notice'
+
+date_range:
+  start: '2020-01-01'
+  end: '2026-09-30'
+
+pilot:
+  start: '2026-01-01'
+  end: '2026-03-31'
+
+query_groups:
+  HARD_CONFIRMATION:
+    - 中标
+    - 重大合同
+    - 签订合同
+    - 采购订单
+    - 销售订单
+    - 客户订单
+    - 定点
+    - 量产
+    - 批量供货
+    - 批量交付
+  SOFT_INTENT:
+    - 框架协议
+    - 战略合作
+    - 合作意向
+    - 意向协议
+    - 备忘录
+
+title_patterns:
+  HARD_CONFIRMATION:
+    - 中标
+    - 中标通知书
+    - 中标结果
+    - 重大合同
+    - 签订.*合同
+    - 合同.*签署
+    - 采购订单
+    - 销售订单
+    - 客户订单
+    - 定点
+    - 定点通知
+    - 供应商.*选定
+    - 量产
+    - 批量供货
+    - 批量交付
+    - 正式投产
+  SOFT_INTENT:
+    - 框架协议
+    - 战略合作
+    - 合作意向
+    - 意向协议
+    - 备忘录
+    - MOU
+
+network:
+  page_size: 30
+  delay_seconds: 0.35
+  timeout_seconds: 30
+  retries: 5
+  retry_backoff_seconds: 1.2
+  max_pages_guard: 5000
+
+output_root: 'D:\positionx_data\events\commercial_catalyst_cninfo_v0_1'
+
+safety:
+  first_party_only: true
+  no_eva_dependency: true
+  no_market_outcomes: true
+  no_pdf_download_yet: true
+  no_database_mutation: true
+  resumable: true

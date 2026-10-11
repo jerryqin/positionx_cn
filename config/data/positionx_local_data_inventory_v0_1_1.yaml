@@ -1,0 +1,18 @@
+inventory_id: POSITIONX_LOCAL_DATA_INVENTORY_V0_1_1
+
+input:
+  structured_inventory_csv: 'D:\positionx_data\research\data_inventory\positionx_local_data_inventory_v0_1\structured_asset_inventory_v0_1.csv'
+  pdf_inventory_json: 'D:\positionx_data\research\data_inventory\positionx_local_data_inventory_v0_1\pdf_directory_inventory_v0_1.json'
+
+output_dir: 'D:\positionx_data\research\data_inventory\positionx_local_data_inventory_v0_1_1'
+
+candidate:
+  hard_hits_min: 1
+  soft_hits_min: 1
+
+safety:
+  read_only: true
+  no_network: true
+  no_pdf_text_parse: true
+  no_database_mutation: true
+  no_eva_dependency: true

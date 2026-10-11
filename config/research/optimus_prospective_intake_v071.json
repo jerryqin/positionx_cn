@@ -1,0 +1,91 @@
+{
+  "intake_id": "OPTIMUS_PROSPECTIVE_INTAKE_V0_7_1",
+  "contract_id": "OPTIMUS_PROSPECTIVE_MONITOR_V0_7_4_2_COMPONENT_DOMAIN_V0_4_5",
+  "mode": "READ_ONLY_DAILY_INTAKE_PROPOSAL_QUEUE",
+  "timezone": "Asia/Shanghai",
+  "project_root_default": "D:\\positionx_cn",
+  "output_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\prospective_monitor_v0_7_1",
+  "dependency_paths": {
+    "v07_script": "scripts/run_optimus_prospective_monitor_v07.py",
+    "v07_config": "config/research/optimus_prospective_monitor_v07.json",
+    "evidence_script": "scripts/run_optimus_evidence_acquisition_v04.py",
+    "evidence_config": "config/research/optimus_evidence_acquisition_v0_4.json",
+    "registry_script": "scripts/run_optimus_candidate_registry_v03.py"
+  },
+  "dependency_sha256": {
+    "v07_script": "ab8e7d190d75ebcc56dd6debaa0f55d01f6957f6e930ce064072c175166bea8d",
+    "v07_config": "d8b8020006db4722eb3ff9c468302771e8740df2f59b75c72b5486387cb28e2c",
+    "evidence_script": "61a5d6db83a5dfde69870366b4cad20521218138c9f0d6a847ca7630f467a99f",
+    "registry_script": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+  },
+  "baseline": {
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "latest_batch_id": "CB_7e2476e590e0bbe674ac8848",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "active_seed": 0,
+    "canonical_fact_count": 25,
+    "materialized_fact_evidence_count": 25,
+    "discovery_only": 2,
+    "provisional_evidence": 2
+  },
+  "scope": {
+    "lane": "CURRENT_22_ACTIVE_CANONICAL_CNINFO_OFFICIAL",
+    "query_method": "ALL_ANNOUNCEMENTS_PER_DATE_THEN_LOCAL_SYMBOL_FILTER",
+    "symbol_source": "V0.7 frozen universe",
+    "candidate_discovery": false,
+    "global_tesla_official_lane": false,
+    "registry_candidate_count": 24,
+    "monitored_symbol_count": 22,
+    "discovery_only_excluded": true,
+    "discovery_only_symbols": [
+      "603416.SH",
+      "603809.SH"
+    ],
+    "scope_rule": "QUERY_ONLY_FROZEN_V07_UNIVERSE_22_NOT_ALL_REGISTRY_CANDIDATES"
+  },
+  "queue_policy": {
+    "existing_registry_evidence": "SKIP_KNOWN_REGISTRY_EVIDENCE",
+    "already_seen_monitor_evidence": "SKIP_ALREADY_QUEUED",
+    "hard_contradiction": "CONTRADICTION_ALERT",
+    "named_tesla_link_min_level": 3,
+    "named_tesla_link_output": "STAGE2_GATE_CANDIDATE",
+    "unnamed_t2_output": "HUMAN_REVIEW_REQUIRED",
+    "other_material_evidence": "EVIDENCE_PROPOSAL",
+    "human_review_required": true,
+    "auto_canonical": false,
+    "auto_candidate_state_change": false,
+    "auto_theme_stage_change": false,
+    "ambiguous_component_domain_output": "HUMAN_REVIEW_REQUIRED",
+    "component_domain_parser_version": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "historical_v0_4_4_reclassification": false,
+    "cross_parser_source_identity_dedupe": true,
+    "source_identity_priority": [
+      "symbol+source_sha256",
+      "symbol+source_ref"
+    ],
+    "future_only_parser_upgrade": true
+  },
+  "safety": {
+    "research_only": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "evidence_inbox_write": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  },
+  "component_domain_contract": {
+    "version": "V0_4_5",
+    "policy_id": "COMPONENT_DOMAIN_CONTEXT_WINDOW_DOMINANCE_V0_4_5",
+    "primary_metric": "context_window_hit_count",
+    "secondary_metric": "term_occurrence_count",
+    "new_domain_minimum_window_margin": 2,
+    "new_domain_minimum_ratio": 1.5,
+    "ambiguous_domain": "AMBIGUOUS_MULTI_DOMAIN_PENDING_REVIEW",
+    "ambiguous_requires_human_review": true,
+    "historical_v0_4_4_frozen": true,
+    "historical_reclassification": false,
+    "cross_parser_source_dedupe": true
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "schema_version": "OPTIMUS_CANONICALIZATION_PLAN_V0_5",
+  "plan_id": "OPTIMUS_SEED_CANONICALIZATION_BATCH_20261009_V0_5",
+  "basis": "Human-reviewed V0.4.4 provisional evidence from the 159-PDF seed backfill. Canonical unit is a fact, not a PDF. One anchor becomes CANONICAL; corroborating proposal rows are append-only REJECTED as superseded duplicates.",
+  "expected_pre_state": {
+    "effective_v044_provisional_count": 21,
+    "seed_audit_debt": 22
+  },
+  "facts": [
+    {
+      "fact_key": "SANHUA_2026H1_ROBOT_ACTUATOR_BATCH_DELIVERY",
+      "symbol": "002050.SZ",
+      "company": "三花智控",
+      "fact_type": "COMMERCIAL_BATCH_DELIVERY",
+      "fact_text": "2026年上半年，公司仿生机器人机电执行器核心产品稳步推进批量交付与产线爬坡。",
+      "component_domain": "actuators / thermal-mechatronics",
+      "canonical_level": 9,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_2dd01f0186127cd097f2710e",
+      "support_evidence_ids": ["EACQ_6dcc558b96c7e9910c7923b9", "EACQ_ad411594fc87f7933f794756"],
+      "decision_rationale": "Primary half-year report is anchor; IR and action-plan disclosure corroborate the same batch-delivery fact. No named Tesla/Optimus link."
+    },
+    {
+      "fact_key": "SHUANGHUAN_2026H1_ROBOT_REDUCER_BUSINESS_ACTIVE",
+      "symbol": "002472.SZ",
+      "company": "双环传动",
+      "fact_type": "ROBOT_BUSINESS_ACTIVITY",
+      "fact_text": "2026年上半年，公司机器人减速器业务整体发展较为稳健。",
+      "component_domain": "RV reducers / precision gears",
+      "canonical_level": 1,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_df01727f274747ec43e3add6",
+      "support_evidence_ids": [],
+      "decision_rationale": "Company-specific robot reducer business statement is relevant but low-level; no customer/order/Optimus link."
+    },
+    {
+      "fact_key": "LEISAI_2026H1_ROBOT_CORE_PARTS_DELIVERY_RAMP",
+      "symbol": "002979.SZ",
+      "company": "雷赛智能",
+      "fact_type": "COMMERCIAL_DELIVERY_RAMP",
+      "fact_text": "公司披露机器人核心部件业务进入交付放量期。",
+      "component_domain": "frameless motors / coreless motors / joint modules / dexterous hands",
+      "canonical_level": 9,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_25c606c61d999014b7024587",
+      "support_evidence_ids": [],
+      "decision_rationale": "Commercial delivery milestone is affirmative. The same record explicitly denies the Tesla acquisition rumor; therefore Tesla link remains 0."
+    },
+    {
+      "fact_key": "ZHAOWEI_2026H1_EMBODIED_ROBOT_PRODUCT_FOCUS",
+      "symbol": "003021.SZ",
+      "company": "兆威机电",
+      "fact_type": "ROBOT_PRODUCT_BUSINESS_RELEVANCE",
+      "fact_text": "公司持续聚焦具身机器人赛道，并推动微型传动与驱动系统在灵巧手、机器人关节等场景中的应用。",
+      "component_domain": "dexterous hand / micro drive modules",
+      "canonical_level": 2,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_99365d97ef56cfea26e03489",
+      "support_evidence_ids": [],
+      "decision_rationale": "Company-specific product/business relevance is supported; generic industry 'functional validation' language is not treated as a customer-validation milestone."
+    },
+    {
+      "fact_key": "INOVANCE_2026H1_HUMANOID_ROBOT_INVESTMENT",
+      "symbol": "300124.SZ",
+      "company": "汇川技术",
+      "fact_type": "ROBOT_BUSINESS_INVESTMENT",
+      "fact_text": "报告期内，公司加大对人形机器人等业务投入，并披露智能机器人业务同比较快增长。",
+      "component_domain": "motors / servo / joints / encoders / screws",
+      "canonical_level": 2,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_fe0ed7a89e336ab34ac6b236",
+      "support_evidence_ids": [],
+      "decision_rationale": "Official performance bulletin supports company-level robot business investment/growth, but no direct Optimus/Tesla commercialization evidence."
+    },
+    {
+      "fact_key": "LENS_2026H1_EMBODIED_INTELLIGENCE_BATCH_DELIVERY",
+      "symbol": "300433.SZ",
+      "company": "蓝思科技",
+      "fact_type": "COMMERCIAL_BATCH_DELIVERY",
+      "fact_text": "公司具身智能业务继续高速增长，累计出货量位居行业前列，机器人灵巧手、关节模组等相关产品批量交付并贡献收入增量。",
+      "component_domain": "dexterous hand / joints / structure / assembly",
+      "canonical_level": 9,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_878b51f0877f1a948ea09fd1",
+      "support_evidence_ids": ["EACQ_9fb335142b4ae944381b956f", "EACQ_049a8ec62be2308e52f0f05e"],
+      "decision_rationale": "Full half-year report is anchor; report summary and IR record corroborate the same realized shipment/batch-delivery fact."
+    },
+    {
+      "fact_key": "JIANGSU_LEILI_2026H1_ROBOT_PARTS_REVENUE",
+      "symbol": "300660.SZ",
+      "company": "江苏雷利",
+      "fact_type": "REALIZED_ROBOT_REVENUE",
+      "fact_text": "报告期内，公司机器人相关零部件业务收入1,784万元，同比增长115.51%。",
+      "component_domain": "motors / joint modules / dexterous hands / linear drive",
+      "canonical_level": 9,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_80e1669051011cf4207ab2ea",
+      "support_evidence_ids": [],
+      "decision_rationale": "Official half-year report provides quantified realized robot-parts revenue."
+    },
+    {
+      "fact_key": "JLMAG_2026H1_EMBODIED_MOTOR_ROTOR_SMALL_BATCH_DELIVERY",
+      "symbol": "300748.SZ",
+      "company": "金力永磁",
+      "fact_type": "COMMERCIAL_SMALL_BATCH_DELIVERY",
+      "fact_text": "公司与国际知名科技公司合作进行具身机器人电机转子研发和产能建设，并已有小批量产品交付。",
+      "component_domain": "NdFeB magnets / motor rotors",
+      "canonical_level": 9,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_0c8c77d99a31545088f983ac",
+      "support_evidence_ids": [],
+      "decision_rationale": "Small-batch delivery is a realized commercialization milestone. This source does not itself establish a Tesla link."
+    },
+    {
+      "fact_key": "JLMAG_2026H1_WORLD_KNOWN_TECH_COMPANY_DESIGNATION",
+      "symbol": "300748.SZ",
+      "company": "金力永磁",
+      "fact_type": "UNNAMED_HEAD_CUSTOMER_PROJECT_DESIGNATION",
+      "fact_text": "公司已获得世界知名科技公司具身机器人电机转子项目定点，并按客户计划推进量产准备、建设专用产线。",
+      "component_domain": "NdFeB magnets / motor rotors",
+      "canonical_level": 4,
+      "canonical_tesla_link_level": 2,
+      "anchor_evidence_id": "EACQ_fd39aaccf17b5b214cefc2f3",
+      "support_evidence_ids": ["EACQ_e9b70a6a6a063170df693b11"],
+      "decision_rationale": "Existing unnamed world-known technology-company relationship is supported. T2 is an unnamed-head-customer clue, not a named Tesla/Optimus relationship."
+    },
+    {
+      "fact_key": "MOONS_2026H1_HUMANOID_ROBOT_PRODUCT_APPLICATION",
+      "symbol": "603728.SH",
+      "company": "鸣志电器",
+      "fact_type": "ROBOT_PRODUCT_APPLICATION",
+      "fact_text": "公司运动控制产品平台主要应用于包括人形机器人在内的高端制造领域。",
+      "component_domain": "coreless motors / frameless motors / drives / reducers",
+      "canonical_level": 2,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_51f729e1810aa3da1022d263",
+      "support_evidence_ids": [],
+      "decision_rationale": "Official half-year report supports product application relevance; no customer/order/Optimus claim."
+    },
+    {
+      "fact_key": "LEADER_HARMONIC_2026H1_ROBOT_ORDER_SCALE_GROWTH",
+      "symbol": "688017.SH",
+      "company": "绿的谐波",
+      "fact_type": "ROBOT_ORDER_GROWTH",
+      "fact_text": "报告期内，公司机器人业务订单规模增长，带动产能利用率持续改善。",
+      "component_domain": "harmonic reducers / precision drive",
+      "canonical_level": 7,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_36465262e8402a1498d55dee",
+      "support_evidence_ids": ["EACQ_551beb83e6c37453e62b73de"],
+      "decision_rationale": "Full half-year report is anchor; quality-improvement report corroborates the same order-growth fact."
+    },
+    {
+      "fact_key": "ORBBEC_2026H1_ROBOT_CUSTOMER_COMMERCIAL_RELEVANCE",
+      "symbol": "688322.SH",
+      "company": "奥比中光",
+      "fact_type": "ROBOT_CUSTOMER_COMMERCIAL_RELEVANCE",
+      "fact_text": "公司已累计服务全球超过1,000家机器人客户，并持续推动3D视觉产品在多类型机器人及具身智能场景中的商业落地。",
+      "component_domain": "3D vision / depth sensing",
+      "canonical_level": 2,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_b85617109bff45fb4c126dd6",
+      "support_evidence_ids": ["EACQ_7a9f6f16097f01a32878a5fb"],
+      "decision_rationale": "Robot customer/commercial relevance is supported. Generic 'head robot customers' does not establish any Tesla/Optimus link, so the T0 anchor governs the canonical fact."
+    }
+  ],
+  "reject_only": [
+    {
+      "evidence_id": "EACQ_9931abd2a8f08db316d33427",
+      "symbol": "600699.SH",
+      "company": "均胜电子",
+      "reason_code": "REJECT_FALSE_CONTEXT_ENTITY_NAME_ONLY",
+      "reason": "The match is a related-party/company-name and property-rental context, not a robot commercialization fact."
+    },
+    {
+      "evidence_id": "EACQ_1eddfecbec2d002da36e2373",
+      "symbol": "688017.SH",
+      "company": "绿的谐波",
+      "reason_code": "REJECT_BACKGROUND_FINANCING_CONTEXT_NOT_COMMERCIAL_MILESTONE",
+      "reason": "Fund-raising project background is not used as a standalone current commercialization milestone; the order-growth fact is canonicalized separately."
+    }
+  ]
+}

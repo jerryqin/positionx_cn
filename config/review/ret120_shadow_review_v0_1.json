@@ -1,0 +1,100 @@
+{
+  "module_id": "RET120_SHADOW_REVIEW_V0_1",
+  "paths": {
+    "project_root": "D:\\positionx_cn",
+    "market_db": "D:\\positionx_data\\catalog\\market_data.duckdb",
+    "market_table": "market.daily_bars_v1",
+    "fire_root": "D:\\positionx_data\\research\\opportunity_engine\\ret120_manual_fire_shadow_v0_1",
+    "human_decision_ledger": "D:\\positionx_data\\research\\opportunity_engine\\ret120_manual_fire_shadow_v0_1\\ledger\\human_decision_ledger.jsonl",
+    "human_trade_ledger": "D:\\positionx_data\\research\\opportunity_engine\\ret120_shadow_review_v0_1\\ledger\\human_trade_ledger.jsonl",
+    "output_root": "D:\\positionx_data\\research\\opportunity_engine\\ret120_shadow_review_v0_1"
+  },
+  "accounts": {
+    "SYSTEM_ALL_FIRE": {
+      "entry_rule": "Every canonical FIRE_MANUAL recommendation",
+      "entry_price": "actual_open",
+      "entry_shares": "suggested_shares",
+      "exit_policy": "NOT_QUALIFIED"
+    },
+    "HUMAN_SELECTION_SHADOW": {
+      "entry_rule": "Canonical FIRE_MANUAL AND first terminal human decision is APPROVE",
+      "entry_price": "actual_open",
+      "entry_shares": "suggested_shares",
+      "exit_policy": "NOT_QUALIFIED"
+    },
+    "HUMAN_LIVE": {
+      "entry_rule": "APPROVE fill from human decision ledger",
+      "subsequent_trades": "human_trade_ledger ADD/REDUCE/EXIT",
+      "accounting": "weighted_average_cost_long_only",
+      "exit_policy": "HUMAN_ACTUAL"
+    }
+  },
+  "markouts": {
+    "horizons_sessions": [
+      20,
+      60,
+      120
+    ],
+    "semantics": "ENTRY_OPEN_TO_CLOSE_AFTER_N_SUBSEQUENT_MARKET_SESSIONS",
+    "calendar": "distinct market_table trade_date",
+    "missing_symbol_close": "UNAVAILABLE_NO_FORWARD_FILL",
+    "returns": "gross_before_fees"
+  },
+  "decision_policy": {
+    "canonical_terminal_decision": "FIRST_OF_APPROVE_OR_REJECT",
+    "skip_is_nonterminal_for_selection": true,
+    "later_conflicting_terminal_decision": "FLAG_CONFLICT_KEEP_FIRST"
+  },
+  "trade_ledger": {
+    "actions": [
+      "ADD",
+      "REDUCE",
+      "EXIT"
+    ],
+    "entry_source": "APPROVE fill is imported automatically; do not record ENTRY again",
+    "long_only": true,
+    "append_only_hash_chain": true,
+    "fees_optional": true,
+    "initial_entry_fees_source": "human_decision_ledger.human_fill_fees",
+    "pnl_fee_semantics": "All recorded ENTRY/ADD/REDUCE/EXIT fees are deducted from HUMAN_LIVE net P&L exactly once.",
+    "prevalidate_before_append": true,
+    "event_order": "trade_date/event_date then recorded_at"
+  },
+  "report": {
+    "default_groups": [
+      "account",
+      "human_decision",
+      "lane",
+      "universe_tier"
+    ],
+    "full_system_portfolio_metrics": "BLOCKED_UNTIL_SYSTEM_EXIT_POLICY_QUALIFIED",
+    "human_live_metrics": [
+      "realized_pnl",
+      "unrealized_pnl",
+      "total_pnl",
+      "fees",
+      "open_positions"
+    ],
+    "cohort_metrics": [
+      "n",
+      "avg_return",
+      "median_return",
+      "win_rate",
+      "p10_return",
+      "worst_return",
+      "best_return"
+    ]
+  },
+  "guardrails": {
+    "research_only": true,
+    "no_broker": true,
+    "no_orders": true,
+    "no_production_db": true,
+    "no_strategy2_change": true,
+    "no_existing_g4_change": true,
+    "no_exit_policy_invention": true,
+    "no_cagr_or_mdd_for_system_shadow_without_exit_policy": true,
+    "no_parameter_scan": true,
+    "no_historical_optimization": true
+  }
+}

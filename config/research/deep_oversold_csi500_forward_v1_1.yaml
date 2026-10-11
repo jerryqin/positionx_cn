@@ -1,0 +1,50 @@
+# PositionX Deep Oversold CSI500 Forward Protocol
+edge_id: ret20_reversal
+protocol_version: "1.1"
+frozen_at: "2026-09-24"
+historical_cutoff: "20260924"
+forward_start_rule: FIRST_COMPLETED_MARKET_SESSION_AFTER_CUTOFF
+
+universe: CSI500
+benchmark: 000905.SH
+signal:
+  definition: ret20 <= -25%
+  observed_at: T_CLOSE
+  ret20_semantics: close[T] / close[T-20_market_sessions] - 1
+
+entry:
+  session: S1_FIRST_MARKET_SESSION_AFTER_SIGNAL
+  price: EXACT_OPEN
+  fillability_version: STANDARD_OPEN_V1
+  fillability_semantics:
+    - valid_open_gt_0
+    - not_suspended
+    - if_up_limit_known_open_must_be_below_up_limit
+    - if_up_limit_unknown_allow_no_limit_day_unless_one_price_up_lock_is_proven
+
+exit:
+  session_offset_from_signal: 20
+  counting_semantics: "S1 is entry session; S20 close is exit. Entry S1 open -> Exit S20 close."
+  price: EXACT_CLOSE
+
+portfolio:
+  initial_reference_equity: 1000000
+  target_weight_per_signal: 0.01
+  max_total_weight: 0.30
+  duplicate_rule: FIRST_SIGNAL_WHILE_PENDING_OR_HELD
+  lot_sizing_version: ROUND_DOWN_TO_MIN_LIMIT_ORDER_VOLUME_V1
+  lot_rule: "target_weight is a ceiling; if allocation cannot buy one minimum lot, skip and record BLOCKED_MIN_LOT_OR_CAPACITY; never force one lot above target."
+
+cost:
+  reference_20bp:
+    round_trip_bps: 20
+    semantics: ALL_IN_ROUND_TRIP_REFERENCE
+  stress_50bp:
+    round_trip_bps: 50
+    semantics: ALL_IN_ROUND_TRIP_STRESS
+  note: "20/50bp are round-trip totals, never per-side. Reference 20bp is not a claim that statutory fees equal 20bp."
+
+review:
+  completed_trades_min: 60
+  calendar_months_min: 3
+  condition: BOTH

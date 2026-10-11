@@ -1,0 +1,86 @@
+.venv/
+__pycache__/
+*.pyc
+data/*.db
+logs/*.log
+config/settings.local.yaml
+
+# ---- PositionX-CN managed baseline additions (P0C4) ----
+# Python / tooling
+/.venv/
+/venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+/.vscode/
+/.idea/
+
+# Secrets / local machine config
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials*.json
+secrets*.json
+test_openai.py
+
+# Runtime / generated directories (project-root anchored)
+/data/
+/logs/
+/log/
+/tmp/
+/temp/
+/cache/
+/backup/
+/backups/
+/patch_backups/
+/_patch_backups/
+/payload/
+/patch_payload/
+
+# Explicit source-config exception
+!/config/data/
+!/config/data/**
+
+# Local databases / data artifacts anywhere
+*.duckdb
+*.duckdb.wal
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.parquet
+*.feather
+*.arrow
+
+# Archives / binaries
+*.zip
+*.7z
+*.rar
+*.exe
+*.dll
+*.pyd
+*.so
+
+# Historical ad-hoc backups / logs
+*.bak
+*.bak_*
+*.bak-*
+*.pre_*
+*.tmp
+*.log
+
+# Local QMT/MiniQMT state
+/userdata_mini/
+/userdata/
+
+# Root-level generated migration manifests
+/protected_manifest.csv
+/safe_to_move_manifest.csv

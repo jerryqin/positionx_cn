@@ -1,0 +1,27 @@
+audit_id: EXCHANGE_OFFICIAL_TRUE_MISS_AUDIT_V0_1
+input:
+  pilot_detail: 'D:\positionx_data\research\data_audit\cninfo_blank_query_exact_date_pilot_v0_1_1\blank_query_pilot_detail_v0_1_1.csv'
+sse:
+  api_url: 'https://query.sse.com.cn/security/stock/queryCompanyBulletin.do'
+  referer: 'https://www.sse.com.cn/assortment/stock/list/info/announcement/'
+  page_size: 100
+  security_type: '0101,120100,020100,020200,120200'
+szse:
+  api_url: 'https://www.szse.cn/api/disc/announcement/annList'
+  referer: 'https://www.szse.cn/disclosure/listed/notice/index.html'
+  channel_code: 'listedNotice_disc'
+  page_size: 100
+network:
+  timeout_seconds: 30
+  retries: 6
+  backoff_seconds: 1.0
+matching:
+  fuzzy_title_threshold: 0.94
+output_dir: 'D:\positionx_data\research\data_audit\exchange_official_true_miss_audit_v0_1'
+safety:
+  first_party_only: true
+  sh_sz_a_shares_only: true
+  no_eva_import: true
+  no_market_outcomes: true
+  no_pdf_download: true
+  no_database_mutation: true

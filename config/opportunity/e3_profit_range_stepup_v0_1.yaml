@@ -1,0 +1,77 @@
+research_id: OPPORTUNITY_E3_PROFIT_RANGE_STEPUP_V0_1
+
+catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+event_table: research.forecast_semantic_events_pit_v1
+
+event_asset:
+  asset_id: FORECAST_SEMANTIC_EVENTS_PIT_CNINFO
+  asset_version: FORECAST_SEMANTIC_2020_2026_PARSER_V0_2_1
+  source_sha256: c11c116a4f7e103891e6ab08623bf5e3b8ae4ca8257e42c95ff477882d5b8a6a
+
+shadow_union:
+  path: 'D:\positionx_data\research\market\e1_historical_price_backfill_v0_1\e1_daily_bars_shadow_union.parquet'
+  sha256: '7da0c5b734bb520ba7471cfd509e44bd8373f18bfc5fab9884dc8b485bfefc09'
+
+qmt_verification:
+  path: 'D:\positionx_data\research\opportunity_engine\e1_identity_qmt_verification_v0_2\e1_qmt_independent_price_verification_v0_2_summary.json'
+  required_verdict: ACCEPT_QMT_INDEPENDENT_PRICE_VERIFICATION_FOR_E1_RESEARCH
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\e3_profit_range_stepup_v0_1'
+
+mechanism:
+  family: E3_EVENT_FUNDAMENTAL_NUMERIC
+  name: PROFIT_RANGE_STEPUP_REPRICING
+  event_kind: ORIGINAL_FORECAST
+  change_type: IMPROVING
+  setup: 'profitable-to-profitable original forecast with complete valid current/prior profit ranges'
+  signal: 'current_profit_min_yuan > prior_profit_max_yuan'
+  interpretation: 'forecast worst case exceeds prior-period best case; no magnitude threshold'
+  entry: 'first tradable canonical equity session strictly after event calendar date, at open'
+  same_day_entry_allowed: false
+  outcome_conditioned_filtering: false
+  parameter_scan: false
+
+identity_policy:
+  include_a_share_prefixes: ['00','30','60','68']
+  include_bse_prefixes: ['43','83','87','88','92']
+  exclude_b_share_prefixes: ['20','90']
+  bse_suffix: BJ
+
+baseline:
+  type: SIGNAL_WEIGHTED_MATCHED_SETUP
+  strata:
+    - event_year
+    - report_period_bucket
+  min_setup_per_stratum: 30
+  setup_includes_signal: true
+
+labels:
+  primary:
+    name: E3_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    name: E3_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+  evaluation_population: MATURED_ONLY
+
+data_quality_gate:
+  entry_mapping_coverage_min: 0.95
+  market_factor_valid_rate_min: 0.99
+  canonicalization_conflict_rows_max: 0
+
+fast_reject:
+  selected_min: 200
+  primary_lift_vs_matched_setup_min: 1.25
+  primary_precision_minus_matched_setup_min: 0.03
+  positive_years_min: 5
+  pass_effect: 'advance only to robustness; NOT strategy qualification'
+
+safety:
+  research_only: true
+  canonical_market_promotion: false
+  broker: false
+  qmt_execution: false

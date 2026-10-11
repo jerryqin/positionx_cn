@@ -1,0 +1,181 @@
+{
+  "baseline_id": "OPTIMUS_STEADY_STATE_V0_7_4_2_COMPONENT_DOMAIN_V0_4_5_FREEZE_BASELINE",
+  "baseline_date": "2026-10-10",
+  "mode": "STEADY_STATE_OPERATIONS",
+  "registry": {
+    "registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "canonical_candidates": 22,
+    "needs_review_candidates": 2,
+    "evidence_count": 163,
+    "provisional_evidence_count": 2,
+    "review_decision_count": 150,
+    "f_status_counts": {
+      "POSSIBLE": 20,
+      "SPECULATIVE": 4
+    },
+    "maintenance_counts": {
+      "seed_audit_debt": 0,
+      "stale_canonical": 0,
+      "discovery_only": 2,
+      "provisional_evidence": 2
+    },
+    "canonical_fact_count": 25,
+    "materialized_fact_evidence_count": 25
+  },
+  "monitoring_partition": {
+    "current_canonical_monitor_count": 22,
+    "current_canonical_monitor_symbols": [
+      "002050.SZ",
+      "002472.SZ",
+      "002979.SZ",
+      "003021.SZ",
+      "300124.SZ",
+      "300115.SZ",
+      "300433.SZ",
+      "300580.SZ",
+      "300660.SZ",
+      "300748.SZ",
+      "301550.SZ",
+      "603662.SH",
+      "603667.SH",
+      "603728.SH",
+      "688017.SH",
+      "688160.SH",
+      "688322.SH",
+      "601100.SH",
+      "603009.SH",
+      "603119.SH",
+      "601689.SH",
+      "600699.SH"
+    ],
+    "discovery_shadow_count": 2,
+    "discovery_shadow": [
+      {
+        "symbol": "603416.SH",
+        "company": "无锡信捷电气股份有限公司",
+        "lifecycle_state": "DISCOVERY_ONLY",
+        "f_status": "SPECULATIVE",
+        "tesla_link_level": 0
+      },
+      {
+        "symbol": "603809.SH",
+        "company": "成都豪能科技股份有限公司",
+        "lifecycle_state": "DISCOVERY_ONLY",
+        "f_status": "SPECULATIVE",
+        "tesla_link_level": 0
+      }
+    ],
+    "unresolved_outsider": {
+      "symbol": "600353.SH",
+      "company": "成都旭光电子股份有限公司",
+      "state": "WAITING_CAPTURE_REPAIR",
+      "registry_action": "NONE"
+    }
+  },
+  "theme": {
+    "stage": "Stage 1",
+    "stage_label": "Late Incubation",
+    "ramp_state": "PRE-RAMP",
+    "industrial_state": "INDUSTRIALIZATION",
+    "confidence": "HIGH",
+    "auto_stage_mutation": false
+  },
+  "validated_runtime": {
+    "b8_dedupe_probe": {
+      "manifest_payload_sha256": "d124f86156111d8299a2b893faa8a13c2ca76767bf949d9e2d28f7be3bb23a48",
+      "record_count": 1,
+      "classified_count": 0,
+      "queue_count": 0,
+      "skipped_already_classified": 1,
+      "error_count": 0
+    },
+    "c8_scan": {
+      "manifest_payload_sha256": "e03fead2a02ff483aa3ef2ba794f23164cd19a8b7d4ef9c43a0dfc575c23c9f8",
+      "queue_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "audit_sha256": "d948f61a0860b8b5047a60240412ee9157651690c35452913f6f740327b98a0f",
+      "proposal_count": 0,
+      "rejected_discovery_count": 1,
+      "waiting_capture_repair_count": 1,
+      "existing_registry_skipped_before_classification": 4,
+      "scan_completeness": "PARTIAL_WAITING_CAPTURE_REPAIR"
+    }
+  },
+  "code_freeze": {
+    "scripts/run_optimus_prospective_monitor_v07.py": "ab8e7d190d75ebcc56dd6debaa0f55d01f6957f6e930ce064072c175166bea8d",
+    "config/research/optimus_prospective_monitor_v07.json": "d8b8020006db4722eb3ff9c468302771e8740df2f59b75c72b5486387cb28e2c",
+    "scripts/run_optimus_prospective_intake_v071.py": "0e0a707030b960f7f1e5530577cf1449071c29b0023b11fc13977d4b0d4d45df",
+    "config/research/optimus_prospective_intake_v071.json": "efd4570054eb2de576639ab9f264970744204f550814fc22d29ecc5d77309f31",
+    "scripts/run_optimus_global_discovery_monitor_v072.py": "36d044485f631c142d03d8225c63b141db3ecf0c1fecd9d30a29861e23b37696",
+    "config/research/optimus_global_discovery_monitor_v072.json": "0e522b7b57df4694bf75e8c911cc6603c17931e3611059eb4a6ae42da2d8aff4",
+    "scripts/run_optimus_external_inbox_v072a.py": "3aa95d0137ca13c6f67ceb01013e0f7648670097fe1fec1b4df81a3cd0cb06ca",
+    "config/research/optimus_external_inbox_v072a.json": "dc26aef5c3c68f50ecd934498ba67a79ccda84999a9776aef2df2c4fbe016a65",
+    "config/research/optimus_external_source_registry_v072a.json": "e14163ef3023a82431451e21e157516a06c0ebaeae086069633f54a0bfcd65d2",
+    "scripts/run_optimus_external_classifier_v072b.py": "ea2c07c34a4491d7da52a64338052cd6773d8b70a53a46a89aa222d8025f2a28",
+    "config/research/optimus_external_classifier_v072b.json": "0906939b380a63f40e7e808ac71963e4547287ea311ae43982235a55fe98baab",
+    "scripts/run_optimus_candidate_discovery_v072c.py": "dcfc008b0fb72028d47c6d844a2fec8dbca1e568153420a706f96370e9a46b23",
+    "config/research/optimus_candidate_discovery_v072c.json": "4ca32fbcef10dc93352707760153f1af852c0b9b2e352a3f14c71efb896d1463",
+    "scripts/run_optimus_candidate_registry_v03.py": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+  },
+  "frozen_history": {
+    "v0_6": {
+      "status": "FROZEN_DO_NOT_RERUN_APPLY",
+      "result_manifest_sha256": "da56ebb611f8c5320dc094f36c2a4d31fa7a80373eb1c84c8977337086e6315f"
+    },
+    "v0_7_3": {
+      "status": "FROZEN_DO_NOT_RERUN_PLAN_OR_APPLY",
+      "plan_manifest_payload_sha256": "cf6dad84cb60e67d3e27962b5b8dcf80da0ae862b561abb25c148143d0d5142e",
+      "apply_result_payload_sha256": "b6b1d7e3c96867d0526fb63b9278efe89e41ff77026230e085cad73953c47878",
+      "post_registry_sha256": "975ab7ff3d8f9d5b644defcd8f4a3479969f1b4c7b08b3cf0b7eac23f3ef69f4"
+    },
+    "v0_5_4_leisai_canonicalization": {
+      "status": "FROZEN_APPLIED_DO_NOT_RERUN",
+      "approved_plan_sha256": "748c1ca8206ea355c2b42252817ec407d23ceca22ef2903c182e500733bfe4dc",
+      "batch_id": "CB_7e2476e590e0bbe674ac8848",
+      "fact_id": "CF_fe5714e699b2e5c1a34c979c",
+      "materialized_evidence_id": "CFE_ef6afb1d4f48e8166d81bfdb",
+      "result_manifest_sha256": "e79e591e4e0db9d1efbd379c74a4891042d2d57b9b613660913d11ed335965ba",
+      "post_registry_sha256": "d51bbc34dc0731667cd7c2991b11cb954fd3747c9b1c9c6c6154f40cbbc9ccaa",
+      "theme_stage_change": false,
+      "tesla_supplier_claim": false
+    },
+    "component_domain_v0_4_5_future_only": {
+      "status": "APPROVED_FUTURE_ONLY_PRODUCTION_PATCH",
+      "approved_at": "2026-10-10",
+      "parser_version": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+      "historical_v0_4_4_reclassification": false,
+      "ambiguous_multi_domain": "HUMAN_REVIEW_REQUIRED",
+      "candidate_eval_manifest_payload_sha256": "e60422d69675d9dcf3a0631c0e5f65c160b9e7b3af927af962c28aa2f6e80666",
+      "candidate_eval_rows_sha256": "7f9bd284490141ce030d1ea7714c22d2b9d7f9f4b1d05af4c20f284cd92a4106",
+      "full_coverage_rows": 50,
+      "old_first_match_minority_risk_rows": 8,
+      "minority_risk_rows_still_old": 0,
+      "b8_dedupe_contract_review": "PASS_NO_CAPTURE_IDENTITY_CHANGE",
+      "registry_mutation": false,
+      "canonicalization_mutation": false,
+      "theme_stage_mutation": false
+    }
+  },
+  "governance": {
+    "registry_mutation_requires_separate_plan_and_explicit_apply_approval": true,
+    "canonicalization_requires_separate_review": true,
+    "theme_stage_mutation_requires_separate_human_review": true,
+    "provisional_evidence_never_auto_promotes": true,
+    "search_snippet_never_classified": true,
+    "observed_at_never_substitutes_for_event_time": true,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  },
+  "previous_baseline_sha256": "8e3cda9404936b8156e02c49e63f75b84ecab899a2aeb2a2a1d78ce567fd307a",
+  "last_governance_event": {
+    "type": "PARSER_POLICY_UPGRADE",
+    "parser_version": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",
+    "scope": "FUTURE_ONLY",
+    "historical_reclassification": false,
+    "evaluation_manifest_payload_sha256": "e60422d69675d9dcf3a0631c0e5f65c160b9e7b3af927af962c28aa2f6e80666"
+  }
+}

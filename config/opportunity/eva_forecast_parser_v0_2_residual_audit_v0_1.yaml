@@ -1,0 +1,8 @@
+research_id: OPPORTUNITY_EVA_FORECAST_PARSER_V0_2_RESIDUAL_AUDIT_V0_1
+
+candidate_path: 'D:\positionx_data\incoming\eva\forecast_semantic_corpus_2020_2026_parser_v0_2\semantic_events_2020_2026_v0_2.parquet'
+candidate_sha256: 'fca87ddf942f6e28d05cae2eadad965b89b6f2f7de2acd62780edff069870c4e'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\eva_forecast_parser_v0_2_residual_audit_v0_1'
+
+target_rate: 0.99

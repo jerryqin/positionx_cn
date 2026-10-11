@@ -1,0 +1,209 @@
+{
+  "classifier_id": "OPTIMUS_EXTERNAL_CAPTURE_CLASSIFIER_V0_7_2B",
+  "contract_id": "OPTIMUS_GLOBAL_DISCOVERY_MONITOR_V0_7_4_POST_EXPANSION",
+  "external_inbox_id": "OPTIMUS_NORMALIZED_EXTERNAL_INBOX_V0_7_2A",
+  "mode": "READ_ONLY_RETRIEVAL_AND_PROPOSAL_CLASSIFICATION",
+  "case_id": "BOE_LIVE_OPTIMUS_V0_1",
+  "case_start": "2026-10-08T00:00:00+08:00",
+  "output_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\external_classifier_v0_7_2b",
+  "staging_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\external_classifier_v0_7_2b\\staging",
+  "dependency_paths": {
+    "v072_script": "scripts/run_optimus_global_discovery_monitor_v072.py",
+    "v072a_script": "scripts/run_optimus_external_inbox_v072a.py",
+    "v072a_config": "config/research/optimus_external_inbox_v072a.json",
+    "v072a_source_registry": "config/research/optimus_external_source_registry_v072a.json",
+    "evidence_script": "scripts/run_optimus_evidence_acquisition_v04.py"
+  },
+  "dependency_sha256": {
+    "v072_script": "36d044485f631c142d03d8225c63b141db3ecf0c1fecd9d30a29861e23b37696",
+    "v072a_script": "3aa95d0137ca13c6f67ceb01013e0f7648670097fe1fec1b4df81a3cd0cb06ca",
+    "v072a_config": "dc26aef5c3c68f50ecd934498ba67a79ccda84999a9776aef2df2c4fbe016a65",
+    "v072a_source_registry": "e14163ef3023a82431451e21e157516a06c0ebaeae086069633f54a0bfcd65d2",
+    "evidence_script": "61a5d6db83a5dfde69870366b4cad20521218138c9f0d6a847ca7630f467a99f"
+  },
+  "retrieval_contract": {
+    "exact_registered_url_only": true,
+    "search_engine_role": "RECALL_ONLY",
+    "search_snippet_never_classified": true,
+    "max_bytes": 25000000,
+    "timeout_seconds": 35,
+    "redirects_must_end_on_allowed_host": true,
+    "sec_contact_email_env": "POSITIONX_SEC_CONTACT_EMAIL",
+    "sec_contact_email_required_for_sec_gov": true
+  },
+  "temporal_contract": {
+    "prospective_case_start": "2026-10-08T00:00:00+08:00",
+    "effective_time_order": [
+      "event_time",
+      "published_at"
+    ],
+    "pre_case_start_disposition": "HISTORICAL_BASELINE_ONLY",
+    "unknown_effective_time_strong_signal_disposition": "HUMAN_REVIEW_REQUIRED",
+    "observed_at_never_substitutes_for_event_time": true,
+    "no_hindsight": true
+  },
+  "classification_contract": {
+    "theme_context_terms": [
+      "optimus",
+      "humanoid robot",
+      "humanoid robots",
+      "tesla bot"
+    ],
+    "strong_milestone_tags": [
+      "SUPPLIER_SOURCING",
+      "PURCHASE_ORDER",
+      "TOOLING_CAPACITY",
+      "MASS_PRODUCTION",
+      "BUILD_RAMP",
+      "INTERNAL_DEPLOYMENT",
+      "EXTERNAL_DEPLOYMENT"
+    ],
+    "supplier_commercial_tags": [
+      "SMALL_BATCH_DELIVERY",
+      "BATCH_SUPPLY",
+      "MASS_PRODUCTION",
+      "CUSTOMER_VALIDATION",
+      "ORDER_SCHEDULING",
+      "ROBOT_REVENUE_SHIPMENT"
+    ],
+    "theme_official_stage2_candidate_requires": [
+      "registered THEME_OFFICIAL source",
+      "Optimus/humanoid context",
+      "at least one strong milestone tag",
+      "effective_time verified on/after case_start"
+    ],
+    "supplier_stage2_candidate_requires": [
+      "registered supplier/global official source",
+      "explicit Tesla/Optimus named context",
+      "commercial milestone tag",
+      "effective_time verified on/after case_start"
+    ],
+    "queue_states": [
+      "NO_NEW_MATERIAL_EVIDENCE",
+      "HISTORICAL_BASELINE_ONLY",
+      "EVIDENCE_PROPOSAL",
+      "HUMAN_REVIEW_REQUIRED",
+      "STAGE2_GATE_CANDIDATE",
+      "CONTRADICTION_ALERT"
+    ],
+    "human_review_required_for_all_nonzero_signals": true,
+    "auto_fact": false,
+    "auto_evidence_level": false,
+    "auto_tesla_link_level": false,
+    "auto_registry_write": false,
+    "auto_canonicalization": false,
+    "auto_theme_stage_change": false,
+    "context_scope": {
+      "decision_rule": "SAME_BLOCK_OR_QA_LOCAL_WINDOW",
+      "block_model": "SENTENCE_OR_LINE; SHORT_CONTEXT_HEADING_MAY_CARRY_TO_NEXT_BLOCK",
+      "qa_answer_local_window_chars": 180,
+      "qa_answer_start_markers": [
+        "答：",
+        "答:",
+        "回复：",
+        "回复:"
+      ],
+      "qa_answer_end_rule": "NEXT_NUMBERED_QUESTION_OR_NEXT_QA_MARKER",
+      "global_signal_tags": "AUDIT_ONLY",
+      "cross_section_cooccurrence": "NOT_MATERIAL_EVIDENCE",
+      "theme_context": "OPTIMUS_OR_HUMANOID",
+      "supplier_proposal_context": "ROBOT_OR_HUMANOID",
+      "supplier_stage2_context": "TESLA_OR_OPTIMUS_NAMED",
+      "pdf_line_wraps_are_not_semantic_boundaries": true
+    },
+    "cross_section_false_positive_reason": "CROSS_SECTION_SIGNAL_REJECTED",
+    "language_support": {
+      "en": "ENABLED",
+      "zh_CN": "ENABLED_V0_7_2B_3",
+      "decision_scope": "CONTEXT_SCOPED"
+    },
+    "chinese_milestone_policy": {
+      "conservative": true,
+      "named_tesla_required_for_supplier_stage2": true,
+      "generic_robot_only_never_implies_tesla": true,
+      "batch_supply_is_supplier_commercialization": true,
+      "product_validation_is_precommercial_milestone": true
+    },
+    "qa_local_window_policy": {
+      "purpose": "Recover semantic continuity lost by PDF hard line wrapping without joining unrelated sections.",
+      "context_and_milestone_must_be_within_chars": 180,
+      "must_be_inside_same_answer_block": true,
+      "question_text_alone_cannot_supply_company_context": true
+    },
+    "supplier_stage2_binding": {
+      "rule": "TESLA_AND_ROBOT_CONTEXT_MUST_BIND_TO_SAME_COMMERCIAL_MILESTONE",
+      "tesla_context_signal_tags": "AUDIT_ONLY_FOR_GENERIC_TESLA_BUSINESS",
+      "tesla_robot_context_signal_tags": "AUTHORITATIVE_FOR_SUPPLIER_STAGE2_GATE",
+      "qa_local_window_chars": 180,
+      "automotive_tesla_order_plus_separate_robot_discussion": "NOT_STAGE2",
+      "optimus_counts_as_both_tesla_and_robot_context": true,
+      "named_tesla_link_required": true
+    }
+  },
+  "safety": {
+    "research_only": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  },
+  "transport_policy": {
+    "SRC_TESLA_CORPORATE_OFFICIAL": "MANUAL_BROWSER_FALLBACK_ON_HTTP_403",
+    "SRC_TESLA_IR_OFFICIAL": "DIRECT_HTTP",
+    "SRC_SEC_TESLA_EDGAR": "DIRECT_HTTP_SEC_CONTACT",
+    "SRC_SEC_GENERIC": "DIRECT_HTTP_SEC_CONTACT",
+    "SRC_HKEXNEWS_OFFICIAL": "DIRECT_HTTP",
+    "SRC_SSE_OFFICIAL": "MANUAL_BROWSER_FALLBACK_ON_NETWORK_OR_DYNAMIC_SHELL",
+    "SRC_SZSE_OFFICIAL": "DIRECT_HTTP"
+  },
+  "transport_contract": {
+    "http_403_is_not_no_evidence": true,
+    "http_403_is_not_classifier_result": true,
+    "manual_browser_capture_preserves_official_source_url": true,
+    "manual_browser_capture_must_still_pass_v072a_source_registry": true,
+    "manual_browser_capture_does_not_fill_event_time": true,
+    "network_reset_is_not_no_evidence": true,
+    "network_timeout_is_not_no_evidence": true,
+    "dynamic_html_shell_is_not_no_evidence": true,
+    "sseinfo_dynamic_shell_manual_render_fallback": true,
+    "manual_browser_rendered_pdf_allowed": true,
+    "manual_capture_preserves_original_official_url": true
+  },
+  "dynamic_shell_detection": {
+    "enabled": true,
+    "hosts": [
+      "roadshow.sseinfo.com"
+    ],
+    "html_max_bytes": 12000,
+    "visible_text_max_chars": 1200,
+    "disposition": "WAITING_MANUAL_CAPTURE",
+    "note": "Fail closed when the HTTP response is only an SPA/static shell and not the rendered official content."
+  },
+  "dedupe_contract": {
+    "version": "V0_7_2B_8",
+    "success_identity_source": "processed_capture_identities.jsonl plus legacy audit/queue migration",
+    "all_successful_classifications_are_processed": true,
+    "no_new_material_evidence_is_processed": true,
+    "historical_baseline_only_is_processed": true,
+    "queued_signal_is_processed": true,
+    "error_is_not_processed": true,
+    "manual_waiting_is_not_processed": true,
+    "explicit_reclassify_bypasses_routine_dedupe": true,
+    "append_only": true,
+    "component_domain_v0_4_5_review": "PASS_NO_CAPTURE_IDENTITY_CHANGE",
+    "capture_identity_includes_component_domain_parser_version": false,
+    "historical_capture_auto_reclassification_on_parser_upgrade": false,
+    "historical_reclassification_requires_explicit_reclassify": true,
+    "future_new_captures_use_current_pdf_adapter": true,
+    "v0_4_4_classified_capture_history_preserved": true,
+    "rationale": "B.8 dedupe is keyed by normalized capture_identity, not CNINFO component-domain parser version; parser upgrade must not replay historical external captures."
+  },
+  "pdf_adapter_contract": {
+    "evidence_script_sha256": "61a5d6db83a5dfde69870366b4cad20521218138c9f0d6a847ca7630f467a99f",
+    "api": "extract_pdf_text(pdf_bytes,max_pages)->(text,pages,parse_error)",
+    "component_domain_logic_not_used_by_external_classifier": true,
+    "capture_identity_unchanged": true
+  }
+}

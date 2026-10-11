@@ -1,0 +1,28 @@
+{
+  "policy_id": "G4_ISOLATED_PREVIEW_ADAPTER_V0_4",
+  "source_status": "CONFIRMED_READY_FOR_PREVIEW",
+  "pilot_strategy_name": "PositionX:G4_EXECUTION_PILOT",
+  "plan_target_semantics": "current broker symbol market value + incremental Pilot notional",
+  "pilot_subledger_guard_before_preview": {
+    "planned_gross_cap_rmb": 150000,
+    "hard_gross_guard_rmb": 180000
+  },
+  "isolated_execution": {
+    "temporary_sqlite": true,
+    "uses_existing_execution_engine": true,
+    "dry_run": true,
+    "live_enabled": false,
+    "auto_execute": false,
+    "broker_submit_forbidden": true,
+    "broker_cancel_forbidden": true,
+    "production_trading_plan_write": false
+  },
+  "preview_evidence": [
+    "requested<=confirmed_shadow",
+    "requested<=50000",
+    "preview_notional<=requested",
+    "implementation_shortfall",
+    "implementation_fidelity"
+  ],
+  "manual_approval": "preview result only; no production write in V0.4"
+}

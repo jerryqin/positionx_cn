@@ -1,0 +1,13 @@
+research_id: OPPORTUNITY_SECTOR_PIT_ASSET_AUDIT_V0_2
+
+catalogs:
+  - 'D:\positionx_data\catalog\market_data.duckdb'
+  - 'D:\positionx_cn\data\research\positionx_cn_research.duckdb'
+
+filesystem_roots:
+  - 'D:\positionx_data'
+  - 'D:\positionx_cn\data'
+
+filesystem_max_results: 500
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\sector_pit_asset_audit_v0_2'

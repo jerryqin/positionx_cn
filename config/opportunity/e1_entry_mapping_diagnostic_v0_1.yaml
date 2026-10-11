@@ -1,0 +1,14 @@
+research_id: OPPORTUNITY_E1_ENTRY_MAPPING_DIAGNOSTIC_V0_1
+
+catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+event_table: research.forecast_semantic_events_pit_v1
+market_table: market.daily_bars_v1
+
+asset:
+  asset_id: FORECAST_SEMANTIC_EVENTS_PIT_CNINFO
+  asset_version: FORECAST_SEMANTIC_2020_2026_PARSER_V0_2_1
+  source_sha256: c11c116a4f7e103891e6ab08623bf5e3b8ae4ca8257e42c95ff477882d5b8a6a
+
+target_entry_mapping_coverage: 0.95
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\e1_entry_mapping_diagnostic_v0_1'

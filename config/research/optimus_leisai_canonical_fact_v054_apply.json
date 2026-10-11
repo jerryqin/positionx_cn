@@ -1,0 +1,100 @@
+{
+  "apply_id": "OPTIMUS_LEISAI_CANONICAL_FACT_V0_5_4_GUARDED_APPLY",
+  "approved_plan": {
+    "path": "D:/positionx_data/research/big_opportunity/optimus/prospective_canonicalization_v0_5_4/leisai_20261010/20261010T161551+0800/CANONICALIZATION_PLAN.json",
+    "sha256": "748c1ca8206ea355c2b42252817ec407d23ceca22ef2903c182e500733bfe4dc",
+    "plan_id": "OPTIMUS_PROSPECTIVE_CANONICALIZATION_20261010_LEISAI_V0_5_4_PLAN",
+    "batch_id": "CB_7e2476e590e0bbe674ac8848",
+    "fact_id": "CF_fe5714e699b2e5c1a34c979c",
+    "fact_key": "LEISAI_2026_HUMANOID_MOTION_CONTROL_CORE_COMPONENT_CAPACITY_EXPANSION",
+    "source_anchor_evidence_id": "EACQ_5afda139f7d4dd9a1f33b7bb",
+    "source_anchor_sha256": "f163f6710bd999508f69e3a8b6282da8fd526f7f5b9ecde62b5cf1f7d701fb9e",
+    "materialized_evidence_id": "CFE_ef6afb1d4f48e8166d81bfdb"
+  },
+  "proposal_search_root": "D:/positionx_data/research/big_opportunity/optimus/prospective_monitor_v0_7_1",
+  "dependencies": {
+    "canonicalization_script": {
+      "path": "scripts/run_optimus_canonicalization_v05.py",
+      "sha256": "3e07d79ad34b5171618a59af50b3efda7b1836b1c9d697b76fcabbc63c988a1f"
+    },
+    "canonicalization_config": {
+      "path": "config/research/optimus_canonicalization_v0_5.json",
+      "sha256": "0d0facd0377ab9ce15cdba3d0bd776bc3acf50df339474dd77a9600d6978f7b7"
+    },
+    "registry_script": {
+      "path": "scripts/run_optimus_candidate_registry_v03.py",
+      "sha256": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884"
+    },
+    "steady_checker": {
+      "path": "scripts/run_optimus_steady_state_v074.py",
+      "sha256": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da"
+    },
+    "steady_baseline": {
+      "path": "config/research/optimus_steady_state_baseline_v074.json",
+      "sha256": "97859e333c144bb0f5812bc5c67c54e6f5b809944df3217a7e2c718b3e1700f5"
+    },
+    "plan_script": {
+      "path": "scripts/run_optimus_leisai_canonical_fact_v054_plan.py",
+      "sha256": "0d9f6b0d52b9de1d9776b188e906fd2bd6a1db18d3c41dac85b49ba63f2f0850"
+    },
+    "plan_config": {
+      "path": "config/research/optimus_leisai_canonical_fact_v054_plan.json",
+      "sha256": "caa2aa1d2aaf299ac463b6588e854623d5114fed36ade17b4c231b34a4ef05a7"
+    }
+  },
+  "precondition": {
+    "registry_sha256": "975ab7ff3d8f9d5b644defcd8f4a3479969f1b4c7b08b3cf0b7eac23f3ef69f4",
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "canonical_candidates": 22,
+    "evidence_count": 161,
+    "review_decision_count": 149,
+    "provisional_evidence_count": 2,
+    "canonical_fact_count": 24,
+    "canonical_symbol_count": 22,
+    "materialized_fact_evidence_count": 24,
+    "target_symbol": "002979.SZ",
+    "target_lifecycle_state": "ACTIVE_CANONICAL",
+    "target_f_status": "POSSIBLE",
+    "target_max_evidence_level": 9,
+    "target_max_tesla_link_level": 0
+  },
+  "expected_post": {
+    "candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "canonical_candidates": 22,
+    "evidence_count": 163,
+    "review_decision_count": 150,
+    "provisional_evidence_count": 2,
+    "canonical_fact_count": 25,
+    "canonical_symbol_count": 22,
+    "materialized_fact_evidence_count": 25,
+    "target_symbol": "002979.SZ",
+    "target_lifecycle_state": "ACTIVE_CANONICAL",
+    "target_f_status": "POSSIBLE",
+    "target_max_evidence_level": 9,
+    "target_max_tesla_link_level": 0,
+    "theme_stage_change": false,
+    "tesla_supplier_claim": false,
+    "steady_state_baseline_rebase_required": true
+  },
+  "output_root": "D:/positionx_data/research/big_opportunity/optimus/prospective_canonicalization_v0_5_4/leisai_20261010/guarded_apply",
+  "backup_root": "D:/positionx_data/research/big_opportunity/optimus/prospective_canonicalization_v0_5_4/leisai_20261010/db_backup",
+  "safety": {
+    "exact_plan_sha_only": true,
+    "simulate_on_temp_db_before_real_apply": true,
+    "backup_db_before_real_apply": true,
+    "rollback_restore_on_failure": true,
+    "single_db_transaction": true,
+    "registry_mutation": true,
+    "canonicalization_mutation": true,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

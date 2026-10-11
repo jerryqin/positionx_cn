@@ -1,0 +1,76 @@
+research_id: OPPORTUNITY_E5_POSITIVE_NEWS_CONFIRMATION_V0_1
+
+catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+event_table: research.forecast_semantic_events_pit_v1
+
+event_asset:
+  asset_id: FORECAST_SEMANTIC_EVENTS_PIT_CNINFO
+  asset_version: FORECAST_SEMANTIC_2020_2026_PARSER_V0_2_1
+  source_sha256: c11c116a4f7e103891e6ab08623bf5e3b8ae4ca8257e42c95ff477882d5b8a6a
+
+shadow_union:
+  path: 'D:\positionx_data\research\market\e1_historical_price_backfill_v0_1\e1_daily_bars_shadow_union.parquet'
+  sha256: '7da0c5b734bb520ba7471cfd509e44bd8373f18bfc5fab9884dc8b485bfefc09'
+
+qmt_verification:
+  path: 'D:\positionx_data\research\opportunity_engine\e1_identity_qmt_verification_v0_2\e1_qmt_independent_price_verification_v0_2_summary.json'
+  required_verdict: ACCEPT_QMT_INDEPENDENT_PRICE_VERIFICATION_FOR_E1_RESEARCH
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\e5_positive_news_confirmation_v0_1'
+
+mechanism:
+  family: E5_EVENT_RESPONSE
+  name: POSITIVE_NEWS_CONFIRMATION
+  event_kind: ORIGINAL_FORECAST
+  positive_change_types:
+    - IMPROVING
+    - TURNAROUND
+    - LOSS_NARROWING
+  reaction_session: 'first tradable session strictly after event calendar date'
+  signal: 'reaction_session_close >= reaction_session_pre_close'
+  interpretation: 'positive forecast remains positively priced after the first complete post-event session'
+  entry: 'next tradable session after reaction session, at open'
+  same_day_entry_allowed: false
+  outcome_conditioned_filtering: false
+  parameter_scan: false
+
+baseline:
+  type: SIGNAL_WEIGHTED_MATCHED_SETUP
+  strata:
+    - event_year
+    - report_period_bucket
+    - change_type
+  min_setup_per_stratum: 30
+  setup_includes_signal: true
+  baseline_entry: 'same second-session open as signal'
+
+labels:
+  primary:
+    name: E5_TREND25_60
+    target: 0.25
+    horizon_sessions: 60
+    mae_floor: -0.10
+  secondary:
+    name: E5_TREND40_120
+    target: 0.40
+    horizon_sessions: 120
+    mae_floor: -0.12
+  evaluation_population: MATURED_ONLY
+
+data_quality_gate:
+  reaction_and_entry_mapping_coverage_min: 0.95
+  market_factor_valid_rate_min: 0.99
+  canonicalization_conflict_rows_max: 0
+
+fast_reject:
+  selected_min: 200
+  primary_lift_vs_matched_setup_min: 1.25
+  primary_precision_minus_matched_setup_min: 0.03
+  positive_years_min: 5
+  pass_effect: 'advance only to robustness; NOT strategy qualification'
+
+safety:
+  research_only: true
+  canonical_market_promotion: false
+  broker: false
+  qmt_execution: false

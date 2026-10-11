@@ -1,0 +1,38 @@
+{
+  "schema_version": "OPTIMUS_CANONICALIZATION_PLAN_V0_5",
+  "plan_id": "OPTIMUS_SEED_CANONICALIZATION_BATCH2_20261009_V0_5_2",
+  "basis": "Human-reviewed V0.4.4-parser provisional evidence discovered by V0.4.5 exhaustive seed-audit-debt range backfill (2026-08-31..2026-10-09). Canonical unit remains a fact, not a PDF. T2 means an unnamed head-customer clue only and is not a named Tesla/Optimus relationship.",
+  "expected_pre_state": {
+    "effective_v044_provisional_count": 2,
+    "seed_audit_debt": 11
+  },
+  "facts": [
+    {
+      "fact_key": "EVERWIN_2026H1_EMBODIED_BUSINESS_AND_UNNAMED_HEAD_ROBOT_CUSTOMER",
+      "symbol": "300115.SZ",
+      "company": "长盈精密",
+      "fact_type": "ROBOT_CUSTOMER_COMMERCIAL_RELEVANCE",
+      "fact_text": "公司披露2026年上半年具身智能与新兴科技硬件业务实现营业收入2.43亿元，同比增长537.64%；同时确认与海外头部机器人客户存在供应商及协同研发合作关系。",
+      "component_domain": "precision manufacturing / robot hardware components / assembly",
+      "canonical_level": 2,
+      "canonical_tesla_link_level": 2,
+      "anchor_evidence_id": "EACQ_248efd8a4b0b144c42c3c83e",
+      "support_evidence_ids": [],
+      "decision_rationale": "Company IR record is affirmative and company-specific. The disclosed 2.43亿元 covers the combined embodied-intelligence and emerging-tech-hardware segment, so it supports commercial relevance but is not treated as pure robot revenue. The overseas head robot customer relationship is existing and affirmative, but unnamed; T2 is therefore only an unnamed-head-customer clue and not Tesla identification."
+    },
+    {
+      "fact_key": "KINCO_2026H1_HUMANOID_ROBOT_CORE_COMPONENT_SOLUTION_RELEVANCE",
+      "symbol": "688160.SH",
+      "company": "步科股份",
+      "fact_type": "ROBOT_CORE_COMPONENT_SOLUTION_RELEVANCE",
+      "fact_text": "公司具备较完整的机器人核心部件解决方案能力，可为工业移动机器人、协作机器人、工业机器人、人形机器人、泛服务机器人及仿生机器人提供显示、控制、驱动等多维度解决方案。",
+      "component_domain": "frameless torque motors / servo drives / reducers / robot control",
+      "canonical_level": 2,
+      "canonical_tesla_link_level": 0,
+      "anchor_evidence_id": "EACQ_5ee8e679db66614cd3fd192a",
+      "support_evidence_ids": [],
+      "decision_rationale": "Formal CNINFO-filed sponsor continuous-supervision report supports low-level company/product relevance only. It does not establish a named customer, order, shipment, revenue milestone, or Tesla/Optimus link."
+    }
+  ],
+  "reject_only": []
+}

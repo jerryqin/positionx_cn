@@ -1,0 +1,9 @@
+research_id: OPPORTUNITY_EVA_FORECAST_PAYLOAD_DIAGNOSTIC_V0_1_1
+
+backfill_path: 'D:\positionx_data\incoming\eva\forecast_semantic_backfill_2020_2023_v0_1\semantic_events_backfill.parquet'
+reparse_path: 'D:\positionx_data\incoming\eva\forecast_semantic_reparse_2024_2026_v0_1\semantic_events_reparse.parquet'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\eva_forecast_payload_diagnostic_v0_1_1'
+
+diagnostic_thresholds:
+  strict_payload_target: 0.99

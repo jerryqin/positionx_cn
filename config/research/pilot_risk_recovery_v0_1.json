@@ -1,0 +1,17 @@
+{
+  "policy_id": "PILOT_RISK_RECOVERY_V0_1",
+  "status": "FROZEN_G6_POLICY_V0_1",
+  "portfolio_max_target_gross": 0.3,
+  "manual_approval_required": true,
+  "auto_execute": false,
+  "kill_switch": {
+    "stale_or_missing_data": "STOP_NEW_ENTRIES",
+    "missed_forward_session": "STOP_NEW_ENTRIES",
+    "policy_hash_mismatch": "STOP_NEW_ENTRIES",
+    "unexplained_reconcile_mismatch": "STOP_NEW_ENTRIES",
+    "duplicate_order_intent": "STOP_NEW_ENTRIES",
+    "target_gross_breach": "STOP_NEW_ENTRIES"
+  },
+  "existing_positions_on_integrity_failure": "NO_FORCED_LIQUIDATION; follow frozen exits only with fresh valid data, otherwise human review",
+  "max_rmb_loss": "G7_USER_OWNED_NOT_DEFINED_HERE"
+}

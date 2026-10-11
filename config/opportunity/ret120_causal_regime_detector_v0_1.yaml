@@ -1,0 +1,63 @@
+research_id: RET120_CAUSAL_REGIME_DETECTOR_V0_1
+
+source:
+  exact_scanner_source: 'D:\positionx_cn\research\trend_edge_scan.py'
+  expected_scanner_source_sha256: '801fcda9cc7db7287eb8ea766c3e054c7804d0cdd64ba0650196701787f0fe16'
+
+  index_ladder_summary: 'D:\positionx_data\research\opportunity_engine\ret120_index_ladder_attribution_v0_1\ret120_index_ladder_attribution_v0_1_summary.json'
+  index_ladder_dir: 'D:\positionx_data\research\opportunity_engine\ret120_index_ladder_attribution_v0_1'
+
+  tail_holdout_summary: 'D:\positionx_data\research\opportunity_engine\ret120_tail_reversal_holdout_v0_1\ret120_tail_reversal_holdout_v0_1_summary.json'
+  tail_holdout_dir: 'D:\positionx_data\research\opportunity_engine\ret120_tail_reversal_holdout_v0_1'
+
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+
+window:
+  market_data_through: '2026-09-30'
+  discovery_end: '2026-04-08'
+
+detector:
+  evidence_horizons: [20,60]
+  rolling_matured_cohorts: 20
+  state_definition:
+    PERSISTENCE: 'spread20>0 AND mono20>0 AND spread60>0 AND mono60>0'
+    REVERSAL: 'spread20<0 AND mono20<0 AND spread60<0 AND mono60<0'
+    TRANSITION: 'otherwise'
+  timestamp_semantics: 'State at T close uses only cohort outcomes whose exit_date <= T.'
+  no_strength_thresholds: true
+  no_parameter_scan: true
+
+evaluation:
+  universes: ['CSI1800','EX_CSI1800']
+  future_horizons: [20,60]
+  retrospective_causal_only: true
+  directional_expectation:
+    PERSISTENCE: 'future Q5-Q1 > 0'
+    REVERSAL: 'future Q5-Q1 < 0'
+  q1_active_long_diagnostic:
+    sample: 'strictly post-2026-04-08 holdout rows only'
+    metrics: ['Q1 raw return','Q1 excess vs full-market median','Q5 raw return','Q5 excess vs full-market median']
+    no_strategy_claim: true
+
+upstream_gates:
+  ladder_status: 'PASS_RET120_INDEX_LADDER_ATTRIBUTION_V0_1_RUN'
+  ladder_verdict: 'INVERSION_LOCALIZED_BELOW_CSI1800'
+  holdout_status: 'PASS_RET120_TAIL_REVERSAL_HOLDOUT_V0_1_RUN'
+  holdout_gate: 'HOLDOUT_SUPPORTS_TAIL_REVERSAL_HYPOTHESIS'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\ret120_causal_regime_detector_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt_calls: true
+  no_broker: true
+  no_orders: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  no_strategy2_change: true
+  no_forward_change: true

@@ -1,0 +1,33 @@
+research_id: OPPORTUNITY_EVA_FORECAST_HOMOGENEOUS_REPARSE_ACCEPTANCE_V0_1
+
+canonical:
+  path: 'D:\positionx_data\events\forecast_semantic_corpus_v0_2_3\semantic_events_all.parquet'
+  sha256: '488c29b12ca9975c36005e9afcc2afb82516aae5bf0305a337c69a81060db0d4'
+  expected_rows: 12090
+
+backfill:
+  path: 'D:\positionx_data\incoming\eva\forecast_semantic_backfill_2020_2023_v0_1\semantic_events_backfill.parquet'
+  sha256: '5d13c9a5a3a47d7157ce5a3d222a9a35664705918ecefee5721c469881b1fe8c'
+
+reparse_candidates:
+  - 'D:\positionx_data\incoming\eva\forecast_semantic_reparse_2024_2026_v0_1\semantic_events_reparse.parquet'
+  - 'D:\positionx_data\incoming\eva\20261004_forecast_semantic_reparse_2024_2026_v0_1\semantic_events_reparse.parquet'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\eva_forecast_homogeneous_reparse_acceptance_v0_1'
+
+gate:
+  row_count_exact: 12090
+  identity_coverage_min: 1.0
+  identity_extra_max: 0
+  duplicate_identity_max: 0
+  event_time_exact_match_min: 1.0
+  event_precision_exact_match_min: 1.0
+  pdf_sha256_exact_match_min: 1.0
+  title_normalized_match_min: 0.99
+  event_time_nonnull_min: 1.0
+  symbol_nonempty_min: 1.0
+  semantic_payload_min: 0.99
+  event_years_exact:
+    - 2024
+    - 2025
+    - 2026

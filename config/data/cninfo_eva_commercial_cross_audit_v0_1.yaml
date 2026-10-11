@@ -1,0 +1,23 @@
+audit_id: CNINFO_EVA_COMMERCIAL_CROSS_AUDIT_V0_1
+
+positionx:
+  summary: 'D:\positionx_data\events\commercial_catalyst_cninfo_v0_1\cninfo_commercial_metadata_v0_1_summary.json'
+  all_metadata: 'D:\positionx_data\events\commercial_catalyst_cninfo_v0_1\cninfo_commercial_metadata_all.parquet'
+  title_candidates: 'D:\positionx_data\events\commercial_catalyst_cninfo_v0_1\cninfo_commercial_title_candidates.parquet'
+
+eva:
+  events: 'D:\positionx_data\incoming\eva\commercial_catalyst_corpus_v0_1\commercial_catalyst_events.parquet'
+  rejected_unresolved: 'D:\positionx_data\incoming\eva\commercial_catalyst_corpus_v0_1\rejected_unresolved.parquet'
+
+expected_positionx_acquisition:
+  shards: 1215
+
+output_dir: 'D:\positionx_data\research\data_audit\cninfo_eva_commercial_cross_audit_v0_1'
+
+safety:
+  read_only: true
+  no_network: true
+  no_market_outcomes: true
+  eva_is_reference_not_truth: true
+  no_research_asset_promotion: true
+  no_database_mutation: true

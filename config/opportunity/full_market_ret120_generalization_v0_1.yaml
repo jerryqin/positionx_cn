@@ -1,0 +1,66 @@
+research_id: FULL_MARKET_RET120_GENERALIZATION_V0_1
+
+source:
+  frozen_ret120_panel: 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+  expected_frozen_ret120_panel_sha256: '66b358a54c33866dd03aae187c1d60379a0317df3c15fe3d453babb430b338f1'
+  full_market_universe: 'D:\positionx_data\research\opportunity_engine\full_market_universe_v0_1\full_market_tradable_universe_v0_1.parquet'
+  expected_full_market_universe_sha256: '45d38422c0021bbfc234eb22b16e216aa0f59e5bf6e1fadc97290389d92b9509'
+  canonical_features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  expected_canonical_features_sha256: '540cbfebb61a8138f01c5bfc8b57f012621633ee35884cf97dddd3e5c4055ce7'
+
+bridge:
+  purpose: 'Prove that canonical synthetic close/pre_close ret120 reproduces exact frozen v0.2.2 CSI500 Q5 membership before using it outside CSI500'
+  frozen_signal_representation: 'QMT back_ratio'
+  canonical_signal_representation: 'synthetic adjusted close from cumulative close/pre_close'
+  ret120_formula: 'adj_close(T) / adj_close(T-120 symbol observations) - 1'
+  bucket_algorithm: 'sort symbol ASC within date -> rank(method=first) -> pd.qcut(5)'
+  required_q5_key_mismatch_rows: 0
+  required_missing_canonical_keys: 0
+  no_outcome_based_bridge_tolerance: true
+
+window:
+  signal_start: '2020-08-03'
+  signal_cutoff_h120: '2026-04-08'
+  latest_market_session: '2026-09-30'
+
+frozen_folds:
+  source: 'trend_persistence_replication_v022_latest.json; resolved historically by RET120 Temporal Persistence V0.1C'
+  F1: ['2020-08-03','2022-10-17']
+  F2: ['2022-10-18','2024-09-19']
+  F3: ['2024-09-20','2026-09-24']
+
+definition:
+  feature: ret120
+  signal_timestamp: 'T close'
+  entry: 'T+1 exact OPEN'
+  exits:
+    H20: 'S20 exact CLOSE'
+    H60: 'S60 exact CLOSE'
+    H120: 'S120 exact CLOSE'
+  bucket: 'daily PIT Q1-Q5; rank(method=first) then qcut(5)'
+  signal_universe: 'SH/SZ full-market tradable universe keys'
+  market_adjustment: 'exact-window signal-date full-market member median synthetic OPEN->CLOSE return'
+  no_transaction_cost_phase1: true
+  no_alpha_filters_added: true
+
+frozen_fast_reject_gate:
+  all_horizon_q5_minus_q1_positive: true
+  at_least_2_horizons_monotonicity_ge: 0.5
+  each_horizon_positive_folds_min: 2
+  fold_count: 3
+  decision:
+    CANDIDATE: 'all three checks pass'
+    REJECT: 'otherwise; no threshold rescue'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\full_market_ret120_generalization_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt: true
+  no_broker: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  existing_ret120_strategy2_unchanged: true
+  existing_ret120_forward_unchanged: true
+  only_intended_research_question: 'Does the frozen RET120 mechanism generalize from index universes to the SH/SZ full-market tradable universe?'

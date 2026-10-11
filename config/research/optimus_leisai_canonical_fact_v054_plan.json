@@ -1,0 +1,103 @@
+{
+  "plan_id": "OPTIMUS_PROSPECTIVE_CANONICALIZATION_20261010_LEISAI_V0_5_4_PLAN",
+  "mode": "PLAN_ONLY_NO_MUTATION",
+  "target": {
+    "evidence_id": "EACQ_5afda139f7d4dd9a1f33b7bb",
+    "symbol": "002979.SZ",
+    "company": "雷赛智能",
+    "source_ref": "http://static.cninfo.com.cn/finalpage/2026-10-09/1225596738.PDF",
+    "event_time": "2026-10-09T00:00:00+08:00",
+    "required_evidence_level": 6,
+    "required_tesla_link_level": 0,
+    "required_queue_state": "EVIDENCE_PROPOSAL",
+    "required_contradiction_kind": null,
+    "expected_parser_version": "OPTIMUS_EVIDENCE_ACQUISITION_V0_4_4"
+  },
+  "fact": {
+    "fact_key": "LEISAI_2026_HUMANOID_MOTION_CONTROL_CORE_COMPONENT_CAPACITY_EXPANSION",
+    "symbol": "002979.SZ",
+    "company": "雷赛智能",
+    "fact_type": "HUMANOID_MOTION_CONTROL_CORE_COMPONENT_CAPACITY_EXPANSION",
+    "fact_text": "公司2026年10月募集说明书（注册稿）披露，智能装备运动控制核心零部件研发及产业化项目拟新建智能化产线，显著扩大生产规模，以满足包括人形机器人在内的高端领域对小型化、高可靠性核心零部件需求，并规划第3年至第5年逐步释放40%、70%、100%产能；该事实证明人形机器人相关运动控制核心零部件的扩产/产业化建设，不证明Tesla/Optimus客户、定点、订单或供货关系。",
+    "component_domain": "motion control core components / humanoid robotics",
+    "canonical_level": 6,
+    "canonical_tesla_link_level": 0,
+    "anchor_evidence_id": "EACQ_5afda139f7d4dd9a1f33b7bb",
+    "support_evidence_ids": [],
+    "decision_rationale": "公司级一级官方披露明确了面向人形机器人等高端领域的核心零部件智能化产线、扩产与分阶段产能释放路径；L6用于表达机器人相关专用/明确扩产建设，不外推为已量产供货或Tesla/Optimus供应商关系。"
+  },
+  "source_review_policy": {
+    "anchor_initial_state": "PROVISIONAL",
+    "anchor_post_materialization_state": "REJECTED",
+    "anchor_reject_reason_template": "SOURCE_ABSORBED_BY_CANONICAL_FACT_V0_5_1:{fact_id}",
+    "canonical_unit": "FACT_NOT_PDF",
+    "materialized_fact_evidence_initial_state": "CANONICAL"
+  },
+  "precondition": {
+    "registry_sha256": "975ab7ff3d8f9d5b644defcd8f4a3479969f1b4c7b08b3cf0b7eac23f3ef69f4",
+    "registry_candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "registry_evidence_count": 161,
+    "registry_review_decision_count": 149,
+    "registry_provisional_evidence_count": 2,
+    "canonical_fact_count": 24,
+    "canonical_symbol_count": 22,
+    "materialized_fact_evidence_count": 24,
+    "target_lifecycle_state": "ACTIVE_CANONICAL",
+    "target_f_status": "POSSIBLE",
+    "target_canonical": true,
+    "target_max_evidence_level": 9,
+    "target_max_tesla_link_level": 0
+  },
+  "expected_post_apply_semantics": {
+    "registry_candidate_count": 24,
+    "active_canonical": 22,
+    "discovery_only": 2,
+    "active_seed": 0,
+    "canonical_fact_count": 25,
+    "canonical_symbol_count": 22,
+    "materialized_fact_evidence_count": 25,
+    "registry_evidence_count_delta": 2,
+    "registry_review_decision_count_delta": 1,
+    "registry_provisional_evidence_count": 2,
+    "target_lifecycle_state": "ACTIVE_CANONICAL",
+    "target_f_status": "POSSIBLE",
+    "target_max_evidence_level": 9,
+    "target_max_tesla_link_level": 0,
+    "theme_stage_change": false,
+    "tesla_supplier_claim": false,
+    "steady_state_baseline_rebase_required_after_apply": true
+  },
+  "dependency_paths": {
+    "steady_checker": "scripts/run_optimus_steady_state_v074.py",
+    "steady_baseline": "config/research/optimus_steady_state_baseline_v074.json",
+    "prospective_intake_script": "scripts/run_optimus_prospective_intake_v071.py",
+    "prospective_intake_config": "config/research/optimus_prospective_intake_v071.json",
+    "canonicalization_script": "scripts/run_optimus_canonicalization_v05.py",
+    "canonicalization_config": "config/research/optimus_canonicalization_v0_5.json",
+    "registry_script": "scripts/run_optimus_candidate_registry_v03.py",
+    "evidence_script": "scripts/run_optimus_evidence_acquisition_v04.py"
+  },
+  "dependency_sha256": {
+    "steady_checker": "10a3406c4c7a5204f4f56cd1f84ad9d2e80ed8f9b6cff1225dfeca47a72d52da",
+    "steady_baseline": "97859e333c144bb0f5812bc5c67c54e6f5b809944df3217a7e2c718b3e1700f5",
+    "prospective_intake_script": "5b65733f479b8a3a9ef7831779ab540bc254a6d28a4d47f671799d5922824184",
+    "prospective_intake_config": "d985d4ffd2361cb94718e801b0575282f82a62981111af796722567123600f41",
+    "canonicalization_script": "3e07d79ad34b5171618a59af50b3efda7b1836b1c9d697b76fcabbc63c988a1f",
+    "registry_script": "3955c6deb314bee4bf6821ae9cc0d2f09c606d0fbd695f34877afa3d4b782884",
+    "evidence_script": "10e5a8288177c76e207fa264f74e18c3a878d95cf191585ca8a576643475a691"
+  },
+  "proposal_search_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\prospective_monitor_v0_7_1",
+  "output_root": "D:\\positionx_data\\research\\big_opportunity\\optimus\\prospective_canonicalization_v0_5_4\\leisai_20261010",
+  "safety": {
+    "plan_only": true,
+    "registry_mutation": false,
+    "canonicalization_mutation": false,
+    "theme_stage_mutation": false,
+    "broker": false,
+    "orders": false,
+    "production_db": false
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "policy_id": "G5_DYNAMIC_CAPITAL_FRONTIER_V0_3",
+  "capital_grid": [
+    4000000,
+    5000000,
+    6000000,
+    8000000,
+    10000000,
+    12000000,
+    15000000,
+    20000000
+  ],
+  "only_variable": "total_pilot_capital",
+  "selection_rule": "ascending; first full pass; stop",
+  "frozen_from_g5_v01": {
+    "sleeves": [
+      0.5,
+      0.5
+    ],
+    "target_weight": 0.01,
+    "max_target_gross": 0.3,
+    "nearest_lot_max_relative_error": 0.25,
+    "fidelity_min": 0.9,
+    "max_abs_cagr_drift": 0.005,
+    "max_abs_mdd_drift": 0.005,
+    "max_abs_sharpe_drift": 0.1,
+    "main_cost": 0.002,
+    "stress_cost": 0.005,
+    "incremental_gate": "dCAGR>0 AND dSharpe>0 AND dMDD>=0"
+  },
+  "no_post_result_threshold_change": true
+}

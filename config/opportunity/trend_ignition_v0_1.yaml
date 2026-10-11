@@ -1,0 +1,44 @@
+research_id: OPPORTUNITY_TREND_IGNITION_V0_1
+
+market_catalog: 'D:\positionx_data\catalog\market_data.duckdb'
+market_table: 'market.daily_bars_v1'
+
+# Deliberately reuse the already-audited CSI500 PIT membership lineage
+# as a clean V0.1 mechanism testbed. This is NOT the final Opportunity universe.
+pit_membership_parquet: 'D:\positionx_cn\data\research\edge_discovery\trend_persistence_scan_csi500_panel_v0221.parquet'
+research_universe: 'CSI500_PIT_TESTBED'
+benchmark_symbol: '000905.SH'
+benchmark_file: 'D:\\positionx_data\\incoming\\eva\\20260925_foundation_assets\\data\\research\\px_assets\\benchmark_index_daily.csv'
+benchmark_sha256: 'ff432d62fa73295ae92cc7162c8de3a4273357a9904a39ad087f1f6e48b4bf73'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\trend_ignition_v0_1'
+
+feature_contract:
+  rs_acceleration: 'RS20(current) - RS20(prior 20d block), benchmark-relative'
+  volatility_compression: '20d return vol / 60d return vol <= 0.85'
+  volume_contraction: '20d mean volume / 60d mean volume <= 0.90'
+  near_breakout: 'close within 5% below 60d high'
+  higher_low: '20d low >= 2% above 60d low'
+  candidate_rule: 'at least 4 of 5 conditions'
+  no_parameter_scan: true
+
+label_contract:
+  signal_time: 'T CLOSE'
+  hypothetical_entry: 'T+1 OPEN'
+  primary: 'TREND25_60 = reach +25% within 60 sessions before MAE worse than -10%'
+  secondary: 'TREND40_120 = reach +40% within 120 sessions before MAE worse than -12%'
+  research_only: true
+
+fast_reject_gate:
+  selected_observations_min: 100
+  primary_lift_min: 1.50
+  precision_minus_baseline_min: 0.03
+  positive_lift_years_min: 2
+  qualification_effect: 'mechanism survives to V0.2 only; NOT Strategy qualification'
+
+data_representation:
+  stock_daily_source: 'market.daily_bars_v1 raw/unadjusted'
+  stock_price_state: 'synthetic adjusted state via cumulative close/pre_close'
+  stock_adjusted_ohlc: 'adj_open/high/low = adj_close * raw_ohlc/raw_close'
+  benchmark_source: 'px_assets/benchmark_index_daily.csv from iwaos_index_daily'
+  benchmark_adjustment: 'none; price index'

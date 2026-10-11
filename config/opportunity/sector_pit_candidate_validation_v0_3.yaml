@@ -1,0 +1,20 @@
+research_id: OPPORTUNITY_SECTOR_PIT_CANDIDATE_VALIDATION_V0_3
+
+candidate_paths:
+  - 'D:\positionx_data\reference\industry\sw_pit\SW_INDUSTRY_PIT_L1_V20260927\ret120_industry_pit.csv'
+  - 'D:\positionx_data\incoming\eva\20260927_ret120_industry_pit\ret120_industry_pit.csv'
+  - 'D:\positionx_data\ret120_industry_pit\ret120_industry_pit.csv'
+
+pit_panel: 'D:\positionx_data\research\opportunity_engine\trend_ignition_v0_1\trend_ignition_v0_1_panel.parquet'
+
+start_col: effective_from
+end_col: effective_to_exclusive
+
+gate:
+  overall_coverage_min: 0.95
+  yearly_coverage_min: 0.90
+  ambiguity_rate_max: 0.001
+  lineage_nonempty_min: 0.95
+  required_start_date: '2020-08-03'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\sector_pit_candidate_validation_v0_3'

@@ -1,0 +1,18 @@
+research_id: OPPORTUNITY_FORECAST_SEMANTIC_CORPUS_VALIDATION_V0_1
+
+candidate_paths:
+  - 'D:\positionx_data\events\forecast_semantic_corpus_v0_2_3\semantic_events_all.parquet'
+  - 'D:\positionx_data\events\forecast_semantic_corpus_v0_1\semantic_events_all.parquet'
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\forecast_semantic_corpus_validation_v0_1'
+
+gate:
+  rows_min: 5000
+  symbols_min: 1000
+  event_time_nonnull_min: 0.99
+  symbol_nonempty_min: 0.99
+  announcement_id_nonempty_min: 0.99
+  duplicate_identity_max: 0
+  semantic_payload_min: 0.90
+  pdf_sha256_min: 0.90
+  formal_history_years_min: 5

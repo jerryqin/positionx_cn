@@ -1,0 +1,69 @@
+research_id: FULL_MARKET_52WH_H120_STANDALONE_V0_1
+
+source:
+  phase1_summary: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\full_market_52wh_generalization_v0_1_summary.json'
+  expected_phase1_summary_sha256: '97dad5de23d8aec86094ad56ffddac5cda2a45f3665e3029ff6d725bb82a0128'
+  candidate_events: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\candidate_events.parquet'
+  expected_candidate_events_sha256: '073bcd44cd12be337230ff782ce7ff39f874bde53fd2193d6142c9afbc32fcef'
+  event_returns: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\event_returns.parquet'
+  expected_event_returns_sha256: '0590f6a8d39df0fc86cc552c07a2b031fc8a52a07177d0390fc7f3eb513562e1'
+  features: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\features_52wh_v0_1.parquet'
+  calendar: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_generalization_v0_1\calendar.parquet'
+
+phase1_contract:
+  required_verdict: PROMISING_HORIZON_CANDIDATE
+  required_h120_pass: true
+  required_h60_pass: false
+  candidate_group: POS
+  horizon: 120
+  measurement_status: OK
+
+portfolio_policy:
+  target_weight: 0.01
+  max_target_gross: 0.30
+  max_positions: 30
+  fractional_shares: true
+  no_duplicate_symbol_while_held: true
+  same_day_exit_not_reusable_at_open: true
+  existing_positions_rebalanced: false
+  baseline_same_day_tie_break: SYMBOL_ASC
+  random_same_day_tie_break_seeds: 100
+  random_seed_start: 0
+  entry_capacity_scaling: 'pro-rata selected entries if gross/cash tighter'
+  main_round_trip_cost: 0.002
+  stress_round_trip_cost: 0.005
+  initial_equity: 1000000.0
+  entry_cost_timing: 'half round-trip cost at entry'
+  exit_cost_timing: 'half round-trip cost at exit'
+  daily_mark: 'synthetic adjusted open/close; missing mark carries last close'
+  exit: 'exact predeclared S120 close from frozen candidate event'
+  no_alpha_filters_added: true
+
+standalone_gate:
+  cagr20_positive: true
+  cagr50_positive: true
+  sharpe20_min: 0.5
+  mdd20_floor: -0.20
+  positive_calendar_years_min: 2
+  random_seed_median_cagr_positive: true
+  random_seed_p10_cagr_positive: true
+
+frozen_csi500_h120_reference:
+  cagr_20bps: 0.06545527893067216
+  max_drawdown_20bps: -0.06863302408619942
+  sharpe_20bps: 0.9557931031747033
+  avg_gross_20bps: 0.26753571816172217
+  random_cagr_p10_20bps: 0.03703602277432079
+  random_cagr_median_20bps: 0.0502709963365634
+  executed_trades: 150
+
+output_dir: 'D:\positionx_data\research\opportunity_engine\full_market_52wh_h120_standalone_v0_1'
+
+safety:
+  research_only: true
+  no_network: true
+  no_qmt: true
+  no_broker: true
+  no_database_mutation: true
+  no_parameter_scan: true
+  only_intended_change: 'CSI500 H120 standalone candidate set -> Full-Market H120 phase1-survivor candidate set; portfolio policy frozen'

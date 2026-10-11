@@ -1,0 +1,31 @@
+{
+  "policy_id": "EXECUTION_PILOT_POLICY_V0_2_600K",
+  "pilot_type": "EXECUTION_ONLY",
+  "economic_evidence_eligible": false,
+  "capital_envelope_rmb": 600000,
+  "max_order_value_rmb": 50000,
+  "expanded": {
+    "planned_gross_cap_rmb": 150000,
+    "hard_gross_guard_rmb": 180000,
+    "max_concurrent_positions": 3,
+    "max_new_entries_per_session": 2
+  },
+  "canary": {
+    "clean_order_lifecycles_required": 5,
+    "planned_gross_cap_rmb": 100000,
+    "max_concurrent_positions": 2,
+    "max_new_entries_per_session": 1,
+    "promotion": "manual only; zero unresolved reconcile/duplicate-intent/policy-mismatch/kill-switch incidents"
+  },
+  "same_symbol_live_gross_cap_rmb": 50000,
+  "max_actual_loss_budget_rmb": 50000,
+  "loss_ladder_rmb": {
+    "warning": 20000,
+    "stop_new_entries": 30000,
+    "emergency_exit_plan": 40000,
+    "budget_breach": 50000
+  },
+  "manual_approval_required": true,
+  "auto_execute": false,
+  "evidence_boundary": "Execution-chain and representative-ticket evidence only; never use Pilot PnL as Deep/RET120 economic evidence."
+}
