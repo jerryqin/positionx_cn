@@ -182,10 +182,10 @@ class TradingService:
     def sync_broker(self):
         if not self.broker or not self.broker.connected:
             raise RuntimeError("Broker 未连接")
-        account = self.broker.query_account()
-        positions = self.broker.query_positions()
-        orders = self.broker.query_orders()
-        trades = self.broker.query_trades()
+        account = self.broker_provider.get_account_snapshot()
+        positions = self.broker_provider.get_positions()
+        orders = self.broker_provider.get_orders()
+        trades = self.broker_provider.get_trades()
         self.db.save_account(account)
         self.db.save_positions(positions)
         self.db.save_broker_orders(orders)
@@ -463,7 +463,7 @@ class TradingService:
         now_ts = datetime.now().timestamp()
         cancelled = []
         active_status = {48,49,50,51,52,55}
-        for o in self.broker.query_orders():
+        for o in self.broker_provider.get_orders():
             if not str(o.get("strategy_name", "")).startswith("PositionX"):
                 continue
             try: status = int(o.get("status", -1))
