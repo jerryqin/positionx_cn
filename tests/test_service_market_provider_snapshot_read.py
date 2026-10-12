@@ -59,19 +59,6 @@ class M1C3ASnapshotReadTests(unittest.TestCase):
         )
         self.assertIn("self.market_provider.get_snapshot([s])[s]", text)
 
-    def test_non_target_legacy_market_calls_remain(self):
-        _, rows = _method_calls(ROOT / "core" / "service.py")
-        expected = {
-            ("readiness_check", "self.market.is_live_session"): 1,
-            ("prepare_plan", "self.market.refresh_completed_daily_bar"): 1,
-            ("prepare_plan", "self.market.history"): 1,
-            ("execute_plan", "self.market.is_live_session"): 1,
-            ("execute_quantity", "self.market.is_live_session"): 1,
-        }
-        for key, count in expected.items():
-            actual = sum(1 for fn, call, _ in rows if (fn, call) == key)
-            self.assertEqual(actual, count, key)
-
     def test_adapter_snapshot_remains_exact_legacy_delegate(self):
         path = ROOT / "core" / "providers" / "xtquant_market_data.py"
         text = path.read_text(encoding="utf-8")

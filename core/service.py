@@ -221,7 +221,7 @@ class TradingService:
         symbols = self.settings.get("market.symbols", []) or []
         ref = symbols[0] if symbols else ""
         checks["calendar_mode"] = "LIVE_SESSION_INFERENCE"
-        checks["session_open"] = bool(ref and self.market.is_live_session(
+        checks["session_open"] = bool(ref and self.market_provider.is_live_session(
             ref, int(self.settings.get("market.stale_tick_seconds", 30))
         ))
 
@@ -274,7 +274,7 @@ class TradingService:
             if not state.get("ok"):
                 missing.append(symbol)
                 continue
-            history[symbol] = self.market.history(symbol, bars=bars, refresh=False)
+            history[symbol] = self.market_provider.history(symbol, bars=bars, refresh=False)
             if str(history[symbol].index[-1])[:10] != plan_date:
                 # At this point refresh reported success, so a mismatch is an
                 # internal invariant failure rather than an expected data lag.
@@ -347,7 +347,7 @@ class TradingService:
         symbols = self.settings.get("market.symbols", []) or []
         if not symbols:
             raise RuntimeError("market.symbols 为空，无法确认交易时段")
-        if not self.market.is_live_session(symbols[0], int(self.settings.get("market.stale_tick_seconds", 30))):
+        if not self.market_provider.is_live_session(symbols[0], int(self.settings.get("market.stale_tick_seconds", 30))):
             return [{
                 "status": "BLOCKED",
                 "block_type": "SESSION_CLOSED_OR_STALE",
@@ -420,7 +420,7 @@ class TradingService:
             }]
 
         stale_seconds = int(self.settings.get("market.stale_tick_seconds", 30))
-        if not self.market.is_live_session(symbol, stale_seconds):
+        if not self.market_provider.is_live_session(symbol, stale_seconds):
             return [{
                 "status": "BLOCKED",
                 "block_type": "SESSION_CLOSED_OR_STALE",

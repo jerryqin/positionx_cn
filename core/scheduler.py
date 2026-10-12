@@ -38,7 +38,7 @@ class DailyScheduler:
 
         symbols = self.service.settings.get("market.symbols", []) or []
         ref = symbols[0] if symbols else ""
-        session_open = bool(ref and self.service.market.is_live_session(
+        session_open = bool(ref and self.service.market_provider.is_live_session(
             ref, int(self.service.settings.get("market.stale_tick_seconds", 30))
         ))
 
@@ -63,7 +63,7 @@ class DailyScheduler:
             if minute_key != self._last_plan_probe_minute:
                 self._last_plan_probe_minute = minute_key
                 bars_ready = all(
-                    self.service.market.has_completed_daily_bar(s, today, refresh=True)
+                    self.service.market_provider.has_completed_daily_bar(s, today, refresh=True)
                     for s in symbols
                 )
                 if bars_ready:

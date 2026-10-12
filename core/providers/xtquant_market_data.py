@@ -41,6 +41,15 @@ class XtQuantMarketDataProvider:
     def get_snapshot(self, symbols: Sequence[str]) -> Mapping[str, Any]:
         return {symbol: self._market.full_tick(symbol) for symbol in symbols}
 
+    def history(self, symbol: str, bars: int = 260, refresh: bool = False) -> Any:
+        return self._market.history(symbol, bars=bars, refresh=refresh)
+
+    def has_completed_daily_bar(self, symbol: str, trade_date: str, refresh: bool = True) -> bool:
+        return self._market.has_completed_daily_bar(symbol, trade_date, refresh=refresh)
+
+    def is_live_session(self, symbol: str, max_age_seconds: int = 30, now: Any = None) -> bool:
+        return self._market.is_live_session(symbol, max_age_seconds=max_age_seconds, now=now)
+
     def get_instrument(self, symbol: str, as_of: str | None = None) -> Any:
         if as_of not in (None, ""):
             raise ProviderCapabilityError("AS_OF_INSTRUMENT_DETAIL_NOT_SUPPORTED_BY_LEGACY_SERVICE")
