@@ -208,7 +208,7 @@ class TradingService:
         try:
             symbols = self.settings.get("market.symbols", []) or []
             for s in symbols:
-                self.market.full_tick(s)
+                self.market_provider.get_snapshot([s])[s]
             checks["market"] = True
         except Exception as e:
             checks["market"] = False
