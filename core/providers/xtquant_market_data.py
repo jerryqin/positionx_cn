@@ -50,6 +50,27 @@ class XtQuantMarketDataProvider:
     def is_live_session(self, symbol: str, max_age_seconds: int = 30, now: Any = None) -> bool:
         return self._market.is_live_session(symbol, max_age_seconds=max_age_seconds, now=now)
 
+    def ensure_tradable(self, symbol: str) -> Any:
+        return self._market.ensure_tradable(symbol)
+
+    def full_tick(self, symbol: str) -> Any:
+        return self._market.full_tick(symbol)
+
+    def is_tick_fresh(self, tick: Any, max_age_seconds: int) -> bool:
+        return self._market.is_tick_fresh(tick, max_age_seconds)
+
+    def tick_price(self, tick: Any, side: str) -> float:
+        return self._market.tick_price(tick, side)
+
+    def price_limits(self, symbol: str) -> Any:
+        return self._market.price_limits(symbol)
+
+    def price_tick(self, symbol: str, default: float = 0.01) -> float:
+        return self._market.price_tick(symbol, default)
+
+    def min_limit_order_volume(self, symbol: str, default: int = 100) -> int:
+        return self._market.min_limit_order_volume(symbol, default)
+
     def get_instrument(self, symbol: str, as_of: str | None = None) -> Any:
         if as_of not in (None, ""):
             raise ProviderCapabilityError("AS_OF_INSTRUMENT_DETAIL_NOT_SUPPORTED_BY_LEGACY_SERVICE")

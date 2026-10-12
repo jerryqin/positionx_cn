@@ -356,7 +356,7 @@ class TradingService:
             }]
         # Bind NEXT_SESSION only after a real live session is observed.
         self.db.claim_pending_plan(trade_date)
-        engine = ExecutionEngine(self.db, self.broker, self.market, self.risk,
+        engine = ExecutionEngine(self.db, self.broker, self.market_provider, self.risk,
                                  self.settings.section("risk"), self.settings.section("execution"), self.settings.section("market"))
         result = engine.execute_plan(trade_date, dry_run=dry_run)
         self.sync_broker()
@@ -432,7 +432,7 @@ class TradingService:
         engine = ExecutionEngine(
             self.db,
             self.broker,
-            self.market,
+            self.market_provider,
             self.risk,
             self.settings.section("risk"),
             self.settings.section("execution"),

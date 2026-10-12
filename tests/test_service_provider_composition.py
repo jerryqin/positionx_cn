@@ -56,17 +56,6 @@ class ServiceProviderCompositionTests(unittest.TestCase):
             "self.execution_provider":"self.providers.execution",
         })
 
-    def test_legacy_execution_engine_still_uses_broker_and_market(self):
-        calls=[
-            n for n in ast.walk(self.tree)
-            if isinstance(n,ast.Call) and call_name(n.func).split(".")[-1]=="ExecutionEngine"
-        ]
-        self.assertEqual(len(calls),2)
-        for c in calls:
-            args=[unparse(x) for x in c.args]
-            self.assertGreaterEqual(len(args),3)
-            self.assertEqual(args[0:3],["self.db","self.broker","self.market"])
-
     def test_service_has_no_direct_external_xtquant_import(self):
         bad=[]
         for n in ast.walk(self.tree):

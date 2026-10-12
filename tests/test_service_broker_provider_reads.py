@@ -117,15 +117,5 @@ class ServiceBrokerProviderReadTests(unittest.TestCase):
                 calls.append(".".join(c))
         self.assertEqual(calls, ["self.broker_provider.get_active_external_orders"])
 
-    def test_execution_engine_still_uses_legacy_broker_and_market(self):
-        calls=[
-            n for n in ast.walk(self.tree)
-            if isinstance(n,ast.Call) and call_name(n.func).split(".")[-1]=="ExecutionEngine"
-        ]
-        self.assertEqual(len(calls),2)
-        for c in calls:
-            args=[unparse(a) for a in c.args]
-            self.assertEqual(args[:3],["self.db","self.broker","self.market"])
-
 if __name__=="__main__":
     unittest.main()
