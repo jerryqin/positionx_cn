@@ -316,8 +316,8 @@ class Dashboard(QMainWindow):
         account = None
         if qmt_connected:
             try:
-                account = self.service.broker.query_account()
-                positions = self.service.broker.query_positions()
+                account = self.service.broker_provider.get_account_snapshot()
+                positions = self.service.broker_provider.get_positions()
             except Exception:
                 pass
 
