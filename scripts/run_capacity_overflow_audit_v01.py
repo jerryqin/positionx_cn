@@ -28,6 +28,13 @@ def connect_ro(path):
     import duckdb
     return duckdb.connect(str(path),read_only=True)
 
+def duckdb_date_arg(value):
+    """Return ISO YYYY-MM-DD for DuckDB DATE parameters while keeping project date8 elsewhere."""
+    d=eng.norm_date(value)
+    if isinstance(d,str) and len(d)==8 and d.isdigit():
+        return f"{d[:4]}-{d[4:6]}-{d[6:]}"
+    return d
+
 def table_cols(con, table):
     try:return [r[1] for r in con.execute(f"PRAGMA table_info('{table}')").fetchall()]
     except Exception:return []
@@ -54,13 +61,14 @@ def probe(c):
 
 def load_market(c, symbols, as_of):
     con=connect_ro(Path(c['market_db']))
+    as_of_db=duckdb_date_arg(as_of)
     try:
         table=c['market_table']
-        sessions=[eng.norm_date(r[0]) for r in con.execute(f'SELECT DISTINCT trade_date FROM {table} WHERE trade_date<=? ORDER BY trade_date',[as_of]).fetchall()]
+        sessions=[eng.norm_date(r[0]) for r in con.execute(f'SELECT DISTINCT trade_date FROM {table} WHERE trade_date<=? ORDER BY trade_date',[as_of_db]).fetchall()]
         if symbols:
             con.register('audit_symbols',pd.DataFrame({'symbol':sorted(set(symbols))}))
             q=f'SELECT b.symbol,b.trade_date,b.open,b.close FROM {table} b JOIN audit_symbols s USING(symbol) WHERE b.trade_date<=? ORDER BY b.symbol,b.trade_date'
-            bars=con.execute(q,[as_of]).df()
+            bars=con.execute(q,[as_of_db]).df()
         else: bars=pd.DataFrame(columns=['symbol','trade_date','open','close'])
     finally: con.close()
     if not bars.empty: bars['trade_date']=bars['trade_date'].map(eng.norm_date)
