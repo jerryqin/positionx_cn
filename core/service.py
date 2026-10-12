@@ -9,6 +9,7 @@ from .config import Settings
 from .data import MarketDataService
 from .db import Database
 from .execution import ExecutionEngine
+from .providers.factory import build_legacy_xtquant_bundle
 from .models import TradingPlanItem
 from .risk import RiskGate
 from .strategy import load_strategy
@@ -153,6 +154,10 @@ class TradingService:
         self.broker: Optional[MiniQmtBroker] = None
         if q.get("account_id"):
             self.broker = MiniQmtBroker(q.get("mini_path", ""), str(q.get("account_id")), q.get("account_type", "STOCK"), int(q.get("session_id",0) or 0), self._broker_event)
+        self.providers = build_legacy_xtquant_bundle(market_service=self.market, broker=self.broker)
+        self.market_provider = self.providers.market_data
+        self.broker_provider = self.providers.broker
+        self.execution_provider = self.providers.execution
         self.risk = RiskGate(self.db, self.settings.section("risk"))
         self.strategy = load_strategy(self.settings.get("strategy.class"), self.settings.section("strategy").get("params", {}))
         self.log = logging.getLogger("positionx")
