@@ -30,6 +30,9 @@ class XtQuantBrokerProvider:
             raise ValueError("LEGACY_BROKER_QUERY_FILTER_NOT_SUPPORTED")
         return self._broker.query_orders()
 
+    def get_active_external_orders(self) -> Any:
+        return self._broker.active_external_orders()
+
     def get_trades(self, query: Any = None) -> Any:
         if query not in (None, {}):
             raise ValueError("LEGACY_BROKER_QUERY_FILTER_NOT_SUPPORTED")

@@ -35,18 +35,38 @@ class ServiceBrokerProviderReadTests(unittest.TestCase):
         self.tree=ast.parse(self.text)
 
     def test_exact_provider_reads_present(self):
-        got=[]
-        for n in ast.walk(self.tree):
-            if isinstance(n,ast.Call):
-                c=call_name(n.func)
-                if c.startswith("self.broker_provider."):
-                    got.append((enclosing_method(self.tree,n.lineno),c))
-        self.assertEqual(sorted(got),sorted([
-            ("sync_broker","self.broker_provider.get_account_snapshot"),
-            ("sync_broker","self.broker_provider.get_positions"),
-            ("sync_broker","self.broker_provider.get_orders"),
-            ("sync_broker","self.broker_provider.get_trades"),
-            ("monitor_orders","self.broker_provider.get_orders"),
+        import ast
+        from pathlib import Path
+
+        service = Path(__file__).resolve().parents[1] / "core" / "service.py"
+        source = service.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        def chain(node):
+            parts = []
+            cur = node
+            while isinstance(cur, ast.Attribute):
+                parts.append(cur.attr)
+                cur = cur.value
+            if isinstance(cur, ast.Name):
+                parts.append(cur.id)
+                return tuple(reversed(parts))
+            return None
+
+        wanted = {"get_account_snapshot", "get_positions", "get_orders", "get_trades", "get_active_external_orders"}
+        got = []
+        for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
+            for call in [n for n in ast.walk(fn) if isinstance(n, ast.Call)]:
+                c = chain(call.func)
+                if c and c[:2] == ("self", "broker_provider") and c[-1] in wanted:
+                    got.append((fn.name, ".".join(c)))
+        self.assertEqual(sorted(got), sorted([
+            ("monitor_orders", "self.broker_provider.get_orders"),
+            ("reconcile", "self.broker_provider.get_active_external_orders"),
+            ("sync_broker", "self.broker_provider.get_account_snapshot"),
+            ("sync_broker", "self.broker_provider.get_orders"),
+            ("sync_broker", "self.broker_provider.get_positions"),
+            ("sync_broker", "self.broker_provider.get_trades"),
         ]))
 
     def test_legacy_read_calls_removed_from_service(self):
@@ -69,12 +89,33 @@ class ServiceBrokerProviderReadTests(unittest.TestCase):
         ]
         self.assertEqual(calls,["self.broker.cancel"])
 
-    def test_active_external_orders_remains_legacy_semantic_bridge(self):
-        calls=[
-            call_name(n.func) for n in ast.walk(self.tree)
-            if isinstance(n,ast.Call) and call_name(n.func)=="self.broker.active_external_orders"
-        ]
-        self.assertEqual(calls,["self.broker.active_external_orders"])
+    def test_active_external_orders_uses_provider_semantic_bridge(self):
+        import ast
+        from pathlib import Path
+
+        service = Path(__file__).resolve().parents[1] / "core" / "service.py"
+        source = service.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        funcs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "reconcile"]
+        self.assertEqual(len(funcs), 1)
+
+        def chain(node):
+            parts = []
+            cur = node
+            while isinstance(cur, ast.Attribute):
+                parts.append(cur.attr)
+                cur = cur.value
+            if isinstance(cur, ast.Name):
+                parts.append(cur.id)
+                return tuple(reversed(parts))
+            return None
+
+        calls = []
+        for call in [n for n in ast.walk(funcs[0]) if isinstance(n, ast.Call)]:
+            c = chain(call.func)
+            if c in (("self", "broker", "active_external_orders"), ("self", "broker_provider", "get_active_external_orders")):
+                calls.append(".".join(c))
+        self.assertEqual(calls, ["self.broker_provider.get_active_external_orders"])
 
     def test_execution_engine_still_uses_legacy_broker_and_market(self):
         calls=[

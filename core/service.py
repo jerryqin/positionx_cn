@@ -501,7 +501,7 @@ class TradingService:
         # Re-read after completion marking so the audit reflects the final DB status.
         today_plans = self.db.plan_for_date(today)
         plan_audit = _plan_status_audit(today_plans, account, positions)
-        external = self.broker.active_external_orders() if self.broker else []
+        external = self.broker_provider.get_active_external_orders() if self.broker else []
         ok = len(external) == 0
         result = {
             "ok": ok,
