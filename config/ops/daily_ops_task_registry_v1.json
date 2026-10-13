@@ -1,0 +1,541 @@
+{
+  "schema": "POSITIONX_CN_DAILY_OPS_TASK_REGISTRY_V1",
+  "cutover_mode": "SHADOW_OPS_5_TRADING_DAYS",
+  "shadow_ops_acceptance_trading_days": 5,
+  "project_root": "D:\\positionx_cn",
+  "data_root": "D:\\positionx_data",
+  "calendar": {
+    "provider": "QMT_TRADING_DATES",
+    "market": "SH",
+    "fail_closed": true
+  },
+  "safety_invariants": {
+    "live_enabled": false,
+    "auto_execute": false,
+    "broker_write": false,
+    "real_order_submit_allowed": false,
+    "automatic_approval_allowed": false,
+    "governed_apply_allowed": false
+  },
+  "manual_gates": [
+    "G4 manual approval token",
+    "Production Plan Commit",
+    "real order submit / main.py execute",
+    "Optimus Attention adjudication and ACK only after actual resolution",
+    "Proposal -> human review -> PLAN -> human approval -> APPLY",
+    "RET120 actual_open/open_source input",
+    "RET120 recommendation selection",
+    "RET120 record-human APPROVE/REJECT",
+    "RET120 ADD/REDUCE/EXIT trade recording",
+    "Registry/Canonical/Theme governed APPLY"
+  ],
+  "forbidden_automation": {
+    "script_names": [
+      "run_g4_manual_approval_v05.py",
+      "run_ret120_manual_fire_shadow_v01.py",
+      "run_ret120_shadow_review_v01.py"
+    ],
+    "argv_tokens": [
+      "approve",
+      "record-human",
+      "record-trade",
+      "reserve",
+      "execute"
+    ],
+    "exact_commands": [
+      [
+        "main.py",
+        "execute"
+      ]
+    ]
+  },
+  "phases": {
+    "preopen": [
+      "HEALTH_PREOPEN",
+      "BROKER_RECONCILE_PREOPEN",
+      "PIT_PREOPEN"
+    ],
+    "optimus_verify": [
+      "OPTIMUS_STATUS",
+      "OPTIMUS_ACCEPTANCE",
+      "OPTIMUS_ATTENTION"
+    ],
+    "g4_open": [
+      "G4_OPEN_CHECK"
+    ],
+    "preclose": [
+      "BROKER_RECONCILE_PRECLOSE"
+    ],
+    "postclose_core": [
+      "A_SHARE_DAILY_UPDATE"
+    ],
+    "postclose_tail": [
+      "RET120_FORWARD",
+      "PORTFOLIO_SHADOW",
+      "CAPACITY_PROBE",
+      "G4_RESERVATION_INSPECT",
+      "PILOT_READINESS",
+      "BROKER_RECONCILE_FINAL"
+    ],
+    "postclose_pit": [
+      "PIT_POSTCLOSE"
+    ]
+  },
+  "tasks": {
+    "HEALTH_PREOPEN": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "main.py",
+          "check"
+        ]
+      ]
+    },
+    "BROKER_RECONCILE_PREOPEN": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "HEALTH_PREOPEN"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "main.py",
+          "reconcile"
+        ]
+      ]
+    },
+    "PIT_PREOPEN": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "PIT_PREOPEN",
+      "deadline": "09:20",
+      "dependencies": [
+        "HEALTH_PREOPEN"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/daily_pit_intake_v01.py",
+          "--phase",
+          "preopen"
+        ]
+      ]
+    },
+    "OPTIMUS_STATUS": {
+      "calendar_scope": "NATURAL_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_optimus_current22_scheduled_v074.py",
+          "status"
+        ]
+      ]
+    },
+    "OPTIMUS_ACCEPTANCE": {
+      "calendar_scope": "NATURAL_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "OPTIMUS_STATUS"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_optimus_v045_first_scheduled_acceptance.py",
+          "inspect",
+          "--date",
+          "<calendar_date>"
+        ]
+      ]
+    },
+    "OPTIMUS_ATTENTION": {
+      "calendar_scope": "NATURAL_DAY",
+      "criticality": "ATTENTION",
+      "exactly_once": false,
+      "handler": "GENERIC",
+      "dependencies": [
+        "OPTIMUS_STATUS"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_optimus_current22_scheduled_v074.py",
+          "attention"
+        ]
+      ]
+    },
+    "G4_OPEN_CHECK": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "ATTENTION",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "BROKER_RECONCILE_PREOPEN"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_g4_open_confirmation_v03.py",
+          "check"
+        ]
+      ]
+    },
+    "BROKER_RECONCILE_PRECLOSE": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "main.py",
+          "reconcile"
+        ]
+      ]
+    },
+    "A_SHARE_DAILY_UPDATE": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "A_SHARE_DAILY_UPDATE",
+      "dependencies": [
+        "BROKER_RECONCILE_PRECLOSE"
+      ]
+    },
+    "DEEP_FORWARD": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "DEEP_FORWARD",
+      "dependencies": [
+        "A_SHARE_DAILY_UPDATE"
+      ]
+    },
+    "RET120_FORWARD": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "RET120_FORWARD",
+      "dependencies": [
+        "A_SHARE_DAILY_UPDATE",
+        "DEEP_FORWARD"
+      ]
+    },
+    "PORTFOLIO_SHADOW": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "DEEP_FORWARD",
+        "RET120_FORWARD"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_strategy_portfolio_shadow_v01.py",
+          "check"
+        ],
+        [
+          "<python>",
+          "scripts/run_strategy_portfolio_shadow_v01.py",
+          "status"
+        ]
+      ]
+    },
+    "CAPACITY_PROBE": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "DEEP_FORWARD",
+        "RET120_FORWARD"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_capacity_overflow_audit_v01.py",
+          "probe"
+        ]
+      ]
+    },
+    "G4_RESERVATION_INSPECT": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "ATTENTION",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "DEEP_FORWARD",
+        "RET120_FORWARD"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_g4_forward_reservation_v02.py",
+          "inspect"
+        ]
+      ]
+    },
+    "PILOT_READINESS": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "DEEP_FORWARD",
+        "RET120_FORWARD"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "scripts/audit_pilot_live_readiness_v01.py",
+          "audit"
+        ]
+      ]
+    },
+    "BROKER_RECONCILE_FINAL": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [
+        "DEEP_FORWARD",
+        "RET120_FORWARD"
+      ],
+      "steps": [
+        [
+          "<python>",
+          "main.py",
+          "reconcile"
+        ]
+      ]
+    },
+    "PIT_POSTCLOSE": {
+      "calendar_scope": "TRADING_DAY",
+      "criticality": "BLOCKING",
+      "exactly_once": true,
+      "handler": "PIT_POSTCLOSE",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "scripts/daily_pit_intake_v01.py",
+          "--phase",
+          "postclose"
+        ]
+      ]
+    },
+    "DAILY_REPORT": {
+      "calendar_scope": "NATURAL_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_daily_ops_report_v1.py",
+          "auto",
+          "--project-root",
+          "<project_root>",
+          "--data-root",
+          "D:\\positionx_data"
+        ]
+      ]
+    },
+    "WATCHDOG_MORNING": {
+      "calendar_scope": "NATURAL_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_daily_ops_watchdog_v1.py",
+          "check",
+          "--scope",
+          "morning",
+          "--project-root",
+          "<project_root>",
+          "--data-root",
+          "D:\\positionx_data"
+        ]
+      ]
+    },
+    "WATCHDOG_POSTCLOSE": {
+      "calendar_scope": "NATURAL_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_daily_ops_watchdog_v1.py",
+          "check",
+          "--scope",
+          "postclose",
+          "--project-root",
+          "<project_root>",
+          "--data-root",
+          "D:\\positionx_data"
+        ]
+      ]
+    },
+    "WATCHDOG_EOD": {
+      "calendar_scope": "NATURAL_DAY",
+      "criticality": "REPORT",
+      "exactly_once": true,
+      "handler": "GENERIC",
+      "dependencies": [],
+      "steps": [
+        [
+          "<python>",
+          "scripts/run_daily_ops_watchdog_v1.py",
+          "check",
+          "--scope",
+          "eod",
+          "--project-root",
+          "<project_root>",
+          "--data-root",
+          "D:\\positionx_data"
+        ]
+      ]
+    }
+  },
+  "scheduler": {
+    "reference_task": "PositionX Optimus Current22 0830",
+    "keep_unchanged": [
+      "PositionX Optimus Current22 0830"
+    ],
+    "update_existing": {
+      "PositionX-DeepOversold-CSI500-Forward": {
+        "mode": "REPLACE_ACTION_AND_ENSURE_RETRY_TRIGGERS",
+        "phase_or_task": "task DEEP_FORWARD",
+        "weekday_times": [
+          "15:15",
+          "15:30",
+          "15:45",
+          "16:00"
+        ]
+      }
+    },
+    "new_tasks": [
+      {
+        "name": "PositionX-DailyOps-Preopen",
+        "scope": "WEEKDAYS",
+        "times": [
+          "08:20"
+        ],
+        "command": "phase preopen"
+      },
+      {
+        "name": "PositionX-DailyOps-OptimusVerify",
+        "scope": "DAILY",
+        "times": [
+          "08:45"
+        ],
+        "command": "phase optimus_verify"
+      },
+      {
+        "name": "PositionX-DailyOps-G4Open",
+        "scope": "WEEKDAYS",
+        "times": [
+          "09:20"
+        ],
+        "command": "phase g4_open"
+      },
+      {
+        "name": "PositionX-DailyOps-Preclose",
+        "scope": "WEEKDAYS",
+        "times": [
+          "14:50"
+        ],
+        "command": "phase preclose"
+      },
+      {
+        "name": "PositionX-DailyOps-PostcloseCore",
+        "scope": "WEEKDAYS",
+        "times": [
+          "15:05"
+        ],
+        "command": "phase postclose_core"
+      },
+      {
+        "name": "PositionX-DailyOps-PostcloseTail",
+        "scope": "WEEKDAYS",
+        "times": [
+          "16:10",
+          "16:25",
+          "16:40"
+        ],
+        "command": "phase postclose_tail"
+      },
+      {
+        "name": "PositionX-DailyOps-PIT-Postclose",
+        "scope": "WEEKDAYS",
+        "times": [
+          "18:00",
+          "18:15",
+          "18:30"
+        ],
+        "command": "phase postclose_pit"
+      },
+      {
+        "name": "PositionX-DailyOps-Report",
+        "scope": "WEEKDAYS",
+        "times": [
+          "18:40"
+        ],
+        "command": "task DAILY_REPORT"
+      },
+      {
+        "name": "PositionX-DailyOps-Watchdog-Morning",
+        "scope": "WEEKDAYS",
+        "times": [
+          "09:05"
+        ],
+        "command": "task WATCHDOG_MORNING"
+      },
+      {
+        "name": "PositionX-DailyOps-Watchdog-Postclose",
+        "scope": "WEEKDAYS",
+        "times": [
+          "16:50"
+        ],
+        "command": "task WATCHDOG_POSTCLOSE"
+      },
+      {
+        "name": "PositionX-DailyOps-Watchdog-EOD",
+        "scope": "WEEKDAYS",
+        "times": [
+          "18:55"
+        ],
+        "command": "task WATCHDOG_EOD"
+      }
+    ]
+  },
+  "ops_storage": {
+    "run_root": "D:\\positionx_data\\ops_runtime\\runs",
+    "lock_root": "D:\\positionx_data\\ops_runtime\\locks",
+    "watchdog_root": "D:\\positionx_data\\ops_runtime\\watchdog",
+    "report_root": "D:\\positionx_data\\ops_reports"
+  }
+}
