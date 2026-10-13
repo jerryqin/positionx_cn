@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 
 import argparse
 import importlib.util
@@ -175,17 +176,68 @@ def check_qmt_xtquant(root, mode, cfg):
                   "xtquant is import-discoverable." if spec else "xtquant is not import-discoverable.",
                   blocking, {"xtquant_spec_found":spec is not None,"tracked_surface_count":len(hits),"sample":hits[:20]})
 
+def _sha256_path(path):
+    h=hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda:f.read(1024*1024),b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def validate_m2_read_only_evidence(root,cfg):
+    rel=str(cfg.get("m2_read_only_evidence_file") or "").strip()
+    if not rel:
+        return {"valid":False,"reason":"EVIDENCE_FILE_NOT_CONFIGURED"}
+    path=root/rel
+    if not path.is_file():
+        return {"valid":False,"reason":"EVIDENCE_FILE_MISSING","path":rel}
+    try:
+        evidence=json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        return {"valid":False,"reason":"EVIDENCE_FILE_INVALID","error":f"{type(e).__name__}: {e}"}
+    required_domains=("market_data","account","positions","orders","trades")
+    facts_ok=(
+        evidence.get("schema")=="POSITIONX_CN_QMT_M2_READ_ONLY_EVIDENCE_V1"
+        and evidence.get("live_validation_status")=="PASS_POSITIONX_CN_QMT_M2B_FULL_QMT_LIVE_READ_ONLY_VALIDATION_V2"
+        and evidence.get("actual_connections",{}).get("qmt_market_connected") is True
+        and evidence.get("actual_connections",{}).get("broker_connected") is True
+        and all(evidence.get("domains",{}).get(k) is True for k in required_domains)
+        and evidence.get("order_actions_executed") is False
+        and evidence.get("privacy_redaction_proven") is True
+    )
+    bindings=evidence.get("source_bindings",{})
+    mismatches=[]
+    if not isinstance(bindings,dict) or not bindings:
+        mismatches.append({"path":"<bindings>","reason":"EMPTY_SOURCE_BINDINGS"})
+    else:
+        for item,expected in sorted(bindings.items()):
+            p=root/item
+            actual=_sha256_path(p) if p.is_file() else None
+            if actual!=expected:
+                mismatches.append({"path":item,"expected_sha256":expected,"actual_sha256":actual})
+    valid=bool(facts_ok and not mismatches)
+    return {"valid":valid,"reason":"OK" if valid else "STALE_OR_INVALID_M2_EVIDENCE",
+            "evidence_file":rel,"m2b_artifact_sha256":evidence.get("m2b_artifact_sha256"),
+            "source_binding_count":len(bindings) if isinstance(bindings,dict) else 0,
+            "source_mismatches":mismatches,"live_probe_performed_now":False}
+
 def check_broker_read_only(root, mode, cfg):
     tracked=git_tracked(root)
     hits=[p for p in tracked if any(t in p.lower() for t in cfg["domain_terms"]["broker_read_only"])]
-    blocking = (mode=="operational" and not hits)
-    if blocking:
+    sample=hits[:20]
+    if not hits:
         return result("broker_read_only", FAIL, "No broker/reconcile code surface discovered.", True,
-                      {"tracked_surface_count":0,"sample":[],"live_connectivity_checked":False})
-    return result("broker_read_only", WARN, "Broker code surface exists; live read-only connectivity is not probed in Doctor V0.1.",
-                  False, {"tracked_surface_count":len(hits),"sample":hits[:20],
-                          "live_connectivity_checked":False},
-                  ["BROKER_CONNECTIVITY_NOT_CHECKED_V0_1"])
+                      {"tracked_surface_count":0,"sample":[],"live_connectivity_checked":False},[])
+    evidence=validate_m2_read_only_evidence(root,cfg)
+    base={"tracked_surface_count":len(hits),"sample":sample,"live_connectivity_checked":False,
+          "live_evidence_valid":bool(evidence.get("valid")),"live_evidence":evidence}
+    if evidence.get("valid"):
+        return result("broker_read_only", PASS,
+                      "Broker read-only surface exists; baseline-bound M2 live evidence is valid. Doctor did not perform a new live probe.",
+                      False,base,[])
+    return result("broker_read_only", WARN,
+                  "Broker code surface exists, but durable M2 live read-only evidence is missing, invalid, or stale.",
+                  False,base,["BROKER_M2_READ_ONLY_EVIDENCE_MISSING_OR_STALE"])
+
 
 def check_scheduler(root, mode, cfg):
     evidence={"platform":sys.platform}

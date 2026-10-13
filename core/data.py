@@ -83,7 +83,9 @@ class MarketDataService:
 
     def history(self, symbol: str, bars: int = 260, refresh: bool = False) -> pd.DataFrame:
         rows = self.db.load_daily_bars(symbol, bars)
-        if refresh or len(rows) < bars:
+        # refresh=False is a hard read-only boundary: never download/update
+        # or write the local daily-bar cache implicitly.
+        if refresh:
             self.update_daily(symbol)
             rows = self.db.load_daily_bars(symbol, bars)
         if not rows:

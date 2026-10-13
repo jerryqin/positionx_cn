@@ -1,0 +1,36 @@
+{
+  "schema": "POSITIONX_CN_QMT_M2_READ_ONLY_EVIDENCE_V1",
+  "evidence_kind": "HISTORICAL_LIVE_READ_ONLY_VALIDATION_BASELINE_BOUND",
+  "live_validation_status": "PASS_POSITIONX_CN_QMT_M2B_FULL_QMT_LIVE_READ_ONLY_VALIDATION_V2",
+  "m2b_artifact_sha256": "e1e3b2ee41f27b1cb9e6f6b46460d8958aed809517cda2452e6611bb829712c7",
+  "m2b_generated_at": "2026-10-13T08:46:35+08:00",
+  "validated_baseline": {
+    "head": "00bcde740a100fa1330791c714ce525f4ad8f3ef",
+    "tree": "6dafa69879857be8d989a38c3d679002ab015994"
+  },
+  "actual_connections": {
+    "qmt_market_connected": true,
+    "broker_connected": true
+  },
+  "domains": {
+    "market_data": true,
+    "account": true,
+    "positions": true,
+    "orders": true,
+    "trades": true
+  },
+  "order_actions_executed": false,
+  "privacy_redaction_proven": true,
+  "source_bindings": {
+    "core/broker.py": "a4086085c279e85f2e10ef4e9b6fbf435b170de9862f5551e2a8825c13bf6727",
+    "core/providers/broker.py": "4443c16323746af9e12357969240b1654db9154703b12ee7a32d043171b05f8b",
+    "core/providers/xtquant_broker.py": "a5e4572ae1a5bbaf23d51e672187b282ffa2ba159dca42f66f75cbd545f193b5",
+    "core/providers/factory.py": "1c6ba11dd3012376c491c3076377294f01bf3eb9c816f0b9c4533205214615fa",
+    "core/providers/models.py": "961e7cab02e5a9e553f1970901c91be1d6c1b51c5c1ac01436362106fc65f2a5",
+    "core/service.py": "fde56ae86208638c3a6d40c1805f9783f75a5c735e2c8dbeb297bdcfd5d34642"
+  },
+  "doctor_semantics": {
+    "live_probe_performed_now": false,
+    "historical_live_evidence_is_accepted_only_while_source_bindings_match": true
+  }
+}

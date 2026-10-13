@@ -90,5 +90,6 @@
     "docs/foundation/P2_DEBT_REGISTER.md"
   ],
   "data_scan_max_files": 5000,
-  "subprocess_timeout_seconds": 20
+  "subprocess_timeout_seconds": 20,
+  "m2_read_only_evidence_file": "config/foundation/qmt_m2_read_only_evidence_v1.json"
 }
