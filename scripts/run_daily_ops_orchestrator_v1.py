@@ -16,12 +16,27 @@ def run_step(registry,ctx,step_no,argv):
     if bad: raise RuntimeError(bad)
     r=run_process(argv,ctx["project_root"],log_path(ctx["data_root"],ctx["date"],ctx["task_id"],ctx["run_id"],step_no),{"PYTHONDONTWRITEBYTECODE":"1"})
     return {"argv":argv,"returncode":r["returncode"],"parsed_json":r["parsed_json"],"log_path":r["log_path"],"stdout":r["stdout"]}
+BUSINESS_NON_SUCCESS_PREFIXES=("FAIL","ERROR","BLOCKED","WAITING","PARTIAL","DEGRADED","NOT_READY","INCOMPLETE","RED")
+def business_status_ok(parsed_json):
+    if not isinstance(parsed_json,dict): return True
+    st=str(parsed_json.get("status","")).strip().upper()
+    if not st:return True
+    return not any(st.startswith(p) for p in BUSINESS_NON_SUCCESS_PREFIXES)
 def generic(registry,task,ctx):
     results=[]
     for i,step in enumerate(task.get("steps",[]),1):
         r=run_step(registry,ctx,i,step);results.append(r)
-        if r["returncode"]!=0:return "FAILED",results
+        if r["returncode"]!=0 or not business_status_ok(r.get("parsed_json")):return "FAILED",results
     return "SUCCESS",results
+def a_share_status_current(parsed_json,business_date):
+    if not isinstance(parsed_json,dict):return False
+    d=norm_date(business_date);d10=f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+    state=parsed_json.get("state") or {}
+    catalog=parsed_json.get("catalog_daily") or {}
+    if norm_date(state.get("last_processed_date",""))!=d:return False
+    if str(catalog.get("max_date","")).strip()!=d10:return False
+    sessions=state.get("sessions") or []
+    return any(norm_date(x.get("trade_date",""))==d for x in sessions if isinstance(x,dict))
 def a_share_daily(registry,task,ctx):
     seq=[["<python>","scripts/update_a_share_daily_v1.py","status"],
          ["<python>","scripts/update_a_share_daily_v1.py","check"],
@@ -30,10 +45,10 @@ def a_share_daily(registry,task,ctx):
     results=[]
     for i,step in enumerate(seq,1):
         r=run_step(registry,ctx,i,step);results.append(r)
-        if i==1 and r["returncode"]==0 and "SESSION_COMMITTED" in r["stdout"] and norm_date(ctx["date"]) in r["stdout"].replace("-",""):
+        if i==1 and r["returncode"]==0 and a_share_status_current(r.get("parsed_json"),ctx["date"]):
             return "SUCCESS",results
         if r["returncode"]!=0:return "FAILED",results
-    return ("SUCCESS" if "SESSION_COMMITTED" in results[-1]["stdout"] else "FAILED"),results
+    return ("SUCCESS" if a_share_status_current(results[-1].get("parsed_json"),ctx["date"]) else "FAILED"),results
 def deep_forward(registry,task,ctx):
     ps=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(Path(ctx["project_root"])/"scripts"/"run_deep_oversold_forward_scheduled.ps1")]
     r1=run_step(registry,ctx,1,ps);results=[r1]

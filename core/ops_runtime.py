@@ -27,15 +27,33 @@ def norm_date(value):
     return s
 def calendar_date_dash(yyyymmdd):
     d=norm_date(yyyymmdd); return f"{d[:4]}-{d[4:6]}-{d[6:]}"
+def qmt_trading_date_to_yyyymmdd(value):
+    if isinstance(value,dt.datetime):
+        return value.astimezone().strftime("%Y%m%d") if value.tzinfo else value.strftime("%Y%m%d")
+    if isinstance(value,dt.date): return value.strftime("%Y%m%d")
+    s=str(value).strip()
+    m=re.search(r"((?:19|20)\d{2})[-/]?(\d{2})[-/]?(\d{2})",s)
+    if m:
+        token="".join(m.groups())
+        try:dt.datetime.strptime(token,"%Y%m%d");return token
+        except ValueError:pass
+    try:n=float(s)
+    except (TypeError,ValueError):return None
+    if n!=n:return None
+    a=abs(n)
+    if a>=1e12:seconds=n/1000.0
+    elif a>=1e9:seconds=n
+    else:return None
+    try:
+        local_tz=dt.datetime.now().astimezone().tzinfo
+        return dt.datetime.fromtimestamp(seconds,tz=dt.timezone.utc).astimezone(local_tz).strftime("%Y%m%d")
+    except (OverflowError,OSError,ValueError):return None
 def qmt_is_trading_day(yyyymmdd,market="SH"):
     d=norm_date(yyyymmdd)
     from xtquant import xtdata
     xtdata.connect()
     rows=xtdata.get_trading_dates(market,d,d)
-    norm=set()
-    for x in rows or []:
-        m=re.search(r"(\d{8})",str(x))
-        if m:norm.add(m.group(1))
+    norm={x for x in (qmt_trading_date_to_yyyymmdd(v) for v in rows or []) if x}
     return d in norm
 
 class TaskLock:

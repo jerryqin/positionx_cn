@@ -14,7 +14,7 @@ function CmdArgs([string]$command){return "-B `"$Orchestrator`" $command --proje
 $Reference=Get-ScheduledTask -TaskName $Registry.scheduler.reference_task
 $Principal=$Reference.Principal
 # Deliberately no catch-up; recovery is explicit in task-level retry policies.
-$Settings=New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+$Settings=New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $Plan=@();foreach($t in $Registry.scheduler.new_tasks){$Plan += [pscustomobject]@{Operation="UPSERT_NEW";TaskName=$t.name;Scope=$t.scope;Times=@($t.times);Command=$t.command}}
 $Plan += [pscustomobject]@{Operation="UPDATE_EXISTING";TaskName="PositionX-DeepOversold-CSI500-Forward";Scope="WEEKDAYS";Times=@("15:15","15:30","15:45","16:00");Command="task DEEP_FORWARD"}
 if($Mode -eq "Preview"){$Plan|ConvertTo-Json -Depth 5;exit 0}
