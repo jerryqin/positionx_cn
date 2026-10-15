@@ -430,10 +430,10 @@
         "mode": "REPLACE_ACTION_AND_ENSURE_RETRY_TRIGGERS",
         "phase_or_task": "task DEEP_FORWARD",
         "weekday_times": [
-          "15:15",
-          "15:30",
           "15:45",
-          "16:00"
+          "16:00",
+          "16:15",
+          "16:30"
         ]
       }
     },
@@ -474,7 +474,10 @@
         "name": "PositionX-DailyOps-PostcloseCore",
         "scope": "WEEKDAYS",
         "times": [
-          "15:05"
+          "15:35",
+          "15:45",
+          "15:55",
+          "16:05"
         ],
         "command": "phase postclose_core"
       },
@@ -482,9 +485,9 @@
         "name": "PositionX-DailyOps-PostcloseTail",
         "scope": "WEEKDAYS",
         "times": [
-          "16:10",
-          "16:25",
-          "16:40"
+          "16:20",
+          "16:40",
+          "17:00"
         ],
         "command": "phase postclose_tail"
       },
@@ -518,7 +521,7 @@
         "name": "PositionX-DailyOps-Watchdog-Postclose",
         "scope": "WEEKDAYS",
         "times": [
-          "16:50"
+          "17:10"
         ],
         "command": "task WATCHDOG_POSTCLOSE"
       },

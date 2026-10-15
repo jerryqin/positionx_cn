@@ -1,0 +1,54 @@
+{
+  "schema": "POSITIONX_CN_EXCHANGE_CALENDAR_V1",
+  "market": "SHSZ",
+  "timezone": "Asia/Shanghai",
+  "valid_from": "20260101",
+  "valid_to": "20261231",
+  "weekend_closed": true,
+  "closed_ranges": [
+    {
+      "start": "20260101",
+      "end": "20260103",
+      "name": "NEW_YEAR"
+    },
+    {
+      "start": "20260215",
+      "end": "20260223",
+      "name": "SPRING_FESTIVAL"
+    },
+    {
+      "start": "20260404",
+      "end": "20260406",
+      "name": "QINGMING"
+    },
+    {
+      "start": "20260501",
+      "end": "20260505",
+      "name": "LABOR_DAY"
+    },
+    {
+      "start": "20260619",
+      "end": "20260621",
+      "name": "DRAGON_BOAT"
+    },
+    {
+      "start": "20260925",
+      "end": "20260927",
+      "name": "MID_AUTUMN"
+    },
+    {
+      "start": "20261001",
+      "end": "20261007",
+      "name": "NATIONAL_DAY"
+    }
+  ],
+  "source": {
+    "authority": "Shanghai Stock Exchange",
+    "notice_id": "上证公告〔2025〕45号",
+    "notice_date": "2025-12-22",
+    "url": "https://www.sse.com.cn/disclosure/dealinstruc/closed/",
+    "checked_at": "2026-10-15"
+  },
+  "policy": "WEEKDAY_AND_NOT_OFFICIAL_CLOSED_RANGE",
+  "notes": "SSE trading days are Monday-Friday excluding official exchange closure days. This local asset avoids relying on QMT future/current-day calendar publication timing."
+}

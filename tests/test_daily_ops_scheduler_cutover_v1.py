@@ -18,9 +18,9 @@ class DailyOpsCutoverContractTests(unittest.TestCase):
     def test_ret120_manual_execution_not_automated(self):
         blob=json.dumps(self.reg['tasks']['RET120_FORWARD'],ensure_ascii=False).lower();self.assertNotIn('record-human',blob);self.assertNotIn('record-trade',blob);self.assertNotIn('approve',blob)
     def test_existing_optimus_kept(self):self.assertIn('PositionX Optimus Current22 0830',self.reg['scheduler']['keep_unchanged'])
-    def test_deep_retry_schedule(self):self.assertEqual(self.reg['scheduler']['update_existing']['PositionX-DeepOversold-CSI500-Forward']['weekday_times'],['15:15','15:30','15:45','16:00'])
+    def test_deep_retry_schedule(self):self.assertEqual(self.reg['scheduler']['update_existing']['PositionX-DeepOversold-CSI500-Forward']['weekday_times'],['15:45','16:00','16:15','16:30'])
     def test_postclose_tail_retries(self):
-        rows={x['name']:x for x in self.reg['scheduler']['new_tasks']};self.assertEqual(rows['PositionX-DailyOps-PostcloseTail']['times'],['16:10','16:25','16:40'])
+        rows={x['name']:x for x in self.reg['scheduler']['new_tasks']};self.assertEqual(rows['PositionX-DailyOps-PostcloseTail']['times'],['16:20','16:40','17:00'])
     def test_three_watchdog_scopes_are_separate(self):
         rows={x['name']:x for x in self.reg['scheduler']['new_tasks']};self.assertEqual(rows['PositionX-DailyOps-Watchdog-Morning']['command'],'task WATCHDOG_MORNING');self.assertEqual(rows['PositionX-DailyOps-Watchdog-Postclose']['command'],'task WATCHDOG_POSTCLOSE');self.assertEqual(rows['PositionX-DailyOps-Watchdog-EOD']['command'],'task WATCHDOG_EOD')
     def test_report_and_watchdogs_have_registry_tasks(self):

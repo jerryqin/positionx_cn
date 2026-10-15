@@ -16,7 +16,7 @@ $Principal=$Reference.Principal
 # Deliberately no catch-up; recovery is explicit in task-level retry policies.
 $Settings=New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $Plan=@();foreach($t in $Registry.scheduler.new_tasks){$Plan += [pscustomobject]@{Operation="UPSERT_NEW";TaskName=$t.name;Scope=$t.scope;Times=@($t.times);Command=$t.command}}
-$Plan += [pscustomobject]@{Operation="UPDATE_EXISTING";TaskName="PositionX-DeepOversold-CSI500-Forward";Scope="WEEKDAYS";Times=@("15:15","15:30","15:45","16:00");Command="task DEEP_FORWARD"}
+$Plan += [pscustomobject]@{Operation="UPDATE_EXISTING";TaskName="PositionX-DeepOversold-CSI500-Forward";Scope="WEEKDAYS";Times=@("15:45","16:00","16:15","16:30");Command="task DEEP_FORWARD"}
 if($Mode -eq "Preview"){$Plan|ConvertTo-Json -Depth 5;exit 0}
 if($env:POSITIONX_GUARDED_SCHEDULER_APPLY -ne "1"){throw "Apply/Rollback requires POSITIONX_GUARDED_SCHEDULER_APPLY=1"}
 if(-not $BackupDir){throw "BackupDir is required"}
@@ -35,6 +35,6 @@ foreach($name in $Names){$existing=Get-ScheduledTask -TaskName $name -ErrorActio
 Set-Content -Path $Manifest -Value $manifestLines -Encoding UTF8
 foreach($t in $Registry.scheduler.new_tasks){$action=New-ScheduledTaskAction -Execute $Python -Argument (CmdArgs $t.command) -WorkingDirectory $ProjectRoot;if($t.scope -eq "DAILY"){$triggers=New-DailyTriggers @($t.times)}else{$triggers=New-WeekdayTriggers @($t.times)};Register-ScheduledTask -TaskName $t.name -Action $action -Trigger $triggers -Principal $Principal -Settings $Settings -Force|Out-Null}
 $deepAction=New-ScheduledTaskAction -Execute $Python -Argument (CmdArgs "task DEEP_FORWARD") -WorkingDirectory $ProjectRoot
-$deepTriggers=New-WeekdayTriggers @("15:15","15:30","15:45","16:00")
+$deepTriggers=New-WeekdayTriggers @("15:45","16:00","16:15","16:30")
 Set-ScheduledTask -TaskName "PositionX-DeepOversold-CSI500-Forward" -Action $deepAction -Trigger $deepTriggers -Settings $Settings|Out-Null
 $Plan|ConvertTo-Json -Depth 5

@@ -48,8 +48,21 @@ def qmt_trading_date_to_yyyymmdd(value):
         local_tz=dt.datetime.now().astimezone().tzinfo
         return dt.datetime.fromtimestamp(seconds,tz=dt.timezone.utc).astimezone(local_tz).strftime("%Y%m%d")
     except (OverflowError,OSError,ValueError):return None
+def local_cn_exchange_is_trading_day(yyyymmdd):
+    d=norm_date(yyyymmdd)
+    p=Path(__file__).resolve().parents[1]/"config"/"ops"/"cn_exchange_calendar_2026.json"
+    if not p.exists(): return None
+    cfg=json.loads(p.read_text(encoding="utf-8"))
+    if not (str(cfg.get("valid_from") or "")<=d<=str(cfg.get("valid_to") or "")): return None
+    day=dt.datetime.strptime(d,"%Y%m%d")
+    if bool(cfg.get("weekend_closed",True)) and day.weekday()>=5: return False
+    for r in cfg.get("closed_ranges") or []:
+        if str(r.get("start") or "")<=d<=str(r.get("end") or ""): return False
+    return True
 def qmt_is_trading_day(yyyymmdd,market="SH"):
     d=norm_date(yyyymmdd)
+    local=local_cn_exchange_is_trading_day(d)
+    if local is not None: return local
     from xtquant import xtdata
     xtdata.connect()
     rows=xtdata.get_trading_dates(market,d,d)
