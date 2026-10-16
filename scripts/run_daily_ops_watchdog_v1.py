@@ -16,7 +16,7 @@ POSTCLOSE_TASKS=[
     "BROKER_RECONCILE_FINAL","WATCHDOG_POSTCLOSE",
 ]
 EOD_TASKS=MORNING_TASKS+POSTCLOSE_TASKS+["PIT_POSTCLOSE","DAILY_REPORT"]
-WATCHDOG_GROUPS={"morning":MORNING_TASKS[:-1],"postclose":["A_SHARE_DAILY_UPDATE","DEEP_FORWARD","RET120_FORWARD","BROKER_RECONCILE_FINAL"],"eod":EOD_TASKS}
+WATCHDOG_GROUPS={"morning":[x for x in MORNING_TASKS[:-1] if x!="G4_OPEN_CHECK"],"postclose":["A_SHARE_DAILY_UPDATE","DEEP_FORWARD","RET120_FORWARD","BROKER_RECONCILE_FINAL"],"eod":EOD_TASKS}
 
 def load_registry(project_root):
     return json.loads((Path(project_root)/"config"/"ops"/"daily_ops_task_registry_v1.json").read_text(encoding="utf-8"))

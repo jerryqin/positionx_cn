@@ -414,8 +414,6 @@ def latest_queue(cfg: dict[str,Any]) -> dict[str,Any]:
             "contradiction_kind":x["contradiction_kind"],
             "source_ref":x["source_ref"],
             "event_time":x["event_time"],
-            "parser_version":x.get("parser_version"),
-            "component_domain":x.get("component_domain"),
         } for x in rows],
         "human_review_required":True,
         "mutation":False,

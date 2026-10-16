@@ -18,11 +18,10 @@ class ShadowOpsHotfixV3Tests(unittest.TestCase):
         self.assertEqual(reg["scheduler"]["update_existing"]["PositionX-DeepOversold-CSI500-Forward"]["weekday_times"],["15:45","16:00","16:15","16:30"])
         self.assertEqual(rows["PositionX-DailyOps-PostcloseTail"]["times"],["16:20","16:40","17:00"])
         self.assertEqual(rows["PositionX-DailyOps-Watchdog-Postclose"]["times"],["17:10"])
-    def test_optimus_latest_queue_preserves_acceptance_fields(self):
-        src=(ROOT/"scripts/run_optimus_prospective_intake_v071.py").read_text(encoding="utf-8")
-        tail=src[src.index("def latest_queue"): ]
-        self.assertIn('"parser_version":x.get("parser_version")',tail)
-        self.assertIn('"component_domain":x.get("component_domain")',tail)
+    def test_optimus_v045_contract_remains_strict(self):
         acc=(ROOT/"config/research/optimus_v045_first_scheduled_acceptance.json").read_text(encoding="utf-8")
         self.assertIn("OPTIMUS_EVIDENCE_ACQUISITION_V0_4_5",acc)
+        src=(ROOT/"scripts/run_optimus_v045_first_scheduled_acceptance.py").read_text(encoding="utf-8")
+        self.assertIn("acceptance_proposals(queue)",src)
+        self.assertIn("ACCEPTANCE_RAW_QUEUE_READ_FAILED",src)
 if __name__=="__main__": unittest.main()

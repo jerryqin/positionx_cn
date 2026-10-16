@@ -41,6 +41,19 @@ def step(audit,name):
             return x.get("result") or {}
     return {}
 
+
+def acceptance_proposals(queue):
+    projected=queue.get("proposals") or []
+    qf=queue.get("queue_file")
+    if not qf:
+        return projected
+    try:
+        with open(qf,"r",encoding="utf-8") as f:
+            raw=[json.loads(line) for line in f if line.strip()]
+    except Exception as e:
+        raise RuntimeError(f"ACCEPTANCE_RAW_QUEUE_READ_FAILED {qf}: {type(e).__name__}: {e}")
+    return raw
+
 def mutation_flags_false(x):
     keys=("registry_mutation","canonicalization_mutation","theme_stage_mutation","broker","orders","production_db")
     return all(x.get(k) is False for k in keys if k in x)
@@ -98,7 +111,7 @@ def inspect(cfg,date_override=None):
     if "skipped_existing_source_across_parser" not in intake: errors.append("MISSING_EXISTING_SOURCE_SKIP_COUNTER")
     if "skipped_prior_source_across_parser" not in intake: errors.append("MISSING_PRIOR_SOURCE_SKIP_COUNTER")
 
-    proposals=queue.get("proposals") or []
+    proposals=acceptance_proposals(queue)
     bad_parser=[]
     bad_ambiguous=[]
     for p in proposals:
