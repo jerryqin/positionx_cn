@@ -4,6 +4,11 @@
 本文件是状态快照；长期安全约束以根目录 AGENTS.md 为准。
 下次使用前应重新核验 Git、配置与最新运行证据。
 
+【已核验：2026-10-17 15:25 Asia/Shanghai，静态补充】
+本次补充 Git 基线、Broker 迁移审计及实现前置条件，并更新相关优先事项。
+原有 Scheduler、生产安全开关和运行结果仍保留各节原始核验时间；
+本次未重新查询这些现场状态，未运行 Broker/QMT、SDK 或 Python 测试。
+
 证据优先级（由高到低）：
 当前源码/配置与当前系统只读状态 >
 带时间戳运行证据 >
@@ -31,6 +36,12 @@
 - 工作区、暂存区均干净，git status --short 无输出。
 
 最新提交仅增加项目治理文件，不能视为运行故障已经修复。
+
+【已核验：2026-10-17 15:25 Asia/Shanghai】
+上述 Git 信息为 14:07 的历史快照。当前 branch 仍为 main，HEAD 为
+c1bf8f4956a42ee3a15b25e5c27092eda53b4966，提交信息为
+PositionX-CN: fail closed on Daily Ops business results。
+本次文档更新前工作区、暂存区均干净；该提交不包含 Full-QMT Broker 迁移实现。
 
 ## 2. 当前主要 milestone
 
@@ -158,6 +169,98 @@ PASS_POSITIONX_CN_QMT_M2B_FULL_QMT_LIVE_READ_ONLY_VALIDATION_V2
 
 因此可以确认历史证据及其声明的源码绑定仍匹配。
 本次没有重新连接 Broker/QMT，不能声称当前连接健康。
+
+### 5.1 迁移背景与路线调整
+
+【判断：规划依据为用户于 2026-10-17 提供的券商通知背景，未独立核验通知原文】
+
+迁移规划按以下前提调整：2026-10-23 后 MiniQMT 独立交易模式将被管控，
+推荐方式为“外部独立 Python + 完整 QMT XtQuantTrader”。
+通知的具体适用范围、客户端、权限和 SDK 要求仍需核对券商原文及新版说明，
+不得将用户提供的通知背景写成已完成的新版运行验证。
+
+【判断】Broker 迁移优先路线由此前候选的“自建 Broker Read bridge”调整为
+“外部 Python + Full-QMT XtQuantTrader”，不再以 QMT 内嵌 ContextInfo
+作为本轮 Broker 迁移目标。MarketData 路线须单独评估，不由此自动切换。
+既有 Provider 兼容 bridge、历史 M2 工作名称和外部行情桥原型，
+均不能视为新的 Full-QMT Broker backend 已实现或已接入。
+
+### 5.2 已核验调用面与旧环境基线
+
+【已核验：2026-10-17 15:25 Asia/Shanghai，当前源码与磁盘元数据】
+
+- MiniQmtBroker 已经在外部 Python 中使用 XtQuantTrader，未使用 ContextInfo。
+- 调用面为 1 个实例构造和 11 个实例方法：XtQuantTrader(path, session_id)，
+  register_callback、start、connect、subscribe、stop，
+  query_stock_asset、query_stock_positions、query_stock_orders、query_stock_trades，
+  order_stock、cancel_order_stock；另有 StockAccount 和 Callback 构造。
+- 当前六类 callback 为断线、账户状态、订单、成交、下单错误、撤单错误。
+- BrokerProvider 已覆盖账户、持仓、订单、成交及外部活动订单读取；
+  ExecutionProvider 已表达预览和同步报撤单，但实际运行仍有直接 legacy 调用。
+- config/settings.yaml 仍使用 qmt.mini_path，配置路径为 D:\qmt\userdata_mini；
+  TradingService 仍直接构造 MiniQmtBroker，没有 mini/full backend 选择。
+- .venv/pyvenv.cfg 记录 Python 3.10.11；xtquant dist-info METADATA 为
+  250807.1.2，包内 __version__ 为 xtquant_250807；requirements.txt 未锁版本。
+- 当前 xtquant/__init__.py 含导入时联网检查更新的逻辑；本次仅读取文件，未导入 SDK。
+
+以上版本仅为旧环境基线，不代表 10/19 新版 Full-QMT 所需版本，
+也不证明新版实际加载路径、连接、字段兼容性或交易能力。
+
+### 5.3 候选 adapter 与已识别风险
+
+【判断】当前调用面高度可复用。领域快照、Provider 职责、风险与 Pilot 规则
+可保持；SDK 字段映射和调用返回语义须在新版验证后确认复用范围。
+候选目标为 MiniQmtBroker -> QmtBrokerAdapter -> mini/full backend，尚未实施。
+adapter 拟隔离路径和 SDK 绑定、连接与账户订阅状态、失败清理、callback、
+字段/时间/状态/ID 规范化及写入保护；旧类可作为 mini 兼容包装保留。
+full backend 不应因失败而自动回退 mini，也不得仅按日期自动切换。
+不能预先假定 Full-QMT 路径必为 userdata，或只替换目录字符串便完成迁移。
+
+【已核验：当前源码中的风险点；右列为【判断】及新版待验证事项】
+
+| 当前代码行为 | 迁移时需要隔离或核验的风险 |
+|---|---|
+| 持仓、订单、成交查询使用 result or [] | 查询失败与合法空集合可能混同；无法证明为空时应保留未知/失败，不能静默判为无持仓或无订单 |
+| connect/subscribe 失败仅清除 connected；stop 异常被吞掉 | 已启动 SDK 对象可能未清理，停止状态和资源释放需验证 |
+| 断线 callback 不清除 Broker.connected；账户状态 callback 仅记录事件 | Service/GUI/Provider health 可能依赖陈旧标志；需区分连接、订阅和账户可读状态 |
+| session_id=0 时用毫秒时间取模生成 | 不保证跨进程唯一；新版范围、复用和有限重连规则需验证 |
+| 订单监控使用数字状态及 epoch 秒/毫秒时间判断超时 | 新版状态和时间语义须验证，不能造成误撤单 |
+| 订单 ID 转 int，成交 ID 转 str，依赖策略名/备注识别来源 | 新版 ID、账户关联、字段及备注保留规则须验证 |
+| cancel_order_stock 返回 0 即被包装为 True | 不能将请求返回直接当作最终已撤；仍需订单状态/回报确认 |
+
+【判断】cancel 的 0 返回值应按“成功发出撤单指令”理解，
+不能提升为终态证明；参见[官方交易接口说明](https://dict.thinktrader.net/nativeApi/xttrader.html)。
+callback 的顺序与线程语义也须验证，不应为兼容而直接开启宽松响应顺序，
+或在 callback 内加入可能阻塞的同步查询。
+现有 ExecutionProvider 审批检查未覆盖 ExecutionEngine 对 broker.submit_limit
+及 Service 订单监控对 broker.cancel 的直接调用；只读 adapter 必须在这些路径下
+同样阻断交易动作。
+
+### 5.4 10/19 只读验证门槛与 Execution 授权
+
+【判断：按用户要求设置的实现前置条件，不构成执行授权】
+
+2026-10-19 必须先完成新版 Full-QMT 只读验证并核验证据，
+之后才能进入 QmtBrokerAdapter 的具体实现与接入阶段；验证未完成或未通过时，
+不得仅凭旧 SDK、历史 M2 PASS 或静态接口同名推进实现、配置切换或生产接入。
+
+只读验证至少覆盖：实际客户端/SDK/Python 版本及路径、session_id、
+connect 原始返回值与类型、subscribe 与账户绑定、资产/持仓/订单/成交字段，
+可观察 callback 顺序和状态、正常 stop 与有限重连。
+订单/成交无样本或 callback 未出现时应标为未覆盖，不能宣称对应能力已验证；
+验证范围是否足以通过门槛须人工评审，不能为补样本提交测试订单。
+
+验证拟采用独立 probe，避免启动 TradingService、GUI、daemon 或 Daily Ops；
+main.py check/reconcile 不是纯只读探针。真实连接、SDK 导入副作用、
+客户端/SDK 日志及隔离证据写入目录，均须在执行前另行明确授权。
+
+Execution 的 submit/cancel 不属于 10/19 只读验证。
+仅在 10/19 之后、只读门槛通过且另获独立授权时，才考虑模拟或受控交易验证；
+授权须明确账户、证券、方向、价格、数量/金额、提交与撤销范围及异常处理。
+连接成功、字段兼容、readiness PASS 或到达日期均不是交易授权，
+不得自动放开 live_enabled、auto_execute、broker_write 或解除其他保护。
+未来修改 Broker/Service/factory 等绑定文件时，需重新评估历史 M2 证据适用性，
+不得仅刷新 source_bindings 哈希继续沿用旧 PASS。
 
 ## 6. MarketData cutover / bridge
 
@@ -309,12 +412,22 @@ Daily Ops 注册表：
 - config/ops/cn_exchange_calendar_2026.json
 - config/foundation/qmt_m2_read_only_evidence_v1.json
 - core/providers/
+- core/broker.py
 - core/service.py
 - core/data.py
 - core/execution.py
 - scripts/run_daily_ops_orchestrator_v1.py
 - scripts/run_daily_ops_report_v1.py
 - scripts/run_daily_ops_watchdog_v1.py
+
+【已核验：旧环境静态版本证据路径】
+
+- .venv/pyvenv.cfg
+- .venv/Lib/site-packages/xtquant-250807.1.2.dist-info/METADATA
+- .venv/Lib/site-packages/xtquant/__init__.py
+- .venv/Lib/site-packages/xtquant/xttrader.py
+- .venv/Lib/site-packages/xtquant/xttype.py
+- .venv/Lib/site-packages/xtquant/xtconstant.py
 
 运行证据根目录：
 
@@ -349,7 +462,9 @@ D:\positionx_data\governance\qmt_migration
 
 【判断】
 
-1. 排查 MiniQMT rc=-1，明确连接恢复条件及获批后的验证方案。
+1. 准备并另行申请 2026-10-19 新版 Full-QMT XtQuantTrader 只读验证；
+   先核对券商迁移说明和新版环境，再按第 5 节核验证据，之后才进入 adapter 实现。
+   10/23 管控背景不构成自动切换、MiniQMT 回退或交易验证授权。
 2. 排查 Optimus 查询超时，确认数据覆盖缺口与受控重试方案。
 3. 核对行情、Deep、RET120 和组合账本实际日期，制定恢复计划；
    不得事后补造盘前 PIT 或直接重跑冻结 APPLY。
