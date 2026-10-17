@@ -17,16 +17,46 @@ def run_step(registry,ctx,step_no,argv):
     r=run_process(argv,ctx["project_root"],log_path(ctx["data_root"],ctx["date"],ctx["task_id"],ctx["run_id"],step_no),{"PYTHONDONTWRITEBYTECODE":"1"})
     return {"argv":argv,"returncode":r["returncode"],"parsed_json":r["parsed_json"],"log_path":r["log_path"],"stdout":r["stdout"]}
 BUSINESS_NON_SUCCESS_PREFIXES=("FAIL","ERROR","BLOCKED","WAITING","PARTIAL","DEGRADED","NOT_READY","INCOMPLETE","RED")
+REQUIRED_TRUE_FIELDS={
+    "HEALTH_PREOPEN":"ready",
+    "BROKER_RECONCILE_PREOPEN":"ok",
+    "BROKER_RECONCILE_PRECLOSE":"ok",
+    "BROKER_RECONCILE_FINAL":"ok",
+}
 def business_status_ok(parsed_json):
     if not isinstance(parsed_json,dict): return True
     st=str(parsed_json.get("status","")).strip().upper()
     if not st:return True
     return not any(st.startswith(p) for p in BUSINESS_NON_SUCCESS_PREFIXES)
+def business_result_error(task_id,parsed_json):
+    field=REQUIRED_TRUE_FIELDS.get(task_id)
+    if field is not None:
+        if not isinstance(parsed_json,dict):
+            return "BUSINESS_RESULT_INVALID: expected JSON object"
+        if "status" in parsed_json:
+            status=parsed_json["status"]
+            if not isinstance(status,str) or not status.strip():
+                return "BUSINESS_STATUS_INVALID: expected nonempty string"
+    if not business_status_ok(parsed_json):
+        return f"BUSINESS_STATUS_NON_SUCCESS: {parsed_json['status']}"
+    if field is not None:
+        if field not in parsed_json:
+            return f"BUSINESS_RESULT_MISSING_FIELD: {field}"
+        if type(parsed_json[field]) is not bool:
+            return f"BUSINESS_RESULT_INVALID_FIELD: {field} must be boolean"
+        if parsed_json[field] is not True:
+            return f"BUSINESS_RESULT_FALSE: {field}"
+    return None
+
 def generic(registry,task,ctx):
     results=[]
     for i,step in enumerate(task.get("steps",[]),1):
         r=run_step(registry,ctx,i,step);results.append(r)
-        if r["returncode"]!=0 or not business_status_ok(r.get("parsed_json")):return "FAILED",results
+        error=(f"SUBPROCESS_EXIT_NONZERO: rc={r['returncode']}" if r["returncode"]!=0 else
+               business_result_error(ctx["task_id"],r.get("parsed_json")))
+        if error:
+            r["error_summary"]=error
+            return "FAILED",results
     return "SUCCESS",results
 def a_share_status_current(parsed_json,business_date):
     if not isinstance(parsed_json,dict):return False
@@ -102,6 +132,7 @@ def execute_task(task_id,project_root,data_root,business_date,scheduled_source):
             ctx={"project_root":project_root,"data_root":data_root,"date":date,"task_id":task_id,"run_id":obj["run_id"]}
             status,steps=HANDLERS[task["handler"]](registry,task,ctx); last=steps[-1] if steps else {}
             return store.finish(p,obj,status,exit_code=0 if status=="SUCCESS" else 1,
+                                error_summary=last.get("error_summary"),
                                 command_identity=json.dumps([x.get("argv") for x in steps],ensure_ascii=False),
                                 code_or_config_sha256=sha256_file(registry_path),log_path=last.get("log_path"),
                                 parsed_summary=last.get("parsed_json"),output_artifacts=[x.get("log_path") for x in steps if x.get("log_path")],
