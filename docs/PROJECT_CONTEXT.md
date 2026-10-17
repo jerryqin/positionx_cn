@@ -9,6 +9,12 @@
 原有 Scheduler、生产安全开关和运行结果仍保留各节原始核验时间；
 本次未重新查询这些现场状态，未运行 Broker/QMT、SDK 或 Python 测试。
 
+【已核验：2026-10-17 18:26 Asia/Shanghai，V0.1.3 离线冻结补充】
+本次核对 Git 提交、probe 文件清单及 fake-only 边界，记录此前离线测试与
+最终独立 closure review，并更新下一 Gate 和优先事项。
+Scheduler、生产安全开关及业务运行结果仍以各节原核验时间为准，未重新核验；
+本轮未运行 Python/测试、导入 xtquant 或连接 QMT/Broker。
+
 证据优先级（由高到低）：
 当前源码/配置与当前系统只读状态 >
 带时间戳运行证据 >
@@ -43,6 +49,18 @@ c1bf8f4956a42ee3a15b25e5c27092eda53b4966，提交信息为
 PositionX-CN: fail closed on Daily Ops business results。
 本次文档更新前工作区、暂存区均干净；该提交不包含 Full-QMT Broker 迁移实现。
 
+【已核验：2026-10-17 18:26 Asia/Shanghai】
+以上为历史 Git 快照。本次文档更新的当前 HEAD 基线为：
+
+- branch：main
+- HEAD / probe commit：f9679927afaf535638fc4347ce41ba24c2a592e6
+- tree：e740a2932a571f9edb9b74107d2ca60b44beb4ed
+- parent：7f3b67f665977c39bc881d98614d4aefcdefd202
+- 提交信息：PositionX-CN: add hardened Full-QMT read-only probe
+- 更新本文档前工作区、暂存区均干净；本轮仅修改本文档，不暂存、不 commit。
+
+该提交只增加六个 probe 文件，不包含 QmtBrokerAdapter 或真实 SDK 接入。
+
 ## 2. 当前主要 milestone
 
 【已核验】任务注册表仍配置：
@@ -60,8 +78,11 @@ PositionX-CN: fail closed on Daily Ops business results。
 - Daily Ops Scheduler cutover 已有 APPLY 和独立验证记录。
 
 【判断】当前工作重点：
-恢复 Daily Ops 与 Optimus 日常链路稳定性，形成可复核的 Shadow Ops
-验收记录。现有日报尚不满足五个绿色交易日要求。
+Full-QMT Read-Only Probe V0.1.3 离线冻结后，下一 Gate 为 2026-10-19
+新版 Full-QMT XtQuantTrader 真实只读验证；通过并核验证据后才决定是否进入
+QmtBrokerAdapter 实施。Shadow Ops 继续作为并行质量证据轨，不因迁移重置；
+Daily Ops / Optimus 稳定性与五个绿色交易日验收缺口仍需独立跟进。
+离线 PASS 不代表这些运行问题已经修复。
 
 【待确认】
 是否存在尚未纳入本次证据范围的人工验收或后续阶段批准。
@@ -262,6 +283,75 @@ Execution 的 submit/cancel 不属于 10/19 只读验证。
 未来修改 Broker/Service/factory 等绑定文件时，需重新评估历史 M2 证据适用性，
 不得仅刷新 source_bindings 哈希继续沿用旧 PASS。
 
+### 5.5 Full-QMT Read-Only Probe V0.1.3 离线冻结
+
+【已核验：2026-10-17 18:26 Asia/Shanghai，Git 与当前源码】
+
+- probe 路径：tools/full_qmt_readonly_probe_v01/
+- 版本：0.1.3；README 明确标记 OFFLINE ONLY，当前入口仅运行固定 fake SDK。
+- commit：f9679927afaf535638fc4347ce41ba24c2a592e6
+- tree：e740a2932a571f9edb9b74107d2ca60b44beb4ed
+- parent：7f3b67f665977c39bc881d98614d4aefcdefd202
+- 已提交且仅包含六个文件：README.md、supervisor.py、worker.py、
+  evidence.py、normalize.py、tests/test_fake_sdk.py。
+
+【历史证据：本会话此前测试执行输出与最终独立 closure review，本轮未重跑】
+
+- fake-only 测试：108/108 PASS。
+- 最终独立 closure review：NO_BLOCKER_FOR_OFFLINE_COMMIT = true。
+- 上述记录只覆盖离线 fake-only 范围，不是本轮新执行结果，
+  也不能替代新版 SDK / Full-QMT 真实只读证据。
+
+【判断：基于源码及上述离线验证/审查形成的风险关闭结论，仅限离线范围】
+
+- process facts 严格 schema / fail-closed，缺字段、错误类型阻断 PASS。
+- callback lifecycle monotonic timeline 校验，phase 与时间线冲突阻断 PASS。
+- supervisor 未知异常类型采集不触发异常实例的 str/repr。
+- evidence completion protocol：COMPLETE 仅证明完整发布，不代表业务 PASS。
+- run-level deadline 覆盖初始化、worker、发布、hash、COMPLETE 与最终消费验证。
+- raw facts 与 summary 冲突检测，由 consumer 复核原始事实。
+- primary / cleanup / evidence failure 分离，记录失败不覆盖原始失败。
+- fail-closed 脱敏，未知字段、值及类型默认不直接落明文。
+- invalid handle / account identity 校验，空值或错误账户绑定不能形成 PASS。
+
+边界必须分别读取，不得合并解释为真实能力通过：
+
+```text
+OFFLINE_FAKE_ONLY = PASS
+REAL_SDK = NOT_COVERED
+REAL_FULL_QMT = NOT_COVERED
+EXECUTION = OUT_OF_SCOPE
+```
+
+【判断：本轮用户明确的冻结与 Gate 约束，不构成真实运行授权】
+
+V0.1.3 已完成离线冻结，不再继续离线功能开发。
+下一 Gate 为 2026-10-19 新版 Full-QMT XtQuantTrader 真实只读验证；
+该验证完成、通过并核验证据前，不得开始 QmtBrokerAdapter 实施。
+Execution 的 submit/cancel 验证继续属于独立授权范围。
+
+真实运行必须在证据中绑定：
+
+```text
+probe_source_commit=f9679927afaf535638fc4347ce41ba24c2a592e6
+```
+
+当前冻结入口没有真实 SDK 加载器，不得直接作为真实连接入口；
+真实 Gate 的执行方案、SDK 导入副作用、隔离证据目录及连接授权须另行确认，
+不得为接入真实 SDK 擅自修改冻结版本。
+10/19 Real-Run Gate 必须先形成并审查独立的真实 SDK 接入/启动方案；
+该方案应绑定 V0.1.3 的 evidence、判定和安全契约，不得以临场修改冻结 probe
+的方式接入真实 SDK。若真实接入必须修改 probe 源码，则应另立新版本并重新
+经过离线测试、独立审查和 commit。
+Full-QMT userdata 路径、session、字段兼容性、callback、stop、客户端前后健康
+和交易能力均未由此验证；OS 阻塞、supervisor 强杀、marker 撤销失败及断电
+持久性等仍属于 REAL_RUN_GATE_ONLY。
+
+2026-10-19 如果首次真实运行失败，先封存该次 evidence；
+不允许现场修改 V0.1.3 后继续同一 run。
+只有确认属于 probe 缺陷时，才另行授权开启 V0.1.4，重新走离线测试、
+独立审查及明确批准的 commit，再以新 run 验证；不得覆盖或复用失败证据。
+
 ## 6. MarketData cutover / bridge
 
 【已核验：已迁移部分】
@@ -368,6 +458,7 @@ Ready 仅表示当前任务可被调度，不代表最近业务成功。
 | 10-16 18:00 | PIT_POSTCLOSE SUCCESS | 运行记录 |
 | 10-16 18:55 | EOD watchdog RED | 运行记录 |
 | 10-17 08:37 | Optimus scheduled FAIL，CNINFO 超时 | scheduled 结果及 intake manifest |
+| 10-17 离线冻结 | Probe V0.1.3：108/108 PASS；NO_BLOCKER_FOR_OFFLINE_COMMIT = true | 此前会话执行/独立审查记录，仅 fake-only；本轮未重跑 |
 
 本次未运行 Python 测试、Doctor 或业务命令。
 历史测试 PASS 不代表当前 HEAD 的全部测试已通过。
@@ -419,6 +510,7 @@ Daily Ops 注册表：
 - scripts/run_daily_ops_orchestrator_v1.py
 - scripts/run_daily_ops_report_v1.py
 - scripts/run_daily_ops_watchdog_v1.py
+- tools/full_qmt_readonly_probe_v01/（V0.1.3 六文件冻结源码，绑定提交见第 5.5 节）
 
 【已核验：旧环境静态版本证据路径】
 
@@ -462,16 +554,19 @@ D:\positionx_data\governance\qmt_migration
 
 【判断】
 
-1. 准备并另行申请 2026-10-19 新版 Full-QMT XtQuantTrader 只读验证；
-   先核对券商迁移说明和新版环境，再按第 5 节核验证据，之后才进入 adapter 实现。
+1. 2026-10-19 Full-QMT Real-Run Gate：先核对券商说明、新版环境及独立执行方案，
+   另行取得真实只读验证授权，按第 5.4 / 5.5 节绑定源码和证据。
+   首次失败先封存 evidence，遵守 V0.1.3 冻结与新版本规则；
    10/23 管控背景不构成自动切换、MiniQMT 回退或交易验证授权。
-2. 排查 Optimus 查询超时，确认数据覆盖缺口与受控重试方案。
-3. 核对行情、Deep、RET120 和组合账本实际日期，制定恢复计划；
+2. 根据真实只读证据决定是否进入 QmtBrokerAdapter；验证未完成或未通过时
+   不得实施。通过后仍须评审接入计划并取得相应修改授权，不自动推进。
+3. Shadow Ops 作为并行质量证据轨继续，不因 Broker 迁移重置历史记录或验收口径。
+   继续跟进 Daily Ops / Optimus 查询超时、行情与前向账本实际日期及恢复计划，
+   完善交易日、最终运行状态、日报快照和连续绿色日口径；
    不得事后补造盘前 PIT 或直接重跑冻结 APPLY。
-4. 完善 Shadow Ops 验收口径：交易日资格、最终运行状态、
-   日报快照时点，以及是否要求连续绿色日。
-5. 明确后续 MarketData 生命周期刷新和执行 provider 迁移范围，
-   保留现有冻结语义与审批边界。
+4. Execution 迁移继续独立治理：Provider 与直接 legacy submit/cancel 路径
+   均须遵守审批、Pilot 和风控边界；交易验证需另行明确授权。
+5. 单独评估 MarketData 生命周期刷新迁移，保留现有冻结语义与审批边界。
 6. 同步 ARCHITECTURE / OPERATIONS / RECOVERY 等历史文档。
 
 上述为待规划事项，不构成执行、生产数据写入、
