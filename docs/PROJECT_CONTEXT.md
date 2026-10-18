@@ -21,6 +21,12 @@ Scheduler、生产安全开关及业务运行结果仍以各节原核验时间�
 本轮仅更新本文档，不运行 Python/测试、不导入 xtquant、不连接 QMT/Broker；
 Scheduler、生产安全开关和业务运行结果仍保留各节原始核验时间。
 
+【已核验：2026-10-17 22:30 Asia/Shanghai，Real-Run V0.2.1-offline 冻结补充】
+本次核对 V0.2 正式提交、六文件清单及 fake-only 边界，记录此前 54/54 测试与
+最终 B1 窄复核结论；三层源码绑定和下一 Gate 见第 5.7 节。
+本轮只更新并提交本文档，不运行 Python/测试、不导入 xtquant、不连接 QMT/Broker；
+Scheduler、生产安全开关和业务现场状态未重新核验，保留原始时间。
+
 证据优先级（由高到低）：
 当前源码/配置与当前系统只读状态 >
 带时间戳运行证据 >
@@ -34,6 +40,34 @@ Scheduler、生产安全开关和业务运行结果仍保留各节原始核验�
 - 【历史证据】本次重新读取了带时间戳的既有结果，未重跑。
 - 【判断】基于已核验证据形成的分析、优先级或建议，不是运行事实或执行授权。
 - 【待确认】现有证据不足，或需要另行授权的运行验证。
+
+## 0. 项目目标与成功标准
+
+【长期项目原则：2026-10-18 由用户明确确立，以根目录 AGENTS.md 为长期治理依据】
+
+**稳定盈利，风险可控。** 根本目标是通过科学的投资决策、仓位管理和风险控制，
+追求长期、稳定、可持续的投资盈利。不承诺收益，也不为提高收益牺牲必要风控。
+
+系统价值与成功标准优先体现在：
+
+- 投资效果：实际投资收益及风险调整后收益，服务长期、可持续的盈利目标。
+- 风险表现：回撤控制、仓位管理和必要风险控制得到落实。
+- 运行质量：交易执行可靠，关键投资与运行事实具有必要、可核验的证据。
+- 维护成本：方案简单、可靠、易维护，优先复用已有能力，控制长期工程负担。
+
+技术先进性、代码量、测试数量或架构完整性本身不是目标，也不能替代上述成功标准。
+这些是长期目标和价值衡量依据，不是已实现收益、当前运行 PASS 或实盘执行授权。
+
+**实用、落地、实操，最小充分复杂度。** 本项目服务实际投资交易，不是学术研究。
+没有明确、必要且可验证的实际价值，不增加模块、抽象层、框架、审计流程、测试环节
+或维护复杂度。验证与真实风险相称，采用有限验收标准，避免无限 hardening、重复审查
+和为验证而验证。
+
+新设计原则上回答：解决什么实际投资或运行问题；对收益、风险或可靠性有什么明确价值；
+有没有更简单、成本更低的实现方式。回答不清楚时，默认不增加复杂度。
+
+简化流程不等于降低交易安全标准。现有交易风控、Broker/QMT 只读边界、实盘授权、
+安全开关和必要证据要求继续有效；上述原则不授权交易、配置切换或放宽任何保护。
 
 ## 1. Git 状态
 
@@ -76,6 +110,14 @@ PositionX-CN: add hardened Full-QMT real-run harness。
 该提交仅增加 harness 七文件；更新前工作区仅有 M docs/PROJECT_CONTEXT.md，
 暂存区为空。本轮将仅提交本文档，不修改冻结源码。
 
+【已核验：2026-10-17 22:30 Asia/Shanghai】
+以上为历史 Git 快照。本次文档更新前 HEAD 为
+89d8b40de27a63f166c52ba77a37cbc4e04608cd，tree 为
+4ea757274689f6e10bf9eb3f1dc07caa85145f71，parent 为
+8ca8defeb81fb678e5451946c1ce9e01a8ddf5a0；提交信息为
+PositionX-CN: add minimal Full-QMT real-run V0.2 harness。
+该提交仅增加 V0.2 六文件；更新前工作区、暂存区均干净，本轮仅提交本文档。
+
 ## 2. 当前主要 milestone
 
 【已核验】任务注册表仍配置：
@@ -93,11 +135,14 @@ PositionX-CN: add hardened Full-QMT real-run harness。
 - Daily Ops Scheduler cutover 已有 APPLY 和独立验证记录。
 
 【判断】当前工作重点：
-Full-QMT Read-Only Probe V0.1.3 与 Real-Run Harness V0.1.3 均已完成离线冻结。
-下一 Gate 是先核定 2026-10-19 新版 Full-QMT XtQuantTrader 真实环境参数、
-执行方案和授权范围；真实只读证据通过并核验后，才决定是否进入
+Full-QMT Read-Only Probe V0.1.3、Real-Run Harness V0.1.3 与最小充分实现
+Real-Run V0.2.1-offline 均已完成离线冻结，不再继续离线 hardening。
+下一 Gate 是先核定 2026-10-19 新版 Full-QMT 环境身份，填完整 authorization
+profile，取得用户对一次真实只读 run 的明确批准并封存 evidence；
+真实只读证据通过并核验后，才决定是否进入
 QmtBrokerAdapter 实施。Shadow Ops 继续作为并行质量证据轨，不因迁移重置；
-Daily Ops / Optimus 稳定性与五个绿色交易日验收缺口仍需独立跟进。
+Shadow Ops 内优先保障第 3.1 节核心链；非核心 Optimus 按该节暂停原则处理，
+五个绿色交易日验收缺口仍需如实保留并独立跟进。
 离线 PASS 不代表这些运行问题已经修复。
 
 【待确认】
@@ -130,6 +175,56 @@ Daily Ops / Optimus 稳定性与五个绿色交易日验收缺口仍需独立跟
 scripts/run_daily_ops_report_v1.py 的 shadow_acceptance() 当前按 GREEN
 日报计数，未独立证明这些日期连续、均为交易日或满足其他完整验收条件。
 后续出现绿色日报时仍需人工核验。
+
+### 3.1 核心策略优先与暂停基线
+
+【长期原则：2026-10-18 由用户明确确立；长期约束见 AGENTS.md 第 0 节】
+Shadow Ops 的 P0 为 DEEP OVERSOLD、RET120 CSI500 及对应 Portfolio，优先保障
+其数据、信号、组合、风控与运行稳定性。非核心 Funnel / Optimus 的反复人工、PDF、
+语义解析或网络故障可作为暂停理由，待核心稳定后再确认恢复；不是当前启停授权。
+
+【已核验：2026-10-18 Asia/Shanghai，当前源码与配置静态核对】
+本轮未查询 Windows 任务现场状态，未运行任何业务任务或连接 QMT/Broker。
+
+核心注册依赖链（RET120 还直接依赖 A_SHARE_DAILY_UPDATE；Portfolio 依赖两策略）：
+
+```text
+BROKER_RECONCILE_PRECLOSE → A_SHARE_DAILY_UPDATE
+→ DEEP_FORWARD → RET120_FORWARD → PORTFOLIO_SHADOW
+```
+
+| 任务 | 当前调用链 / 策略标识 |
+|---|---|
+| DEEP_FORWARD | orchestrator → run_deep_oversold_forward_scheduled.ps1 → run_deep_oversold_csi500_forward.py，并备份/验证；DEEP_OVERSOLD_CSI500_FORWARD_V1_1 |
+| RET120_FORWARD | orchestrator → run_ret120_universe_prior_forward_v10.py 的 probe／必要 refresh／capture → run_ret120_csi500_forward.py；RET120_CSI500_FORWARD_V1_0 |
+| PORTFOLIO_SHADOW | orchestrator → run_strategy_portfolio_shadow_v01.py check / status；STRATEGY_PORTFOLIO_V0_1；当前任务不调用 snapshot，不能据此认定组合曲线已更新 |
+
+Deep 使用独立 Windows 入口 PositionX-DeepOversold-CSI500-Forward；RET120 与 Portfolio
+在 PositionX-DailyOps-PostcloseTail 内。不得为暂停非核心策略停用整个 Tail。
+RET120 的 universe-prior 是当前硬前置，使用同日 PIT_PREOPEN 成分股，覆盖检查包含
+CSI300／CSI500／CSI1000／EX_CSI1800；不能与独立 Funnel 一并停用。
+PIT、行情、Broker 对账、风控与 watchdog 等共享能力不随非核心策略暂停而自动停用。
+
+【判断：可独立暂停的候选范围，实际操作仍须另行确认】
+
+- BIG OPPORTUNITY OPTIMUS：PositionX Optimus Current22 0830 采集入口，以及
+  PositionX-DailyOps-OptimusVerify 的 OPTIMUS_STATUS → OPTIMUS_ACCEPTANCE /
+  OPTIMUS_ATTENTION 验证组；注册表未将其列为核心链前置。应整体核定，避免只停采集
+  却让验证继续读旧结果；保留未解决 attention，不以 ACK 代替暂停。
+- UNIVERSE-AWARE FUNNEL：当前对应候选为独立 run_ret120_execution_funnel_v01.py
+  （RET120_EXECUTION_FUNNEL_V0_1_2），读取 universe-prior 快照，未发现同名 Daily Ops
+  注册任务或调度映射。可暂缓其独立运行，但用户名称与实际入口范围仍待确认；
+  不得停用其与 RET120 共用的 universe-prior、PIT 或行情数据链。
+
+当前注册表/编排没有专用 PAUSED 开关，日报和 morning/EOD watchdog 仍包含 Optimus。
+暂停入口后可能保留 NOT_RUN、FAILED、BLOCKED 及 YELLOW/RED；本原则不自动豁免检查，
+不授权将 PAUSED 写成成功、用空操作制造 SUCCESS/GREEN 或追溯改写验收结果。
+真正暂停时先确认具体入口及恢复范围，优先复用现有计划任务启停机制；
+保留代码、历史数据、证据与原验收记录，不新增通用调度框架或状态机。
+
+核验依据：config/ops/daily_ops_task_registry_v1.json、scripts/run_daily_ops_orchestrator_v1.py、
+上述策略入口、config/forward/ret120_universe_prior_forward_v1_0.yaml，以及
+scripts/run_daily_ops_report_v1.py、scripts/run_daily_ops_watchdog_v1.py。
 
 ## 4. Daily Ops 当前 blocker
 
@@ -298,7 +393,7 @@ connect 原始返回值与类型、subscribe 与账户绑定、资产/持仓/订
 订单/成交无样本或 callback 未出现时应标为未覆盖，不能宣称对应能力已验证；
 验证范围是否足以通过门槛须人工评审，不能为补样本提交测试订单。
 
-验证须采用独立执行方案，绑定冻结 probe 与 harness（第 5.5 / 5.6 节），
+验证须采用独立执行方案，绑定三层冻结源码（第 5.5 / 5.6 / 5.7 节），
 当前入口仍为 fake-only。避免启动 TradingService、GUI、daemon 或 Daily Ops；
 main.py check/reconcile 不是纯只读探针。真实连接、SDK 导入副作用、
 客户端/SDK 日志及隔离证据写入目录，均须在执行前另行明确授权。
@@ -452,6 +547,87 @@ harness，也不得开始 QmtBrokerAdapter；只有真实只读证据通过并�
 重新走离线测试、独立审查和 commit，再开展获批的新 run。
 Execution 的 submit/cancel 继续属于独立授权范围，不得为补字段或 callback 样本交易。
 
+### 5.7 Full-QMT Real-Run V0.2.1-offline 冻结与下一 Gate
+
+【已核验：2026-10-17 22:30 Asia/Shanghai，Git 提交及当前 README/源码】
+
+- 路径：tools/full_qmt_realrun_v02/；版本：0.2.1-offline。
+- 已冻结并正式提交，提交信息为：
+  PositionX-CN: add minimal Full-QMT real-run V0.2 harness。
+- realrun_v02_source_commit=89d8b40de27a63f166c52ba77a37cbc4e04608cd
+- realrun_v02_tree=4ea757274689f6e10bf9eb3f1dc07caa85145f71
+- realrun_v02_parent=8ca8defeb81fb678e5451946c1ce9e01a8ddf5a0
+- 该提交仅包含六个文件：README.md、supervisor.py、worker.py、profile.py、
+  windows_runtime.py、tests/test_fake_realrun.py。
+- 当前只执行内置 fake SDK；真实 SDK loader / 真实 QMT 执行入口仍未实现。
+
+【历史证据：此前提交前测试输出及最终 B1 窄复核，本轮不重跑】
+
+- fake-only tests：54/54 PASS。
+- B1_CLOSED = true。
+- DIRECT_REGRESSION_BLOCKER = false。
+- SHOULD_FIX_BEFORE_OFFLINE_COMMIT = none。
+- NO_BLOCKER_FOR_OFFLINE_COMMIT = true。
+- 普通 pass scenario 的 write-barrier 反例已覆盖：report 保持干净、退出码强制为 0，
+  独立 consumer 仍因持久化 callback closure evidence 返回 COMPLETE + FAIL。
+  COMPLETE 仅表示证据包完整发布，不表示业务成功。
+
+当前离线状态必须分别读取，不能合并解释为本机真实能力通过：
+
+```ini
+REALRUN_V02_FAKE_ONLY = PASS
+REAL_SDK = NOT_COVERED
+REAL_FULL_QMT = NOT_COVERED
+EXECUTION = OUT_OF_SCOPE
+```
+
+【判断：用户明确的三层源码绑定与冻结规则，不构成执行授权】
+
+后续真实运行 evidence 必须记录三层源码及当时核定并获批的 context commit，
+同时核验实际 Git blob / 文件 SHA256，不得只相信 commit 字符串：
+
+```ini
+probe_source_commit=f9679927afaf535638fc4347ce41ba24c2a592e6
+harness_v01_source_commit=f136674f655c243d7612a6f4c95d1a9a613c5baf
+realrun_v02_source_commit=89d8b40de27a63f166c52ba77a37cbc4e04608cd
+context_source_commit=<真实运行前核定并获批的上下文提交>
+```
+
+第 5.6 节的两层绑定是 V0.1 冻结时的要求，当前三层关系以本节为准。
+文档的 realrun_v02_source_commit 对应 V0.2 profile 的 harness_v02_source_commit；
+其默认 null 仍仅代表未声明已提交身份的离线模式，不会因 Git commit 自动固定。
+冻结 V0.2 profile 的 context_source_commit 仍为
+8ca8defeb81fb678e5451946c1ce9e01a8ddf5a0，且会核对该基线的文档 blob。
+本次更新不代表冻结入口已经支持新 context 或真实 authorization profile；
+真实接入方案须明确这些绑定关系，不得伪造旧 context 或现场改冻结源码绕过核验。
+
+V0.2 定位为面向一次真实只读迁移验证的“最小充分”接入层，当前仅完成 fake-only
+离线实现。按本轮冻结规则，不再继续离线 hardening，不构造通用 Windows/native
+sandbox；真实 SDK 接入必须在独立获批方案下落实，不能将当前入口直接用于真实连接。
+
+【待确认：10/19 仍须核定，均未由上述离线 PASS 验证】
+
+真实 SDK loader、新版 Python/xtquant/native 环境身份、实际 Full-QMT userdata、
+账户/session、字段兼容、callback、stop 与客户端运行前后真实健康。
+实际 import/file/network/IPC/userdata/log 副作用及授权范围也须在执行前核定。
+submit/cancel 继续属于独立授权，不得为补 schema/callback 样本交易。
+
+【判断：下一 Gate，不构成自动执行队列或真实运行授权】
+
+```text
+10/19 新版环境身份核定
+→ 填完整 authorization profile（包括真实接入方案、required checks 与副作用范围）
+→ 用户明确批准一次真实只读 run
+→ 封存 evidence
+→ 决定是否进入 QmtBrokerAdapter
+```
+
+只有真实只读证据通过并核验后，才决定是否另行批准 QmtBrokerAdapter 实施。
+首次 run 不自动重连、不 fallback，不控制或重启 QMT 客户端。
+首次失败先封存 evidence；不允许现场修改冻结 V0.2 后继续同一 run，
+不得覆盖或复用失败证据。后续真实接入及源码变更须另行明确授权；
+既有冻结 probe/V0.1 harness 保持原版本约束，Execution 授权仍独立治理。
+
 ## 6. MarketData cutover / bridge
 
 【已核验：已迁移部分】
@@ -560,6 +736,7 @@ Ready 仅表示当前任务可被调度，不代表最近业务成功。
 | 10-17 08:37 | Optimus scheduled FAIL，CNINFO 超时 | scheduled 结果及 intake manifest |
 | 10-17 离线冻结 | Probe V0.1.3：108/108 PASS；NO_BLOCKER_FOR_OFFLINE_COMMIT = true | 此前会话执行/独立审查记录，仅 fake-only；本轮未重跑 |
 | 10-17 离线冻结 | Harness V0.1.3：115/115 PASS；NO_BLOCKER_FOR_OFFLINE_COMMIT = true | 上一轮提交前测试/独立审查记录，仅 fake-only；正式提交见第 5.6 节，本轮未重跑 |
+| 10-17 离线冻结 | Real-Run V0.2.1-offline：54/54 PASS；B1_CLOSED = true；DIRECT_REGRESSION_BLOCKER = false；NO_BLOCKER_FOR_OFFLINE_COMMIT = true | 提交前 fake-only 测试及最终窄复核记录；正式提交见第 5.7 节，本轮未重跑 |
 
 本次未运行 Python 测试、Doctor 或业务命令。
 历史测试 PASS 不代表当前 HEAD 的全部测试已通过。
@@ -613,6 +790,7 @@ Daily Ops 注册表：
 - scripts/run_daily_ops_watchdog_v1.py
 - tools/full_qmt_readonly_probe_v01/（V0.1.3 六文件冻结源码，绑定提交见第 5.5 节）
 - tools/full_qmt_realrun_harness_v01/（V0.1.3 七文件冻结源码，绑定提交见第 5.6 节）
+- tools/full_qmt_realrun_v02/（V0.2.1-offline 六文件冻结源码，三层绑定见第 5.7 节）
 
 【已核验：旧环境静态版本证据路径】
 
@@ -656,15 +834,19 @@ D:\positionx_data\governance\qmt_migration
 
 【判断】
 
-1. 2026-10-19 Full-QMT Real-Run Gate：先核定真实环境参数、接入/启动执行方案、
-   证据目录和授权范围，另行取得真实只读验证授权；当前不继续修改冻结 harness。
-   按第 5.4 / 5.5 / 5.6 节同时绑定 probe、harness 和当时获批的 context commit。
-   首次 run 禁止自动重连；首次失败先封存 evidence，遵守两份 V0.1.3 冻结与新版本规则；
+1. 2026-10-19 Full-QMT Real-Run Gate：新版环境身份核定 → 填完整 authorization profile
+   → 用户明确批准一次真实只读 run → 封存 evidence → 决定是否进入 QmtBrokerAdapter。
+   先核定真实接入/启动方案、证据目录、required checks 和副作用授权范围；
+   当前不继续离线 hardening，不修改冻结源码。按第 5.4 至 5.7 节同时绑定
+   probe、V0.1 harness、Real-Run V0.2 及当时获批的 context commit。
+   首次 run 不自动重连、不 fallback，不控制/重启 QMT 客户端；首次失败先封存 evidence，
+   不现场修改冻结 V0.2 后继续同一 run，保留两份 V0.1.3 的冻结与新版本规则；
    10/23 管控背景不构成自动切换、MiniQMT 回退或交易验证授权。
 2. 根据真实只读证据决定是否进入 QmtBrokerAdapter；验证未完成或未通过时
    不得实施。通过后仍须评审接入计划并取得相应修改授权，不自动推进。
 3. Shadow Ops 作为并行质量证据轨继续，不因 Broker 迁移重置历史记录或验收口径。
-   继续跟进 Daily Ops / Optimus 查询超时、行情与前向账本实际日期及恢复计划，
+   按第 3.1 节优先保障 DEEP、RET120 和 Portfolio；跟进行情与前向账本实际日期，
+   非核心 Optimus / Funnel 可在另行确认后暂停，保留其故障与暂停证据；
    完善交易日、最终运行状态、日报快照和连续绿色日口径；
    不得事后补造盘前 PIT 或直接重跑冻结 APPLY。
 4. Execution 迁移继续独立治理：Provider 与直接 legacy submit/cancel 路径
