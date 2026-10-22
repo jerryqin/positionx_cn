@@ -39,7 +39,30 @@ def table_cols(con, table):
     try:return [r[1] for r in con.execute(f"PRAGMA table_info('{table}')").fetchall()]
     except Exception:return []
 
+
+def probe_segments(c):
+    from core.qmt_runtime import segment_bindings
+    from research.strategy_portfolio import DEEP_ID,RET120_ID
+    sources=segment_bindings();dbs={DEEP_ID:sources['deep_db'],RET120_ID:sources['ret120_db']}
+    day=now8().strftime('%Y%m%d');records={};ok=Path(c['market_db']).is_file()
+    for sid,spec in c['strategies'].items():
+        if sid not in dbs:raise ValueError('UNBOUND_CAPACITY_STRATEGY')
+        con=connect_ro(dbs[sid])
+        try:
+            tables={row[0] for row in con.execute('SHOW TABLES').fetchall()}
+            row=con.execute('SELECT state_json FROM forward_state WHERE strategy_id=?',[sid]).fetchone()
+            state=json.loads(row[0]) if row else {}
+            required={'forward_positions','forward_trades',spec['signal_table']}
+            current=str(state.get('last_processed_date','')).replace('-','')==day
+            ok=ok and required<=tables and current
+            records[sid]={'database':dbs[sid],'last_processed_date':state.get('last_processed_date'),'current':current,'required_tables_present':required<=tables}
+        finally:con.close()
+    out={'status':'PASS_CAPACITY_OVERFLOW_AUDIT_V0_1_PROBE' if ok else 'BLOCKED_CAPACITY_SEGMENT_INPUTS','strategies':records,'market_db_exists':Path(c['market_db']).is_file(),'research_db_read_only':True,'qmt':False,'broker':False}
+    print(json.dumps(out,ensure_ascii=False,indent=2));return 0 if ok else 3
+
 def probe(c):
+    from core.qmt_runtime import is_full
+    if is_full():return probe_segments(c)
     db=choose_existing(c['forward_db_candidates'])
     out={'status':'BLOCKED_CAPACITY_OVERFLOW_AUDIT_V0_1_PROBE','generated_at':iso(),'forward_db':str(db) if db else None,'market_db':c['market_db'],'strategies':{},'guardrails':c['guardrails']}
     if not db:
@@ -77,6 +100,8 @@ def load_market(c, symbols, as_of):
     return sessions,op,cl
 
 def capture(c,as_of):
+    from core.qmt_runtime import is_full
+    if is_full():raise RuntimeError('FULL_QMT_CAPACITY_CAPTURE_REQUIRES_SEPARATE_AUTHORIZATION')
     as8=eng.norm_date(as_of); db=choose_existing(c['forward_db_candidates'])
     if not db: raise RuntimeError('forward research DuckDB not found')
     if not Path(c['market_db']).exists(): raise RuntimeError('market DB not found')

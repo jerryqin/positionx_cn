@@ -36,7 +36,7 @@ def table_exists(con,t):
     return bool(con.execute("select 1 from information_schema.tables where table_schema='main' and table_name=?",[t]).fetchone())
 
 def inspect_source(con,src):
-    st=readj(src["state"])
+    st=src["state_data"] if "state_data" in src else readj(src["state"])
     d=str(st.get("last_processed_date") or "").replace("-","")
     expected=int(st.get("pending_signals") or 0)
     if not d:
@@ -60,7 +60,7 @@ def inspect_source(con,src):
     pending_rows=[r for r in rows if r[3] in pending_statuses]
     return {
       "strategy_id":src["strategy_id"],"table":src["table"],
-      "state_file":str(src["state"]),"state_sha256":sha(src["state"]),
+      "state_file":str(src["state"]),"state_sha256":src["state_sha256"] if "state_sha256" in src else sha(src["state"]),
       "last_processed_date":d,"expected_pending":expected,
       "unentered_latest_signal_rows":len(rows),"status_counts":status_counts,
       "inferred_pending_statuses":pending_statuses,
@@ -120,7 +120,27 @@ def persist_idempotent(con,table,row,key="shadow_decision_id"):
     con.execute(f"insert into {table} ({','.join(cols)}) values ({ph})",[row[c] for c in cols])
     return "INSERTED"
 
+
+def inspect_segments():
+    import duckdb
+    from core.qmt_runtime import segment_bindings
+    paths=segment_bindings();dbs={DEEP_ID:paths['deep_db'],RET120_ID:paths['ret120_db']}
+    records=[];day=datetime.now().strftime('%Y%m%d')
+    for original in SOURCES:
+        src=dict(original);db=dbs[src['strategy_id']];con=duckdb.connect(str(db),read_only=True)
+        try:
+            row=con.execute('SELECT state_json FROM forward_state WHERE strategy_id=?',[src['strategy_id']]).fetchone()
+            state=json.loads(row[0]) if row else {}
+            src.update(state_data=state,state=Path(db),state_sha256=hashlib.sha256(row[0].encode()).hexdigest() if row else None)
+            record=inspect_source(con,src);record['current']=str(state.get('last_processed_date','')).replace('-','')==day
+            records.append(record)
+        finally:con.close()
+    ok=all(x.get('mapping_ok') is True and x['current'] for x in records)
+    print(json.dumps({'status':'PASS_G4_FORWARD_RESERVATION_V0_2_INSPECT' if ok else 'BLOCKED_G4_SEGMENT_INPUTS','sources':records,'safety':{'qmt':False,'broker':False,'research_db_read_only':True}},ensure_ascii=False,indent=2));return 0 if ok else 3
+
 def inspect():
+    from core.qmt_runtime import is_full
+    if is_full():return inspect_segments()
     g7=readj(G7)
     con=connect(True)
     try:
@@ -225,6 +245,8 @@ def main():
     p.add_argument("--stage",choices=["CANARY","EXPANDED"],default="CANARY")
     a=p.parse_args()
     try:
+        from core.qmt_runtime import is_full
+        if is_full() and a.command!="inspect":raise RuntimeError("FULL_QMT_RESERVATION_WRITES_NOT_AUTHORIZED")
         if a.command=="inspect":return inspect()
         if a.command=="bootstrap":return bootstrap()
         return reserve_cmd(a.stage)

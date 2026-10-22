@@ -12,8 +12,9 @@ def daily(date,project_root,data_root):
     for tid,spec in reg["tasks"].items():
         runs=store.list_runs(d,tid);latest=runs[-1] if runs else None;status=(latest or {}).get("status","NOT_RUN")
         expected=not(spec["calendar_scope"]=="TRADING_DAY" and status=="SKIPPED_NON_TRADING_DAY")
-        if expected and spec["criticality"]=="BLOCKING" and status not in ("SUCCESS","SKIPPED_ALREADY_SUCCESS"):red=True
-        elif expected and status in ("FAILED","BLOCKED","PARTIAL","NOT_RUN"):yellow=True
+        if status=="PAUSED":yellow=True
+        elif expected and spec["criticality"]=="BLOCKING" and status not in ("SUCCESS","SKIPPED_ALREADY_SUCCESS"):red=True
+        elif expected and status in ("FAILED","BLOCKED","PARTIAL","NOT_RUN","PAUSED"):yellow=True
         rows.append({"task_id":tid,"task_expected":expected,"task_started_at":(latest or {}).get("actual_started_at"),
                      "task_finished_at":(latest or {}).get("finished_at"),"task_status":status,
                      "skip_reason":(latest or {}).get("error_summary") if str(status).startswith("SKIPPED") else None,
@@ -39,7 +40,7 @@ def aggregate(kind,dates,project_root):
         p=Path(reg["ops_storage"]["report_root"])/"daily"/d/"report.json"
         if p.is_file():reports.append(json.loads(p.read_text(encoding="utf-8")))
     total=sum(len(x.get("tasks",[])) for x in reports);good=sum(1 for x in reports for t in x.get("tasks",[]) if t.get("task_status") in ("SUCCESS","SKIPPED_ALREADY_SUCCESS","SKIPPED_NON_TRADING_DAY"))
-    failures=[t for x in reports for t in x.get("tasks",[]) if t.get("task_status") in ("FAILED","BLOCKED","PARTIAL","NOT_RUN")]
+    failures=[t for x in reports for t in x.get("tasks",[]) if t.get("task_status") in ("FAILED","BLOCKED","PARTIAL","NOT_RUN","PAUSED")]
     return {"period_kind":kind,"period_dates":dates,"task_completion_rate":good/total if total else None,
             "late_or_missed_runs":sum(1 for t in failures if t.get("task_status")=="NOT_RUN"),"retry_rate":None,
             "failure_causes":[t.get("task_id") for t in failures],"mean_recovery_time":None,

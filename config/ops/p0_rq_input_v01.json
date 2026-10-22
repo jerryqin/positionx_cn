@@ -1,0 +1,32 @@
+{
+  "schema": "P0_RQ_INPUT_V1",
+  "enabled": true,
+  "asset_root": "D:\\positionx_data\\market\\p0_daily_inputs_v01",
+  "pit_root": "D:\\positionx_data\\pit_live",
+  "strategy_contracts": {
+    "front": {
+      "accepted": true,
+      "representation": "QMT_FRONT_AFFINE",
+      "suspension_semantics_accepted": true,
+      "evidence_file": "D:\\positionx_data\\market\\p0_daily_inputs_v01\\contracts\\deep_front_20261020.json",
+      "evidence_sha256": "3babcebb78011d7b0669c828dbafee78d504ebf4f6f75e60b7f42ef31c457dcd",
+      "reason": "PRODUCTION_PATH_20261020_500X120_527_EVENTS_AND_NATIVE_CASH_SPLIT_ACCEPTED; CURRENT_DAY_INPUT_AND_TRUE_PIT_STILL_REQUIRED",
+      "volume_contract": "RAW_RETAINED_UNIT_UNVERIFIED_NOT_USED_BY_DEEP_RET120_DECISIONS",
+      "execution_price_basis_accepted": true
+    },
+    "back_ratio": {
+      "accepted": true,
+      "representation": "RET120_FROZEN_CLOSE_PRE_CLOSE",
+      "suspension_semantics_accepted": true,
+      "evidence_file": "D:\\positionx_data\\market\\p0_daily_inputs_v01\\contracts\\ret120_20261020_4b00213f1063.json",
+      "evidence_sha256": "4b00213f1063b0a144b3b4aaee2baf4b8ad3709da9043e5cb2ab016561e9de6b",
+      "reason": "PRICE_BASIS_AND_NO_FILL_ACCEPTED_FOR_CONTROLLED_NEW_SEGMENT_ONLY; NO_TRADING_AUTHORIZATION",
+      "volume_contract": "RAW_RETAINED_UNIT_UNVERIFIED_NOT_USED_BY_DEEP_RET120_DECISIONS",
+      "execution_price_basis_accepted": true
+    }
+  },
+  "no_fill_semantics_accepted": true,
+  "native_history_downloads": false,
+  "runtime_profile_activation_requires_exact_delta_approval": true,
+  "source_policy_note": "Validated Full-QMT native updates become the daily primary after acceptance; versioned DuckDB remains long-term storage. RQ is retained transition/history; MyQuant/EWA only fill gaps or independently verify. No automatic switching."
+}

@@ -23,6 +23,9 @@ except ImportError as e:
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from core import p0_rq_input as rq_input
 PIT_ROOT = Path(r"D:\positionx_data\pit_live")
 RAW_ROOT = PIT_ROOT / "raw"
 MANIFEST_ROOT = PIT_ROOT / "manifests"
@@ -159,7 +162,7 @@ def now_cst() -> datetime:
 
 
 def iso_now() -> str:
-    return now_cst().isoformat(timespec="seconds")
+    return now_cst().isoformat(timespec="microseconds")
 
 
 def safe_capture_id(phase: str) -> str:
@@ -335,8 +338,38 @@ def capture_qmt_membership(
     observed_at: str,
     dest: Path,
 ) -> tuple[list[dict[str, Any]], bool]:
+    if rq_input.enabled():
+        import contextlib
+        import io
+        try:
+            # This branch runs only in the explicitly deployed preopen CLI.
+            # The existing RQ credential stays in process memory, never evidence.
+            secret = os.environ.get('RQDATA_LICENSE')
+            if not secret:
+                raise RuntimeError('RQ_CREDENTIAL_MISSING')
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                import rqdatac
+                if rqdatac.__version__ != '3.7.1':
+                    raise RuntimeError('RQ_SDK_VERSION_MISMATCH')
+                rqdatac.init(username='license', password=secret, auto_load_plugins=False,
+                             timeout=12, connect_timeout=5)
+                try:
+                    frame = rq_input.membership_frame(rqdatac, observed_at, capture_id)
+                finally:
+                    rqdatac.reset()
+            path = dest / 'index_membership_rqdata.parquet'
+            write_parquet(frame, path)
+            return [{'dataset': 'index_membership_' + code, 'source': 'RQDATA_COMPONENTS_PROVIDER',
+                     'rows': int(frame.index_code.eq(code).sum()), 'source_max_date': now_cst().strftime('%Y%m%d'),
+                     'health': 'FRESH', 'file_path': str(path), 'sha256': sha256_file(path), 'error': None}
+                    for code in INDEX_SECTORS], True
+        except Exception as exc:
+            return [{'dataset': 'index_membership', 'source': 'RQDATA_COMPONENTS_PROVIDER',
+                     'rows': 0, 'source_max_date': None, 'health': 'ERROR', 'file_path': None,
+                     'sha256': None, 'error': 'RQ_PREOPEN_CAPTURE_FAILED:' + type(exc).__name__}], False
     try:
-        from xtquant import xtdata
+        from core.qmt_runtime import get_xtdata
+        xtdata = get_xtdata()
     except Exception as e:
         return [{
             "dataset": "index_membership",
@@ -933,7 +966,8 @@ def run(phase: str) -> int:
             "raw_snapshots_immutable": True,
             "same_day_runs_never_overwrite": True,
             "event_time_and_observed_at_separate": True,
-            "qmt_current_membership_is_forward_truth": True,
+            "qmt_current_membership_is_forward_truth": not rq_input.enabled(),
+            "rq_components_observed_preopen_only": rq_input.enabled(),
             "cninfo_is_forward_earnings_event_time_source": True,
             "cninfo_fulltext_query_matches_are_raw_evidence": True,
             "cninfo_title_confirmed_events_are_canonical": True,
@@ -960,7 +994,7 @@ def run(phase: str) -> int:
             insert_capture_item(con, capture_id, item)
 
         if phase == "preopen":
-            mp = dest / "index_membership_qmt.parquet"
+            mp = dest / ("index_membership_rqdata.parquet" if rq_input.enabled() else "index_membership_qmt.parquet")
             if mp.exists():
                 qpath = str(mp).replace("'", "''")
                 con.execute(

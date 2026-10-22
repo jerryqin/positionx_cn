@@ -31,6 +31,7 @@ import math
 import os
 import re
 import shutil
+import sys
 import time
 from collections import Counter
 from datetime import datetime
@@ -38,6 +39,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 BASE_ROOT = Path(r"D:\positionx_data\market\a_share_daily_v1\A_SHARE_SHSZ_NON_ST_DAILY_V1_20260928")
 BASE_MANIFEST = BASE_ROOT / "manifest.json"
@@ -242,6 +247,20 @@ def load_state() -> Dict[str, Any]:
     return st
 
 
+def approved_resume_gap(last: str, target: str, sessions: List[str]):
+    # Explicit future cutover boundary, never historical PIT reconstruction.
+    from core.qmt_runtime import profile
+    cfg=profile();resume=cfg.get("a_share_resume",{})
+    if cfg.get("enabled") is not True or resume.get("enabled") is not True:return None
+    if (resume.get("start_date")!=target or resume.get("last_validated_session")!=last
+            or sessions[-1:]!=[target] or resume.get("missing_sessions")!=sessions[:-1]
+            or not resume.get("authorization_ref") or resume["authorization_ref"]=="UNAPPROVED"):
+        return None
+    return {"from_last_validated_session":last,"resume_date":target,
+            "missing_sessions":sessions[:-1],"authorization_ref":resume["authorization_ref"],
+            "missing_dates_backfilled":False}
+
+
 def resolve_plan(xtdata: Any, target_date: Optional[str] = None) -> Dict[str, Any]:
     now = datetime.now()
     today = now.strftime("%Y%m%d")
@@ -282,13 +301,14 @@ def resolve_plan(xtdata: Any, target_date: Optional[str] = None) -> Dict[str, An
 
     sessions = get_sessions_between(xtdata, last, target)
     sessions = [d for d in sessions if d > last]
-    if sessions != [target]:
+    resume_gap=approved_resume_gap(last,target,sessions) if sessions != [target] else None
+    if sessions != [target] and resume_gap is None:
         raise RuntimeError(
             f"MISSED_SESSION_FAIL_CLOSED: last={last}, target={target}, missing_chain={sessions}"
         )
 
     return {
-        "action": "PROCESS",
+        "action": "PROCESS", "resume_gap": resume_gap,
         "today": today, "latest_trade_date": latest,
         "last_processed_date": last, "target_date": target,
     }
@@ -1113,9 +1133,13 @@ def commit_state(st: Dict[str, Any], target: str, session_manifest: Dict[str, An
     json_write_atomic(STATE, st)
 
 
-def process(target: str, xtdata: Any) -> int:
+def process(target: str, xtdata: Any, resume_gap=None) -> int:
     final = SESSIONS / f"trade_date={target}"
     st = load_state()
+    if resume_gap is not None:
+        if st["last_processed_date"]!=resume_gap["from_last_validated_session"] or target!=resume_gap["resume_date"]:
+            raise RuntimeError("RESUME_STATE_CHANGED_NO_WRITE")
+        st.setdefault("acknowledged_session_gaps",[]).append(resume_gap)
 
     if final.exists():
         print(f"SESSION_ALREADY_COMMITTED: {final}")
@@ -1195,7 +1219,8 @@ def process(target: str, xtdata: Any) -> int:
 
 def check() -> int:
     ensure_foundation()
-    from xtquant import xtdata
+    from core.qmt_runtime import get_xtdata
+    xtdata = get_xtdata()
     try:
         xtdata.enable_hello = False
     except Exception:
@@ -1278,7 +1303,8 @@ def main() -> int:
         return status()
 
     ensure_foundation()
-    from xtquant import xtdata
+    from core.qmt_runtime import get_xtdata
+    xtdata = get_xtdata()
     try:
         xtdata.enable_hello = False
     except Exception:
@@ -1290,7 +1316,7 @@ def main() -> int:
         print("NO_NEW_SESSION")
         return 0
 
-    return process(plan["target_date"], xtdata)
+    return process(plan["target_date"], xtdata, plan.get("resume_gap"))
 
 
 if __name__ == "__main__":

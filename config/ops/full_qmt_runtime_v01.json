@@ -1,0 +1,288 @@
+{
+  "version": "full-qmt-cutover-candidate-v0.1",
+  "enabled": true,
+  "python": "D:\\positionx_cn\\.venv\\Scripts\\python.exe",
+  "numerical_site": "D:\\positionx_cn\\.venv\\Lib\\site-packages",
+  "sdk_root": "D:\\qmt\\bin.x64\\Lib\\site-packages\\xtquant",
+  "dll_roots": [
+    "D:\\qmt\\bin.x64\\Lib\\site-packages\\xtquant",
+    "C:\\Python310"
+  ],
+  "client_root": "D:\\qmt",
+  "client_exe": "D:\\qmt\\bin.x64\\XtItClient.exe",
+  "cache_root": "D:\\qmt\\datadir",
+  "broker_userdata": "D:\\qmt\\userdata",
+  "broker_read_only": true,
+  "account_type": "STOCK",
+  "session_id_policy": "fresh_per_instance",
+  "allow_history_updates": false,
+  "allow_metadata_updates": false,
+  "history_update": {
+    "mode": "bounded_range_acknowledged",
+    "start": "UNAPPROVED",
+    "end": "UNAPPROVED",
+    "not_before": "UNAPPROVED",
+    "max_symbols": 0
+  },
+  "sdk_files": [
+    {
+      "path": "IPythonApiClient.cp310-win_amd64.pyd",
+      "sha256": "854f1c85bce2c0a6ac2105c37998454458d0e1268475dc0b4510280632fd690d"
+    },
+    {
+      "path": "__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "libeay32.dll",
+      "sha256": "d2bbc6acad8cec2fdda00ba67474c7c12a989b88ad91f03f15e7b5823e8025e7"
+    },
+    {
+      "path": "log4cxx.dll",
+      "sha256": "c3f57ffffa078dd53c0fff8a7078d0fad6af6832f3a581decb708b30045ca00d"
+    },
+    {
+      "path": "msvcp140.dll",
+      "sha256": "85a415f7aa8a1e7d10e05e713c91a3aec9bf3f4c821eba10df2d20b1a02e3882"
+    },
+    {
+      "path": "qmttools\\__init__.py",
+      "sha256": "bd2099e8d60134ce9f83a83cb4691a6c9ac5a1e713143ab28e79baa39ecddd7f"
+    },
+    {
+      "path": "qmttools\\contextinfo.py",
+      "sha256": "e067185d9bf9582e9c48b7f7c343d081c303e0b5f79e737c14500832b32aa287"
+    },
+    {
+      "path": "qmttools\\functions.py",
+      "sha256": "58121bc08073d8294139dee10f3def0ce80e2f9aa5b9e544b179edf37fe5d459"
+    },
+    {
+      "path": "qmttools\\stgentry.py",
+      "sha256": "132deb1643394d04235155aac533166519cb8eab2c8e92e15a6c60f94608a49f"
+    },
+    {
+      "path": "qmttools\\stgframe.py",
+      "sha256": "6cd19f2fe9729b09c0f36b8a263482dd2db79539ea3112fa7b5816938f23e173"
+    },
+    {
+      "path": "ssleay32.dll",
+      "sha256": "255c3afa6a3758ddff83540aa9d7f92124984e6fef8bc27f82cd0b949a842bc1"
+    },
+    {
+      "path": "vcruntime140.dll",
+      "sha256": "3096cafb6a21b6d28cf4fe2dd85814f599412c0fe1ef090dd08d1c03affe9ab6"
+    },
+    {
+      "path": "xtbson\\__init__.py",
+      "sha256": "cbc022c8746ac887873be171c050a6e35e53d1af97ba39f2188f9439651a3dcd"
+    },
+    {
+      "path": "xtbson\\bson36\\__init__.py",
+      "sha256": "681c10cac45f8bde1c7752141c38434741555adfa59bc1a1513c333ecaf84e93"
+    },
+    {
+      "path": "xtbson\\bson36\\_helpers.py",
+      "sha256": "b3978e8a8a7431a25d8cde5fc293dd304371d0314f3f61d74f7e7a76b2b0e6dd"
+    },
+    {
+      "path": "xtbson\\bson36\\binary.py",
+      "sha256": "43e7c994c4be806d1e7477b8264add76d29ff8245b5fe340eb4f8868a720147c"
+    },
+    {
+      "path": "xtbson\\bson36\\code.py",
+      "sha256": "b76ed8f1ab74a93d9daa14998e104847d6647e3a598b7503710844a3cab3f560"
+    },
+    {
+      "path": "xtbson\\bson36\\codec_options.py",
+      "sha256": "52089ba2ac76fe796becd0c024ccb6a73a6aad015ae0b9a310c36b37b27faa5d"
+    },
+    {
+      "path": "xtbson\\bson36\\dbref.py",
+      "sha256": "d2c61cb4b5c5f6a4eb8b7bf114455d0b292bf2b99f1e6be01033e98ebb5593e4"
+    },
+    {
+      "path": "xtbson\\bson36\\decimal128.py",
+      "sha256": "0fc4f5f6a4fe0b4564e7b21df881ae154fef13818b33ec8d5de00fed0649fa72"
+    },
+    {
+      "path": "xtbson\\bson36\\errors.py",
+      "sha256": "976481902f20c387d61ed377ce82edada05d4fbc55908958127610ee59669f17"
+    },
+    {
+      "path": "xtbson\\bson36\\int64.py",
+      "sha256": "c53cd1c0f79a76bdc42a64037c20ce2e090ef50e867398e256f423ac3f086345"
+    },
+    {
+      "path": "xtbson\\bson36\\json_util.py",
+      "sha256": "cc0788877d13413ec57ed276d7bfee5c534d742fd7d2d872127d7d4122de5ac2"
+    },
+    {
+      "path": "xtbson\\bson36\\max_key.py",
+      "sha256": "dfe83279979da1fbf75ecf3a701e7573ac028314a14a031651c94d3324da4e6f"
+    },
+    {
+      "path": "xtbson\\bson36\\min_key.py",
+      "sha256": "1a7a9649f183729216a66a2803d926a2bac71f376882fb04aea31ae79d6e901e"
+    },
+    {
+      "path": "xtbson\\bson36\\objectid.py",
+      "sha256": "aa102ef8bc07c99176b0ed018e79fa6e08c6cd87f2cff20f08059fd372dc39d2"
+    },
+    {
+      "path": "xtbson\\bson36\\raw_bson.py",
+      "sha256": "f670232aa5e2482a05149362108b59f50442f3f32d4c04b3b2a8f86b7bc8e075"
+    },
+    {
+      "path": "xtbson\\bson36\\regex.py",
+      "sha256": "7091be0e34bb63dc5417dd89937783b5014ec75e1ed75ee57686aec02c4c185a"
+    },
+    {
+      "path": "xtbson\\bson36\\son.py",
+      "sha256": "c442f2c0f717972234fd3a774ba32c1e0261f1ee06dd6c96b5b5fe411b50575e"
+    },
+    {
+      "path": "xtbson\\bson36\\timestamp.py",
+      "sha256": "0a3040b8e45ae399d0448ec36efbcd94e6d4959fac54788e90c9dc17ed3c3210"
+    },
+    {
+      "path": "xtbson\\bson36\\tz_util.py",
+      "sha256": "fd5ce1e183a436de9b6e34790c8f209ae861cc7270306ee3a95ea55d2b7d97d3"
+    },
+    {
+      "path": "xtbson\\bson37\\__init__.py",
+      "sha256": "e5db90708600ab3e4602b54da1ddc3f5d2fa0b9371b25c82274993196bc8d8b5"
+    },
+    {
+      "path": "xtbson\\bson37\\_cbson.cp310-win_amd64.pyd",
+      "sha256": "7006f1d4bf9c97223de64265f71b55435a1ec9c5496b4cce7792b7f3dea738c5"
+    },
+    {
+      "path": "xtbson\\bson37\\_helpers.py",
+      "sha256": "3a1d523bdf63a547980b13264ebe1f95e56c59630150d9fb28536ad7d448559a"
+    },
+    {
+      "path": "xtbson\\bson37\\binary.py",
+      "sha256": "3f4d6cbd6a6e716f3f95d4f627c8913dece31c5fed04282a882d64109a65a8dd"
+    },
+    {
+      "path": "xtbson\\bson37\\code.py",
+      "sha256": "4fc603f37bcea244f3103b37893762d145e1df2eb1071c3c985f4b687c304b45"
+    },
+    {
+      "path": "xtbson\\bson37\\codec_options.py",
+      "sha256": "9bfea6accb2d570b8035d179ffe0ea996174b813d668ab856cbf6f6cc481c63c"
+    },
+    {
+      "path": "xtbson\\bson37\\datetime_ms.py",
+      "sha256": "61191354cd929a9afeb450cfaba998b2a9a84b16c1b6c1dda30be35d1966d68f"
+    },
+    {
+      "path": "xtbson\\bson37\\dbref.py",
+      "sha256": "63cc1d3c6d45daee656fda55808248964cede24052f0df678d59489b3de50715"
+    },
+    {
+      "path": "xtbson\\bson37\\decimal128.py",
+      "sha256": "97a493dfd322a46906aef5917bef70be8752eb4d6cb48bc35a02d7d467e0c852"
+    },
+    {
+      "path": "xtbson\\bson37\\errors.py",
+      "sha256": "976481902f20c387d61ed377ce82edada05d4fbc55908958127610ee59669f17"
+    },
+    {
+      "path": "xtbson\\bson37\\int64.py",
+      "sha256": "5638fb7d54f3ac68dc66509a1b5d097f82733fe656f3ce01e110d4a7761c223d"
+    },
+    {
+      "path": "xtbson\\bson37\\json_util.py",
+      "sha256": "573da2c696a300ed3ddd0b55212948049e34dc53468cf4d6fd7bc8da72c549a4"
+    },
+    {
+      "path": "xtbson\\bson37\\max_key.py",
+      "sha256": "47c14f25a7ffb13420e108fde145ff4f4aedd6edb9cdcbb6f9d7b9778ecc8ab6"
+    },
+    {
+      "path": "xtbson\\bson37\\min_key.py",
+      "sha256": "3a0666e2a5cf49d2d814899639ac272e578b8dc0c746628f7f1e1c882cf849e0"
+    },
+    {
+      "path": "xtbson\\bson37\\objectid.py",
+      "sha256": "14ff83c35ae6852e0d4efa95cf0716c1578966c366f4a1139a62d036f639985e"
+    },
+    {
+      "path": "xtbson\\bson37\\raw_bson.py",
+      "sha256": "abd59b867dcaff71026a50e639938bfc4e5b046b6636784bd07ce12076750d79"
+    },
+    {
+      "path": "xtbson\\bson37\\regex.py",
+      "sha256": "dddc59662d89103c177aa3103ab9d6d8312de3a1b8b16a176e861eed393900cf"
+    },
+    {
+      "path": "xtbson\\bson37\\son.py",
+      "sha256": "0849ade167aff54f6807483caba857b20f0e259c5eea3f3fcc3ab925088cbd14"
+    },
+    {
+      "path": "xtbson\\bson37\\timestamp.py",
+      "sha256": "f53671c212d3cc3940fb4d1188757ddd57e8ee8d71085cdfa326f3f877cfe159"
+    },
+    {
+      "path": "xtbson\\bson37\\tz_util.py",
+      "sha256": "510b04efeefd9619ba9f0aca557364f102aeb563df35d286a7f37b034b93778c"
+    },
+    {
+      "path": "xtconstant.py",
+      "sha256": "2e954b1ca9d93596d3907863d8d5a1f26ce73601564b5853ed60efd88d830863"
+    },
+    {
+      "path": "xtdata.py",
+      "sha256": "52bc303c97b5deb207888821a27c0af4d268f81dc252dfdffca964ba0568ae3e"
+    },
+    {
+      "path": "xtdata_config.py",
+      "sha256": "413ea55abc640ebe7d9f6bd8a6996849ad6efafcba14783dbdad5fe453745334"
+    },
+    {
+      "path": "xtextend.py",
+      "sha256": "9f913a515ad268efde73dfa4607930c945a3e3b3dfa71d1d17f2983447758f20"
+    },
+    {
+      "path": "xtpythonclient.cp310-win_amd64.pyd",
+      "sha256": "202dc27ff34d9586fb55b403014c92fcb4f8edb363e559ac1cb386eb5a34cc86"
+    },
+    {
+      "path": "xtstocktype.py",
+      "sha256": "8bbb71b1cd72fece4bd2ddcfab4b192dd6e468e9da1797dbddfc147625af72ec"
+    },
+    {
+      "path": "xttools.py",
+      "sha256": "3bcdcf94bf64b2a3c96b230463aef8d9e4c1fe36e73627589ade7f3558b9a629"
+    },
+    {
+      "path": "xttrader.py",
+      "sha256": "722df0f139678b32f2e47ff4fd7651ba93d984ffb8b0b0d9a9e682bcd80f1b90"
+    },
+    {
+      "path": "xttype.py",
+      "sha256": "57c1ab333b8b52b3309066326df113d22f6747c997c96a0af4164a234f9790cc"
+    },
+    {
+      "path": "xtview.py",
+      "sha256": "28ae3c68cb23c2b38d11d6e320e55db748e66d7b478f4640db3cbf039ff4f9a0"
+    }
+  ],
+  "backend": "full",
+  "client_config": "D:\\positionx_cn\\config\\ops\\full_qmt_xtdata_client_v01.ini",
+  "client_config_sha256": "f785222d88181287fb2c0f1dee4a15dccab64818b2bf8dcb5aeb9bf73f24a0cc",
+  "a_share_resume": {
+    "enabled": true,
+    "start_date": "20261022",
+    "last_validated_session": "20261015",
+    "missing_sessions": [
+      "20261016",
+      "20261019",
+      "20261020",
+      "20261021"
+    ],
+    "authorization_ref": "USER_FULL_QMT_CUTOVER_20261020_FOR_20261021_23"
+  }
+}

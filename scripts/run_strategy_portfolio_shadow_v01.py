@@ -235,8 +235,18 @@ def main() -> int:
     p.add_argument("command", choices=["check", "bootstrap", "snapshot", "status"])
     p.add_argument("--db", default=str(DB_PATH))
     p.add_argument("--output-dir", default=str(OUT_DIR))
+    p.add_argument("--recovery-profile")
+    p.add_argument("--expected-trade-date")
     a = p.parse_args()
     try:
+        if a.recovery_profile:
+            from scripts.p0_core_recovery_v01 import load_profile, check_portfolio, portfolio_snapshot, portfolio_status
+            profile = load_profile(a.recovery_profile)
+            operations = {"check": check_portfolio, "snapshot": portfolio_snapshot, "status": portfolio_status}
+            if a.command not in operations or not a.expected_trade_date:
+                raise RuntimeError("FAIL_CLOSED RECOVERY_DATE_AND_OPERATION_REQUIRED")
+            print(json.dumps(operations[a.command](profile, a.expected_trade_date), allow_nan=False))
+            return 0
         if a.command == "check": return check(Path(a.db))
         if a.command == "bootstrap": return bootstrap(Path(a.db), Path(a.output_dir))
         if a.command == "snapshot": return snapshot(Path(a.db), Path(a.output_dir))

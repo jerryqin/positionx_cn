@@ -1,0 +1,11 @@
+{
+  "version": "0.1-offline",
+  "enabled": true,
+  "start_date": "20261022",
+  "segment_root": "D:\\positionx_data\\research\\p0_core_recovery_v01\\ret120_20261022",
+  "segment_db": "D:\\positionx_data\\research\\p0_core_recovery_v01\\ret120_20261022\\ret120.duckdb",
+  "output_dir": "D:\\positionx_data\\research\\p0_core_recovery_v01\\ret120_20261022\\portfolio",
+  "deep_db": "D:\\positionx_data\\research\\p0_core_recovery_v01\\deep_20261022\\deep.duckdb",
+  "pit_root": "D:\\positionx_data\\pit_live\\manifests",
+  "calendar": "D:\\positionx_cn\\config\\ops\\cn_exchange_calendar_2026.json"
+}

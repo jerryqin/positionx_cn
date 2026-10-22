@@ -124,10 +124,13 @@ def create_backup(
     force: bool = False,
     only_if_session_today: bool = False,
     retention_days: int = 90,
+    segment_db: Path | None = None,
+    segment_output: Path | None = None,
+    keep_all: bool = False,
 ) -> Dict[str, Any]:
-    db = project_root / "data/research/positionx_research.duckdb"
-    state_path = project_root / "data/research/forward_deep_oversold_csi500_v1_1/state.json"
-    latest_path = project_root / "data/research/forward_deep_oversold_csi500_v1_1/latest.json"
+    db = segment_db if segment_db is not None else project_root / "data/research/positionx_research.duckdb"
+    state_path = segment_output / "state.json" if segment_output is not None else project_root / "data/research/forward_deep_oversold_csi500_v1_1/state.json"
+    latest_path = segment_output / "latest.json" if segment_output is not None else project_root / "data/research/forward_deep_oversold_csi500_v1_1/latest.json"
     if not db.exists():
         raise RuntimeError(f"research DuckDB missing: {db}")
     if not state_path.exists():
@@ -163,6 +166,7 @@ def create_backup(
     backup_root.mkdir(parents=True, exist_ok=True)
     staging = backup_root / f".{backup_key}.staging"
     if staging.exists():
+        if keep_all:raise RuntimeError("SEGMENT_BACKUP_STAGING_EXISTS_PRESERVE_EVIDENCE")
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
 
@@ -223,7 +227,7 @@ def create_backup(
                 d = datetime.strptime(child.name, "%Y%m%d")
             except ValueError:
                 continue
-            if d < cutoff:
+            if d < cutoff and not keep_all:
                 shutil.rmtree(child)
                 removed.append(child.name)
 

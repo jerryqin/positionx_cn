@@ -12,7 +12,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
-from xtquant import xtdata
+from core import p0_rq_input as rq_input
+from core.qmt_runtime import get_xtdata
+xtdata = get_xtdata()
 
 from research.forward_deep_oversold import (
     DeepOversoldForwardPolicy,
@@ -36,6 +38,8 @@ POLICY = DeepOversoldForwardPolicy()
 
 
 def current_universe() -> dict:
+    if rq_input.enabled():
+        return rq_input.current_universe()
     sector = set()
     weights = set()
     sector_error = None
@@ -76,6 +80,9 @@ def load_histories(
     *,
     refresh: bool = False,
 ) -> dict[str, pd.DataFrame]:
+    if rq_input.enabled():
+        frames = rq_input.strategy_histories(xtdata, symbols, bars, POLICY.dividend_type, 120)
+        return {s: normalize_history(f) for s, f in frames.items()}
     adapter = XtDataWatchlistAdapter(
         xtdata,
         AdapterConfig(sector="", bars=bars, dividend_type=POLICY.dividend_type),
@@ -442,11 +449,20 @@ def state_counts(store, state):
     state["total_return_shadow"] = float(state["shadow_equity"]) / 1_000_000.0 - 1.0
 
 
-def main() -> int:
+def _run_main() -> int:
     p = argparse.ArgumentParser(description="CSI500 Deep Oversold frozen forward v1")
     p.add_argument("--db", default=str(DB_PATH))
     p.add_argument("--output-dir", default=str(OUT_DIR))
+    p.add_argument("--segment-profile")
     args = p.parse_args()
+    segment=None
+    from core.qmt_runtime import is_full
+    if args.segment_profile or is_full():
+        from scripts.deep_forward_segment_v01 import load_profile
+        segment=load_profile(args.segment_profile or PROJECT_ROOT/"config/ops/deep_forward_segment_v01.json")
+        if datetime.now().strftime("%Y%m%d")<segment["start_date"]:raise SystemExit("DEEP_SEGMENT_NOT_STARTED")
+        args.db=segment["segment_db"];args.output_dir=segment["output_dir"]
+        if not Path(args.db).is_file():raise SystemExit("DEEP_SEGMENT_NOT_INITIALIZED")
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -458,6 +474,10 @@ def main() -> int:
             raise SystemExit("BLOCKED_POLICY_FINGERPRINT_CHANGED")
 
         state = store.load_state(POLICY.strategy_id) or initial_state(POLICY)
+
+        if segment is not None:
+            from scripts.deep_forward_segment_v01 import require_state
+            require_state(segment,state,con=store.con)
 
         # Load benchmark first; this establishes completed market sessions.
         bench_hist = load_histories([POLICY.benchmark], bars=120, refresh=True).get(POLICY.benchmark)
@@ -569,7 +589,7 @@ def main() -> int:
             store.upsert_bars(
                 observed_bars,
                 dividend_type=POLICY.dividend_type,
-                source_system="MINIQMT_FORWARD_OBSERVED",
+                source_system=rq_input.source_label(POLICY.dividend_type),
             )
 
             # Chronology: T+1 open entries -> close exits/mark -> T-close signals.
@@ -625,6 +645,18 @@ def main() -> int:
         print(f"LATEST: {out_dir/'latest.json'}")
 
     return 0
+
+def main() -> int:
+    from core.qmt_runtime import is_full
+    if not is_full():return _run_main()
+    from core.ops_runtime import TaskLock
+    from scripts.deep_forward_segment_v01 import load_profile,DEFAULT_PROFILE
+    parser=argparse.ArgumentParser(add_help=False);parser.add_argument("--segment-profile")
+    args,_=parser.parse_known_args()
+    segment=load_profile(args.segment_profile or DEFAULT_PROFILE)
+    if datetime.now().strftime("%Y%m%d")<segment["start_date"]:raise SystemExit("DEEP_SEGMENT_NOT_STARTED")
+    with TaskLock(Path(segment["segment_root"])/"locks","DEEP_FORWARD",datetime.now().strftime("%Y%m%d")):
+        return _run_main()
 
 if __name__ == "__main__":
     raise SystemExit(main())

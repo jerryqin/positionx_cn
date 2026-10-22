@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import math
+import numbers
+import re
+import secrets
+from .qmt_runtime import profile as qmt_profile, pin_sdk, verify_full_endpoint
 import threading
 import time
 from typing import Callable, Dict, List, Optional
 
-from .models import AccountSnapshot, PositionSnapshot, now_iso
+from .models import AccountSnapshot, PositionSnapshot, now_iso, broker_order_key
 
 
 class BrokerError(RuntimeError):
@@ -15,13 +20,34 @@ class BrokerError(RuntimeError):
 class _CallbackProxy:
     """运行时创建真正的 XtQuantTraderCallback 子类，避免无 xtquant 环境导入失败。"""
     @staticmethod
-    def build(event_sink: Optional[Callable[[str, Dict], None]] = None):
+    def build(event_sink: Optional[Callable[[str, Dict], None]] = None, account_id=None):
         from xtquant.xttrader import XtQuantTraderCallback
 
         class Callback(XtQuantTraderCallback):
             def _emit(self, kind: str, obj):
                 if event_sink:
                     payload = {}
+                    if account_id is not None:
+                        # Only reviewed scalar facts enter production event logs. No account IDs,
+                        # free text, arbitrary getters, class names or unknown fields.
+                        try:
+                            if kind != "DISCONNECTED" and getattr(obj,"account_id",None) != account_id:
+                                raise ValueError("CALLBACK_ACCOUNT_BINDING")
+                            for name in ("order_id","order_type","order_status","order_volume","traded_volume","traded_price","traded_amount","status","error_id"):
+                                value=getattr(obj,name,None)
+                                if value is None:continue
+                                if isinstance(value,bool) or not isinstance(value,numbers.Real) or not math.isfinite(value):
+                                    raise ValueError("CALLBACK_FIELD_TYPE")
+                                payload[name]=value
+                            code=getattr(obj,"stock_code",None)
+                            if code is not None:
+                                if type(code) is not str or not re.fullmatch(r"\d{6}\.(SH|SZ|BJ)",code):raise ValueError("CALLBACK_SYMBOL")
+                                payload["stock_code"]=code
+                        except Exception:
+                            event_sink("CAPTURE_ERROR",{"error":"CALLBACK_FACT_CAPTURE_FAILED"})
+                            return
+                        event_sink(kind,payload)
+                        return
                     for name in dir(obj):
                         if name.startswith("_"):
                             continue
@@ -46,10 +72,15 @@ class _CallbackProxy:
 class MiniQmtBroker:
     def __init__(self, mini_path: str, account_id: str, account_type: str = "STOCK", session_id: int = 0,
                  event_sink: Optional[Callable[[str, Dict], None]] = None):
-        self.mini_path = mini_path
+        runtime=qmt_profile()
+        self._full_mode=runtime.get("backend")=="full" or runtime["enabled"]
+        self._full_connect_attempted=False
+        self.last_cleanup_error=None
+        self.read_coverage={}
+        self.mini_path = runtime["broker_userdata"] if self._full_mode else mini_path
         self.account_id = account_id
         self.account_type = account_type
-        self.session_id = session_id or int(time.time() * 1000) % 2_000_000_000
+        self.session_id = (secrets.randbelow(1_999_999_999)+1) if self._full_mode else (session_id or int(time.time() * 1000) % 2_000_000_000)
         self.event_sink = event_sink
         self.trader = None
         self.account = None
@@ -60,47 +91,100 @@ class MiniQmtBroker:
     def connect(self):
         with self._lock:
             try:
+                if self._full_mode:
+                    if qmt_profile().get("enabled") is not True:raise BrokerError("FULL_QMT_DISABLED_NO_FALLBACK")
+                    if self.connected:return True
+                    if self._full_connect_attempted:raise BrokerError("FULL_QMT_RETRY_NOT_ALLOWED")
+                    self._full_connect_attempted=True
+                    if self.account_type!="STOCK":raise BrokerError("FULL_QMT_ACCOUNT_TYPE")
+                    verify_full_endpoint(qmt_profile());pin_sdk()
                 from xtquant.xttrader import XtQuantTrader
                 from xtquant.xttype import StockAccount
                 self.trader = XtQuantTrader(self.mini_path, self.session_id)
-                self.callback = _CallbackProxy.build(self.event_sink)
+                def sink(kind,payload):
+                    if kind in {"DISCONNECTED","CAPTURE_ERROR"}:self.connected=False
+                    if self.event_sink:self.event_sink(kind,payload)
+                self.callback = _CallbackProxy.build(sink,self.account_id if self._full_mode else None)
                 self.trader.register_callback(self.callback)
                 self.trader.start()
                 rc = self.trader.connect()
-                if rc != 0:
+                if type(rc) is not int or rc != 0:
                     raise BrokerError(f"miniQMT交易连接失败 rc={rc}")
                 self.account = StockAccount(self.account_id, self.account_type)
                 sub = self.trader.subscribe(self.account)
-                if sub != 0:
+                if type(sub) is not int or sub != 0:
                     raise BrokerError(f"资金账号订阅失败 rc={sub}")
                 self.connected = True
                 return True
             except Exception:
                 self.connected = False
+                if self.trader is not None:
+                    try:self.trader.stop()
+                    except Exception:self.last_cleanup_error="STOP_FAILED_AFTER_PRIMARY_ERROR"
                 raise
 
     def disconnect(self):
         with self._lock:
             if self.trader:
                 try: self.trader.stop()
-                except Exception: pass
+                except Exception:
+                    self.last_cleanup_error="STOP_FAILED"
+                    self.connected=False
+                    raise BrokerError("BROKER_STOP_FAILED") from None
             self.connected = False
 
     def ensure_connected(self):
         if not self.connected or self.trader is None or self.account is None:
             raise BrokerError("交易服务未连接")
 
+    def _validate_row(self, obj, kind):
+        if not self._full_mode:return
+        if getattr(obj,"account_id",None)!=self.account_id:raise BrokerError("ACCOUNT_BINDING_MISMATCH")
+        fields={"positions":("stock_code","volume","can_use_volume","market_value"),
+                "orders":("stock_code","order_id","order_type","order_volume","price","traded_volume","order_status"),
+                "trades":("stock_code","order_id","order_type","traded_id","traded_time","traded_volume","traded_price","traded_amount"),
+                "asset":("total_asset","cash","market_value","frozen_cash")}[kind]
+        if any(not hasattr(obj,k) for k in fields):raise BrokerError("BROKER_SCHEMA_MISSING_FIELD")
+        for key in fields:
+            value=getattr(obj,key)
+            if key=="stock_code":
+                if type(value) is not str or not re.fullmatch(r"\d{6}\.(SH|SZ|BJ)",value):raise BrokerError("BROKER_STOCK_CODE")
+            elif key=="traded_id":
+                if type(value) not in (str,int) or value=="" or type(value) is int and value<=0:raise BrokerError("BROKER_TRADE_ID")
+            else:
+                if isinstance(value,bool) or not isinstance(value,numbers.Real) or not math.isfinite(value):raise BrokerError("BROKER_NUMERIC_FIELD")
+                if key in ("order_id","volume","can_use_volume","order_volume","traded_volume") and (not isinstance(value,numbers.Integral) or value<0 or key=="order_id" and value==0 and kind!="orders"):raise BrokerError("BROKER_INTEGER_FIELD")
+        if kind=="orders" and obj.order_id==0:
+            try:
+                broker_order_key({"order_id":obj.order_id,"symbol":obj.stock_code,
+                                  "order_sysid":getattr(obj,"order_sysid",None),
+                                  "order_time":getattr(obj,"order_time",None)})
+            except ValueError as exc:
+                raise BrokerError(str(exc)) from None
+        if kind=="positions":
+            price=getattr(obj,"avg_price",getattr(obj,"open_price",None))
+            if isinstance(price,bool) or not isinstance(price,numbers.Real) or not math.isfinite(price) or price<0:raise BrokerError("BROKER_POSITION_PRICE")
+    def _query_rows(self, method, kind):
+        value=getattr(self.trader,method)(self.account)
+        if value is None:raise BrokerError("BROKER_QUERY_RETURNED_NONE")
+        if type(value) is not list:raise BrokerError("BROKER_QUERY_WRONG_TYPE")
+        for obj in value:self._validate_row(obj,kind)
+        self.read_coverage[kind]="EMPTY_SCHEMA_NOT_COVERED" if len(value)==0 else "RUNTIME_FIELDS_VALIDATED"
+        return value
+
     def query_account(self) -> AccountSnapshot:
         self.ensure_connected()
         a = self.trader.query_stock_asset(self.account)
         if a is None:
             raise BrokerError("账户资产查询失败")
-        return AccountSnapshot(now_iso(), float(a.total_asset), float(a.cash), float(a.market_value), float(getattr(a, "frozen_cash", 0) or 0))
+        self._validate_row(a,"asset")
+        self.read_coverage["asset"]="RUNTIME_FIELDS_VALIDATED"
+        return AccountSnapshot(now_iso(), float(a.total_asset), float(a.cash), float(a.market_value), float(a.frozen_cash) if self._full_mode else float(getattr(a, "frozen_cash", 0) or 0))
 
     def query_positions(self) -> List[PositionSnapshot]:
         self.ensure_connected()
         out = []
-        for p in self.trader.query_stock_positions(self.account) or []:
+        for p in self._query_rows("query_stock_positions", "positions"):
             avg_price = getattr(p, "avg_price", None)
             if avg_price is None:
                 avg_price = getattr(p, "open_price", 0)
@@ -124,7 +208,7 @@ class MiniQmtBroker:
     def query_orders(self) -> List[Dict]:
         self.ensure_connected()
         out = []
-        for o in self.trader.query_stock_orders(self.account) or []:
+        for o in self._query_rows("query_stock_orders", "orders"):
             out.append({
                 "order_id": int(o.order_id), "ts": now_iso(), "order_time": getattr(o, "order_time", 0), "symbol": o.stock_code,
                 "direction": self._direction(o.order_type), "price": float(o.price or 0),
@@ -135,12 +219,18 @@ class MiniQmtBroker:
                 "strategy_name": str(getattr(o, "strategy_name", "") or ""),
                 "remark": str(getattr(o, "order_remark", "") or ""),
             })
+            if self._full_mode:
+                if o.order_id==0:
+                    out[-1]["order_sysid"] = o.order_sysid
+                out[-1]["order_key"] = broker_order_key(out[-1])
+        if self._full_mode and len({o["order_key"] for o in out}) != len(out):
+            raise BrokerError("BROKER_ORDER_IDENTITY_DUPLICATE")
         return out
 
     def query_trades(self) -> List[Dict]:
         self.ensure_connected()
         out = []
-        for t in self.trader.query_stock_trades(self.account) or []:
+        for t in self._query_rows("query_stock_trades", "trades"):
             out.append({
                 "trade_id": str(getattr(t, "traded_id", getattr(t, "trade_id", ""))),
                 "order_id": int(t.order_id), "ts": now_iso(),
@@ -162,6 +252,7 @@ class MiniQmtBroker:
         return [o for o in self.query_orders() if int(o["status"]) in active and not str(o.get("strategy_name", "")).startswith("PositionX")]
 
     def submit_limit(self, symbol: str, side: str, volume: int, price: float, remark: str) -> int:
+        if self._full_mode:raise BrokerError("FULL_QMT_READ_ONLY_SUBMIT_FORBIDDEN")
         self.ensure_connected()
         from xtquant import xtconstant
         order_type = xtconstant.STOCK_BUY if side.upper() == "BUY" else xtconstant.STOCK_SELL
@@ -174,5 +265,9 @@ class MiniQmtBroker:
         return int(order_id)
 
     def cancel(self, order_id: int) -> bool:
+        if self._full_mode:raise BrokerError("FULL_QMT_READ_ONLY_CANCEL_FORBIDDEN")
         self.ensure_connected()
         return self.trader.cancel_order_stock(self.account, int(order_id)) == 0
+
+# Existing constructor and public model contract are retained.
+QmtBrokerAdapter = MiniQmtBroker

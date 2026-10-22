@@ -116,6 +116,14 @@ def verify_frozen_prerequisites() -> dict[str, Any]:
 
 
 def ensure_ret120_tables(store: ResearchStore) -> None:
+    if rq_input.enabled():
+        # This is a new-segment research audit table, never a broker fill record.
+        store.con.execute('''CREATE TABLE IF NOT EXISTS ret120_price_basis(
+          strategy_id VARCHAR, ledger VARCHAR, symbol VARCHAR, signal_date VARCHAR,
+          phase VARCHAR, trade_date VARCHAR, raw_price DOUBLE, research_price DOUBLE,
+          factor DOUBLE, raw_limit_up DOUBLE, raw_limit_down DOUBLE, price_tick DOUBLE,
+          instrument_status INTEGER, available_at VARCHAR, source VARCHAR, version VARCHAR,
+          PRIMARY KEY(strategy_id,ledger,symbol,signal_date,phase))''')
     store.con.execute("""
     CREATE TABLE IF NOT EXISTS ret120_forward_daily_snapshot(
       strategy_id VARCHAR NOT NULL,
@@ -224,7 +232,12 @@ def details(xtdata: Any, symbol: str) -> dict[str, Any]:
         return {}
 
 
+from core import p0_rq_input as rq_input
+
+
 def current_universe(xtdata: Any) -> dict[str, Any]:
+    if rq_input.enabled():
+        return rq_input.current_universe()
     sector = set()
     weights = set()
     sector_error = None
@@ -268,6 +281,10 @@ def qmt_sessions(xtdata: Any, start: str, end: str) -> list[str]:
 
 
 def refresh_history(xtdata: Any, symbols: list[str], target: str) -> None:
+    if rq_input.enabled():
+        # Sealed RQ input is ingested separately, never download a QMT stock pool.
+        rq_input.open_inputs(target).require_contract(POLICY.dividend_type)
+        return
     if not symbols:
         return
     start = (datetime.strptime(target, "%Y%m%d") - timedelta(days=650)).strftime("%Y%m%d")
@@ -280,6 +297,9 @@ def refresh_history(xtdata: Any, symbols: list[str], target: str) -> None:
 
 
 def load_histories(xtdata: Any, symbols: list[str], bars: int = 320) -> dict[str, pd.DataFrame]:
+    if rq_input.enabled():
+        frames = rq_input.strategy_histories(xtdata, symbols, bars, POLICY.dividend_type, 121)
+        return {s: normalize_history(f) for s, f in frames.items()}
     from research.watchlist_adapter import AdapterConfig, XtDataWatchlistAdapter
     adapter = XtDataWatchlistAdapter(
         xtdata,
@@ -348,6 +368,19 @@ def set_ledger_cash(state: dict[str, Any], ledger: str, cash: float) -> None:
     state["base_cash" if ledger == "BASE20" else "shadow_cash"] = cash
 
 
+def record_price_basis(store, ledger, symbol, signal_date, target, phase, histories, research_price):
+    if not rq_input.enabled():
+        return
+    b = rq_input.execution_bar(histories.get(symbol), target)
+    field = 'open' if phase == 'ENTRY' else 'close'
+    if not b['tradable'] or b[field] is None:
+        raise rq_input.InputBlocked('NONTRADABLE_PRICE_BASIS_CANNOT_BE_RECORDED')
+    store.con.execute('''INSERT INTO ret120_price_basis VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+        [POLICY.strategy_id, ledger, symbol, signal_date, phase, target, b[field],
+         research_price, b['factor'], b['up_stop_price'], b['down_stop_price'],
+         b['price_tick'], b['instrument_status'], b['available_at'], b['source'], b['version']])
+
+
 def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.DataFrame], target: str, market_dates: list[str], state: dict[str, Any]) -> dict[str, int]:
     pending = pending_signals(store)
     if not pending:
@@ -366,6 +399,12 @@ def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.D
         symbol = sig["symbol"]
         op = day_field(histories, symbol, target, "open")
         d = details(xtdata, symbol)
+        execution = None
+        if rq_input.enabled():
+            execution = rq_input.execution_bar(histories.get(symbol), target)
+            op = execution['open']
+            d = dict(d, UpStopPrice=execution['up_stop_price'], DownStopPrice=execution['down_stop_price'],
+                     PriceTick=execution['price_tick'], InstrumentStatus=execution['instrument_status'])
         name = d.get("InstrumentName")
         if is_st_name(name):
             f = {"fillable": False, "reason": "ENTRY_KNOWN_ST"}
@@ -379,10 +418,10 @@ def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.D
                 status_i = None
             f = standard_open_v1(
                 op, d.get("UpStopPrice"), status_i, d.get("PriceTick", 0.01),
-                high_price=day_field(histories, symbol, target, "high"),
-                low_price=day_field(histories, symbol, target, "low"),
-                close_price=day_field(histories, symbol, target, "close"),
-                prev_close=prev_close_price(histories, symbol, target),
+                high_price=execution['high'] if execution is not None else day_field(histories, symbol, target, "high"),
+                low_price=execution['low'] if execution is not None else day_field(histories, symbol, target, "low"),
+                close_price=execution['close'] if execution is not None else day_field(histories, symbol, target, "close"),
+                prev_close=execution['prev_close'] if execution is not None else prev_close_price(histories, symbol, target),
             )
         raw_status = d.get("InstrumentStatus")
         try:
@@ -439,7 +478,12 @@ def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.D
             notional = desired_each * scale
             if notional <= 0:
                 continue
-            shares = notional / op  # research-only fractional shares: frozen P1 economics
+            # Raw op was checked against raw limits/tick. Keep the frozen
+            # adjusted research units for return, allocation, mark and net PnL.
+            economic_open = day_field(histories, sig['symbol'], target, 'open') if rq_input.enabled() else op
+            if economic_open is None or economic_open <= 0:
+                raise RuntimeError('FAIL_CLOSED adjusted research open missing')
+            shares = notional / economic_open  # research-only fractional units
             fee = notional * half
             cash -= notional + fee
             if ledger == "BASE20":
@@ -447,7 +491,8 @@ def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.D
             store.con.execute("""
               INSERT INTO forward_positions(strategy_id,ledger,symbol,signal_date,entry_date,entry_price,shares,entry_notional,entry_fee,last_price)
               VALUES (?,?,?,?,?,?,?,?,?,?)
-            """, [POLICY.strategy_id, ledger, sig["symbol"], sig["signal_date"], target, op, shares, notional, fee, op])
+            """, [POLICY.strategy_id, ledger, sig["symbol"], sig["signal_date"], target, economic_open, shares, notional, fee, economic_open])
+            record_price_basis(store, ledger, sig['symbol'], sig['signal_date'], target, 'ENTRY', histories, economic_open)
         set_ledger_cash(state, ledger, cash)
 
     for sig, op, upf, status_i, name, fill_reason in selected:
@@ -469,6 +514,12 @@ def process_exits_and_mark(store: ResearchStore, histories: dict[str, pd.DataFra
         positions = get_positions(store, ledger)
         for p in positions:
             cp = day_field(histories, p["symbol"], target, "close")
+            if rq_input.enabled():
+                # A vendor-carried positive close may mark a position, but can
+                # never execute its S120 exit. Keep the existing defer policy.
+                b = rq_input.execution_bar(histories.get(p['symbol']), target)
+                if not b['tradable']:
+                    cp = None
             dist = None
             if p["signal_date"] in idx and target in idx:
                 dist = idx[target] - idx[p["signal_date"]]
@@ -476,6 +527,7 @@ def process_exits_and_mark(store: ResearchStore, histories: dict[str, pd.DataFra
             if action == "FAIL_SESSION_DISTANCE":
                 raise RuntimeError(f"FAIL_CLOSED session distance {p['symbol']} {p['signal_date']}->{target}")
             if action == "EXIT_AT_CLOSE":
+                record_price_basis(store, ledger, p['symbol'], p['signal_date'], target, 'EXIT', histories, cp)
                 proceeds = float(p["shares"]) * float(cp)
                 exit_fee = proceeds * half
                 cash += proceeds - exit_fee
@@ -599,7 +651,8 @@ def status(db_path: Path) -> int:
 def run_forward(db_path: Path, out_dir: Path) -> int:
     artifacts = verify_frozen_prerequisites()
     fingerprint = POLICY.fingerprint(artifacts)
-    from xtquant import xtdata
+    from core.qmt_runtime import get_xtdata
+    xtdata = get_xtdata()
 
     today = datetime.now().strftime("%Y%m%d")
     # Exchange calendar, not weekday logic.
@@ -657,7 +710,8 @@ def run_forward(db_path: Path, out_dir: Path) -> int:
                 earliest = min(earliest, str(r))
         cal_full_start = (datetime.strptime(earliest, "%Y%m%d") - timedelta(days=10)).strftime("%Y%m%d")
         market_dates = qmt_sessions(xtdata, cal_full_start, target)
-        snapshot = build_daily_snapshot(histories, members, target, POLICY.feature_min_valid)
+        feature_frames = rq_input.feature_histories(histories) if rq_input.enabled() else histories
+        snapshot = build_daily_snapshot(feature_frames, members, target, POLICY.feature_min_valid)
 
         # One atomic DuckDB session: universe, observed bars, entries, exits, T-close snapshot/signals, state.
         store.con.execute("BEGIN TRANSACTION")
@@ -671,7 +725,7 @@ def run_forward(db_path: Path, out_dir: Path) -> int:
                 r = df.loc[target]
                 bar_rows.append({"symbol": s, "trade_date": target, "open": r.get("open"), "high": r.get("high"), "low": r.get("low"), "close": r.get("close"), "volume": r.get("volume"), "amount": r.get("amount")})
             if bar_rows:
-                store.upsert_bars(pd.DataFrame(bar_rows), dividend_type=POLICY.dividend_type, source_system="MINIQMT_RET120_FORWARD_OBSERVED")
+                store.upsert_bars(pd.DataFrame(bar_rows), dividend_type=POLICY.dividend_type, source_system=rq_input.source_label(POLICY.dividend_type))
 
             entry_diag = process_entries(store, xtdata, histories, target, market_dates, state)
             exit_diag = process_exits_and_mark(store, histories, target, market_dates, state)
@@ -755,11 +809,32 @@ def check() -> int:
 
 def main() -> int:
     p = argparse.ArgumentParser(description="PositionX RET120 CSI500 true-Forward research collector v1.0")
-    p.add_argument("command", choices=["check", "bootstrap", "status", "run"])
+    p.add_argument("command", choices=["check", "bootstrap", "status", "run", "initialize-segment"])
     p.add_argument("--db", default=str(DB_PATH))
     p.add_argument("--output-dir", default=str(OUT_DIR))
+    p.add_argument("--recovery-profile")
+    p.add_argument("--authorize-initialize", action="store_true")
     a = p.parse_args()
     try:
+        if a.recovery_profile:
+            from scripts.p0_core_recovery_v01 import load_profile, initialize_segment, before_run, segment_status
+            profile = load_profile(a.recovery_profile)
+            if a.command == "initialize-segment":
+                result = initialize_segment(profile, POLICY, verify_frozen_prerequisites(),
+                                            authorized=a.authorize_initialize)
+                print(json.dumps(result))
+                return 0
+            if a.command == "bootstrap":
+                raise RuntimeError("FAIL_CLOSED USE_EXPLICIT_SEGMENT_INITIALIZATION")
+            if a.command == "run":
+                before_run(profile, datetime.now().strftime("%Y%m%d"))
+                return run_forward(Path(profile["segment_db"]), Path(profile["output_dir"]) / "ret120")
+            if a.command == "status":
+                print(json.dumps(segment_status(profile), allow_nan=False))
+                return 0
+            return check()
+        if a.command == "initialize-segment":
+            raise RuntimeError("FAIL_CLOSED RECOVERY_PROFILE_REQUIRED")
         if a.command == "check":
             return check()
         if a.command == "bootstrap":

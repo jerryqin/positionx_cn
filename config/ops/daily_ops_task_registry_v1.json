@@ -142,7 +142,8 @@
           "scripts/run_optimus_current22_scheduled_v074.py",
           "status"
         ]
-      ]
+      ],
+      "paused": true
     },
     "OPTIMUS_ACCEPTANCE": {
       "calendar_scope": "NATURAL_DAY",
@@ -160,7 +161,8 @@
           "--date",
           "<calendar_date>"
         ]
-      ]
+      ],
+      "paused": true
     },
     "OPTIMUS_ATTENTION": {
       "calendar_scope": "NATURAL_DAY",
@@ -176,7 +178,8 @@
           "scripts/run_optimus_current22_scheduled_v074.py",
           "attention"
         ]
-      ]
+      ],
+      "paused": true
     },
     "G4_OPEN_CHECK": {
       "calendar_scope": "TRADING_DAY",
@@ -224,7 +227,8 @@
       "handler": "DEEP_FORWARD",
       "dependencies": [
         "A_SHARE_DAILY_UPDATE"
-      ]
+      ],
+      "segment_profile": "config/ops/deep_forward_segment_v01.json"
     },
     "RET120_FORWARD": {
       "calendar_scope": "TRADING_DAY",
@@ -234,13 +238,14 @@
       "dependencies": [
         "A_SHARE_DAILY_UPDATE",
         "DEEP_FORWARD"
-      ]
+      ],
+      "recovery_profile": "config/ops/p0_core_recovery_v01.json"
     },
     "PORTFOLIO_SHADOW": {
       "calendar_scope": "TRADING_DAY",
       "criticality": "REPORT",
       "exactly_once": true,
-      "handler": "GENERIC",
+      "handler": "PORTFOLIO_RECOVERY",
       "dependencies": [
         "DEEP_FORWARD",
         "RET120_FORWARD"
@@ -249,14 +254,32 @@
         [
           "<python>",
           "scripts/run_strategy_portfolio_shadow_v01.py",
-          "check"
+          "check",
+          "--recovery-profile",
+          "config/ops/p0_core_recovery_v01.json",
+          "--expected-trade-date",
+          "<trade_date>"
         ],
         [
           "<python>",
           "scripts/run_strategy_portfolio_shadow_v01.py",
-          "status"
+          "snapshot",
+          "--recovery-profile",
+          "config/ops/p0_core_recovery_v01.json",
+          "--expected-trade-date",
+          "<trade_date>"
+        ],
+        [
+          "<python>",
+          "scripts/run_strategy_portfolio_shadow_v01.py",
+          "status",
+          "--recovery-profile",
+          "config/ops/p0_core_recovery_v01.json",
+          "--expected-trade-date",
+          "<trade_date>"
         ]
-      ]
+      ],
+      "recovery_profile": "config/ops/p0_core_recovery_v01.json"
     },
     "CAPACITY_PROBE": {
       "calendar_scope": "TRADING_DAY",

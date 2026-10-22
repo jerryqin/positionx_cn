@@ -21,16 +21,14 @@ class MarketDataService:
         if self._xtdata is not None:
             return
         try:
-            from xtquant import xtdata
+            from core.qmt_runtime import get_xtdata
+            xtdata = get_xtdata()
         except ImportError as e:
             raise MarketDataError("无法导入 xtquant。请在安装了 miniQMT/xtquant 的 Windows Python 环境运行。") from e
         self._xtdata = xtdata
         # 新版通常自动连接；老版 connect() 仍可用。存在则调用。
         if hasattr(xtdata, "connect"):
-            try:
-                xtdata.connect()
-            except Exception:
-                pass
+            xtdata.connect()
 
     @staticmethod
     def _normalize_index(v) -> str:

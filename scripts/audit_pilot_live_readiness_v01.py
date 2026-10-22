@@ -35,17 +35,35 @@ def _table_exists(con, name: str) -> bool:
 
 def audit(db_path: Path) -> int:
     qual, sem, g6 = _read(QUAL), _read(SEM), _read(G6)
-    with ResearchStore(db_path) as store:
-        ds = store.load_state(DEEP_ID) or {}
-        rs = store.load_state(RET120_ID) or {}
-        portfolio_state = {}
-        if _table_exists(store.con, "strategy_portfolio_state"):
-            row = store.con.execute("SELECT state_json FROM strategy_portfolio_state WHERE portfolio_id=?", [PORTFOLIO_ID]).fetchone()
-            portfolio_state = json.loads(row[0]) if row else {}
-        common_sessions = int(portfolio_state.get("common_sessions", 0) or 0)
-        portfolio_sessions = int(store.con.execute(
-            "SELECT count(*) FROM strategy_portfolio_equity WHERE portfolio_id=?", [PORTFOLIO_ID]
-        ).fetchone()[0]) if _table_exists(store.con, "strategy_portfolio_equity") else 0
+    from core.qmt_runtime import is_full,segment_bindings
+    if is_full():
+        import duckdb
+        paths=segment_bindings();states=[]
+        for sid,key in ((DEEP_ID,'deep_db'),(RET120_ID,'ret120_db')):
+            con=duckdb.connect(paths[key],read_only=True)
+            try:
+                row=con.execute('SELECT state_json FROM forward_state WHERE strategy_id=?',[sid]).fetchone()
+                states.append(json.loads(row[0]) if row else {})
+            finally:con.close()
+        ds,rs=states
+        con=duckdb.connect(paths['portfolio_db'],read_only=True)
+        try:
+            row=con.execute('SELECT count(*),max(trade_date) FROM p0_portfolio_equity').fetchone() if _table_exists(con,'p0_portfolio_equity') else (0,None)
+            portfolio_sessions=int(row[0]);common_sessions=portfolio_sessions
+            portfolio_state={'last_processed_date':row[1],'common_sessions':common_sessions,'segment_start':paths['start_date'],'legacy_returns_spliced':False}
+        finally:con.close()
+    else:
+        with ResearchStore(db_path) as store:
+            ds = store.load_state(DEEP_ID) or {}
+            rs = store.load_state(RET120_ID) or {}
+            portfolio_state = {}
+            if _table_exists(store.con, "strategy_portfolio_state"):
+                row = store.con.execute("SELECT state_json FROM strategy_portfolio_state WHERE portfolio_id=?", [PORTFOLIO_ID]).fetchone()
+                portfolio_state = json.loads(row[0]) if row else {}
+            common_sessions = int(portfolio_state.get("common_sessions", 0) or 0)
+            portfolio_sessions = int(store.con.execute(
+                "SELECT count(*) FROM strategy_portfolio_equity WHERE portfolio_id=?", [PORTFOLIO_ID]
+            ).fetchone()[0]) if _table_exists(store.con, "strategy_portfolio_equity") else 0
 
     evidence_ok = (
         qual.get("status") == "QUALIFIED_STRATEGY_2_HISTORICAL_EVIDENCE_V0_1"

@@ -63,7 +63,8 @@ def qmt_is_trading_day(yyyymmdd,market="SH"):
     d=norm_date(yyyymmdd)
     local=local_cn_exchange_is_trading_day(d)
     if local is not None: return local
-    from xtquant import xtdata
+    from core.qmt_runtime import get_xtdata
+    xtdata = get_xtdata()
     xtdata.connect()
     rows=xtdata.get_trading_dates(market,d,d)
     norm={x for x in (qmt_trading_date_to_yyyymmdd(v) for v in rows or []) if x}

@@ -1,6 +1,7 @@
 param(
-    [int]$MaxAttempts = 4,
-    [int]$RetrySeconds = 900
+    [int]$MaxAttempts = 1,
+    [int]$RetrySeconds = 900,
+    [string]$SegmentProfile = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,6 +12,17 @@ $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $Runner = Join-Path $ProjectRoot "scripts\run_deep_oversold_csi500_forward.py"
 $Backup = Join-Path $ProjectRoot "scripts\backup_deep_oversold_forward.py"
 $LogDir = Join-Path $ProjectRoot "logs\forward_deep_oversold_scheduler"
+$RuntimeProfile = Join-Path $ProjectRoot "config\ops\full_qmt_runtime_v01.json"
+$UseFull = (Test-Path -LiteralPath $RuntimeProfile) -and ((Get-Content -LiteralPath $RuntimeProfile -Raw | ConvertFrom-Json).enabled -eq $true)
+$RunnerArgs = @()
+$BackupArgs = @()
+if ($UseFull) {
+    $MaxAttempts = 1
+    if (-not $SegmentProfile) { $SegmentProfile = Join-Path $ProjectRoot "config\ops\deep_forward_segment_v01.json" }
+    $RunnerArgs = @("--segment-profile", $SegmentProfile)
+    $BackupArgs = @("--segment-profile", $SegmentProfile)
+}
+
 
 if (-not (Test-Path $Python)) {
     throw "Python not found: $Python"
@@ -22,9 +34,11 @@ if (-not (Test-Path $Runner)) {
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 # Keep scheduler logs useful without growing forever.
+if (-not $UseFull) {
 Get-ChildItem $LogDir -Filter "*.log" -File -ErrorAction SilentlyContinue |
     Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-120) } |
     Remove-Item -Force -ErrorAction SilentlyContinue
+}
 
 $Stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $Log = Join-Path $LogDir "forward_$Stamp.log"
@@ -44,7 +58,7 @@ for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt++) {
 
     Push-Location $ProjectRoot
     try {
-        & $Python $Runner 2>&1 |
+        & $Python $Runner @RunnerArgs 2>&1 |
             ForEach-Object {
                 $_.ToString() | Tee-Object -FilePath $Log -Append
             }
@@ -60,7 +74,7 @@ for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt++) {
             Write-Log "BACKUP_FAILED missing_script=$Backup"
             $Code = 2
         } else {
-            & $Python $Backup --only-if-session-today --scheduler-log $Log 2>&1 |
+            & $Python $Backup @BackupArgs --only-if-session-today --scheduler-log $Log 2>&1 |
                 ForEach-Object { $_.ToString() | Tee-Object -FilePath $Log -Append }
             $BackupCode = $LASTEXITCODE
             if ($BackupCode -eq 0) {

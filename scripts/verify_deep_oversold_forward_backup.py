@@ -10,7 +10,11 @@ def main() -> int:
     p.add_argument("--backup-root", default=r"D:\positionx_data\backup\positionx_forward")
     p.add_argument("--backup-dir")
     p.add_argument("--latest", action="store_true")
+    p.add_argument("--segment-profile")
     a = p.parse_args()
+    if a.segment_profile:
+        from scripts.deep_forward_segment_v01 import load_profile
+        a.backup_root=load_profile(a.segment_profile)["backup_root"]
     target = Path(a.backup_dir) if a.backup_dir else latest_backup_dir(Path(a.backup_root))
     if target is None: raise SystemExit("NO_FORWARD_BACKUP_FOUND")
     print(json.dumps(verify_backup_dir(target), ensure_ascii=False, indent=2)); return 0

@@ -81,43 +81,77 @@ def a_share_daily(registry,task,ctx):
     return ("SUCCESS" if a_share_status_current(results[-1].get("parsed_json"),ctx["date"]) else "FAILED"),results
 def deep_forward(registry,task,ctx):
     ps=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(Path(ctx["project_root"])/"scripts"/"run_deep_oversold_forward_scheduled.ps1")]
+    segment=task.get("segment_profile")
+    if segment:ps.extend(["-SegmentProfile",str(Path(ctx["project_root"])/segment)])
     r1=run_step(registry,ctx,1,ps);results=[r1]
     if r1["returncode"]!=0:return "FAILED",results
-    r2=run_step(registry,ctx,2,["<python>","scripts/verify_deep_oversold_forward_backup.py","--latest"]);results.append(r2)
+    verify=["<python>","scripts/verify_deep_oversold_forward_backup.py","--latest"]
+    if segment:verify.extend(["--segment-profile",str(Path(ctx["project_root"])/segment)])
+    r2=run_step(registry,ctx,2,verify);results.append(r2)
     if r2["returncode"]!=0:return "FAILED",results
     pj=r2["parsed_json"] or {}
+    if segment and (pj.get("ok") is not True or norm_date((pj.get("state") or {}).get("last_processed_date",""))!=norm_date(ctx["date"])):return "FAILED",results
     return ("FAILED" if pj.get("ok") is False else "SUCCESS"),results
-def positive_probe(r):
-    if r["returncode"]!=0:return False
-    pj=r["parsed_json"] or {}; st=str(pj.get("status",""))
-    if st.startswith("PASS_"):return True
-    if any(pj.get(k) is True for k in ("coverage_ok","complete","ok")):return True
-    return "PASS_RET120_UNIVERSE_PRIOR" in r["stdout"]
+def positive_probe(r,business_date):
+    from scripts.p0_core_recovery_v01 import positive_probe as strict_probe
+    return strict_probe(r,business_date)
 def ret120_forward(registry,task,ctx):
+    # New-segment routing is disabled unless an explicit profile is enabled.
+    profile_path=task.get("recovery_profile")
+    if profile_path:
+        from scripts.p0_core_recovery_v01 import load_profile,require_initialized,before_run
+        profile_path=str(Path(ctx["project_root"])/profile_path)
+        profile=load_profile(profile_path)
+        require_initialized(profile)
+        before_run(profile,ctx["date"])
     results=[];counter=0
     def go(step):
         nonlocal counter
+        if profile_path and "scripts/run_ret120_csi500_forward.py" in step:
+            step=step+["--recovery-profile",profile_path]
         counter+=1;r=run_step(registry,ctx,counter,step);results.append(r);return r
     r=go(["<python>","scripts/run_ret120_universe_prior_forward_v10.py","probe","--signal-date","<trade_date>"])
-    if not positive_probe(r):
+    if not positive_probe(r,ctx["date"]):
         if go(["<python>","scripts/run_ret120_universe_prior_forward_v10.py","refresh","--signal-date","<trade_date>"])["returncode"]!=0:return "FAILED",results
         r=go(["<python>","scripts/run_ret120_universe_prior_forward_v10.py","probe","--signal-date","<trade_date>"])
-        if not positive_probe(r):return "FAILED",results
+        if not positive_probe(r,ctx["date"]):return "FAILED",results
     cap=go(["<python>","scripts/run_ret120_universe_prior_forward_v10.py","capture","--signal-date","<trade_date>"])
     if cap["returncode"]!=0 and "already" not in cap["stdout"].lower() and "immutable" not in cap["stdout"].lower():return "FAILED",results
+    from scripts.p0_core_recovery_v01 import ret120_status_current
     st=go(["<python>","scripts/run_ret120_csi500_forward.py","status"])
-    if st["returncode"]==0 and norm_date(ctx["date"]) in st["stdout"].replace("-","") and "last_processed_date" in st["stdout"]:return "SUCCESS",results
+    if ret120_status_current(st,ctx["date"],recovery=bool(profile_path)):return "SUCCESS",results
+    if st["returncode"]!=0 or not isinstance(st.get("parsed_json"),dict) or st["parsed_json"].get("status")!="OK":
+        st["error_summary"]="P0_RET120_STATUS_INVALID"
+        return "FAILED",results
     if go(["<python>","scripts/run_ret120_csi500_forward.py","check"])["returncode"]!=0:return "FAILED",results
     if go(["<python>","scripts/run_ret120_csi500_forward.py","run"])["returncode"]!=0:return "FAILED",results
     st=go(["<python>","scripts/run_ret120_csi500_forward.py","status"])
-    if st["returncode"]!=0 or "last_processed_date" not in st["stdout"] or norm_date(ctx["date"]) not in st["stdout"].replace("-",""):return "FAILED",results
+    if not ret120_status_current(st,ctx["date"],recovery=bool(profile_path)):
+        st["error_summary"]="P0_RET120_NOT_CURRENT"
+        return "FAILED",results
     return "SUCCESS",results
-HANDLERS={"GENERIC":generic,"A_SHARE_DAILY_UPDATE":a_share_daily,"DEEP_FORWARD":deep_forward,"RET120_FORWARD":ret120_forward,"PIT_PREOPEN":generic,"PIT_POSTCLOSE":generic}
+def portfolio_recovery(registry,task,ctx):
+    from scripts.p0_core_recovery_v01 import task_result_error,load_profile
+    load_profile(Path(ctx["project_root"])/task["recovery_profile"])
+    statuses=("PASS_P0_PORTFOLIO_CHECK","PASS_P0_PORTFOLIO_SNAPSHOT","PASS_P0_PORTFOLIO_STATUS")
+    if len(task.get("steps",[]))!=3:raise ValueError("P0_STEP_SET_INVALID")
+    results=[]
+    for i,(step,expected) in enumerate(zip(task["steps"],statuses),1):
+        r=run_step(registry,ctx,i,step);results.append(r)
+        error=("P0_SUBPROCESS_FAILED" if r["returncode"]!=0 else
+               task_result_error(r.get("parsed_json"),ctx["date"],expected))
+        if error:
+            r["error_summary"]=error
+            return "FAILED",results
+    return "SUCCESS",results
+
+HANDLERS={"PORTFOLIO_RECOVERY":portfolio_recovery,"GENERIC":generic,"A_SHARE_DAILY_UPDATE":a_share_daily,"DEEP_FORWARD":deep_forward,"RET120_FORWARD":ret120_forward,"PIT_PREOPEN":generic,"PIT_POSTCLOSE":generic}
 
 def execute_task(task_id,project_root,data_root,business_date,scheduled_source):
     registry,registry_path=load_registry(project_root); task=registry["tasks"][task_id]
     store=RunStore(registry["ops_storage"]["run_root"]);date=norm_date(business_date);p,obj=store.new(task_id,date,scheduled_source)
     try:
+        if task.get("paused") is True:return store.finish(p,obj,"PAUSED",error_summary="EXPLICITLY_AUTHORIZED_NONCORE_PAUSE")
         if task.get("calendar_scope")=="TRADING_DAY":
             try:trading=qmt_is_trading_day(date,registry["calendar"]["market"])
             except Exception as e:return store.finish(p,obj,"FAILED",error_summary=f"TRADING_CALENDAR_UNAVAILABLE: {type(e).__name__}: {e}")

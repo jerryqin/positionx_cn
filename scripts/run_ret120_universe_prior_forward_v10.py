@@ -7,6 +7,8 @@ import pandas as pd
 import yaml
 
 ROOT=Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path: sys.path.insert(0,str(ROOT))
+from core import p0_rq_input as rq_input
 CFG=ROOT/'config/forward/ret120_universe_prior_forward_v1_0.yaml'
 
 def cfg(): return yaml.safe_load(CFG.read_text(encoding='utf-8'))
@@ -62,6 +64,8 @@ def load_scanner(c):
     return m
 
 def find_preopen_membership(c,signal_date):
+    if rq_input.enabled():
+        return rq_input.preopen_file(c["paths"]["pit_root"], signal_date)
     base=Path(c['paths']['pit_root'])/'raw'/signal_date.replace('-','')/'preopen'
     cand=sorted(base.glob('*/index_membership_qmt.parquet'),key=lambda p:p.parent.name) if base.exists() else []
     if not cand: raise RuntimeError(f'no exact-date preopen membership for {signal_date}')
@@ -83,8 +87,12 @@ def load_index_membership(c,signal_date):
     if len(union)!=sum(len(v) for v in idx.values()): raise RuntimeError('CSI300/500/1000 membership overlap detected')
     return idx,p,sha256_file(p)
 
-def qmt_full_market(c):
-    try: from xtquant import xtdata
+def qmt_full_market(c,signal_date=None):
+    if rq_input.enabled():
+        return rq_input.full_market(signal_date)
+    try:
+        from core.qmt_runtime import get_xtdata
+        xtdata = get_xtdata()
     except Exception as e: raise RuntimeError(f'xtquant import failed: {e}')
     syms=set(); errors=[]
     for sector in c['full_market']['qmt_sector_candidates']:
@@ -129,7 +137,11 @@ def series_rows(series,symbol):
     return out
 
 def local_back_ratio_close(symbols,signal_date,c,batch_size=500):
-    try: from xtquant import xtdata
+    if rq_input.enabled():
+        return rq_input.prior_close(symbols, signal_date)
+    try:
+        from core.qmt_runtime import get_xtdata
+        xtdata = get_xtdata()
     except Exception as e: raise RuntimeError(f'xtquant import failed: {e}')
     start=(pd.Timestamp(signal_date)-pd.Timedelta(days=int(c['qmt_history']['lookback_calendar_days']))).strftime('%Y%m%d')
     end=signal_date.replace('-',''); rows=[]
@@ -169,8 +181,12 @@ def completeness(close_df,ret,all_symbols,signal_date):
     }
 
 def refresh_history(symbols,signal_date,c):
+    if rq_input.enabled():
+        raise RuntimeError("RQ_INCREMENT_MUST_BE_VALIDATED_SEPARATELY_NO_QMT_DOWNLOAD")
     if not symbols: return {'requested':0,'chunks':0,'errors':[],'chunk_results':[]}
-    try: from xtquant import xtdata
+    try:
+        from core.qmt_runtime import get_xtdata
+        xtdata = get_xtdata()
     except Exception as e: raise RuntimeError(f'xtquant import failed: {e}')
     start=(pd.Timestamp(signal_date)-pd.Timedelta(days=int(c['qmt_history']['lookback_calendar_days']))).strftime('%Y%m%d')
     end=signal_date.replace('-',''); chunk=int(c['qmt_history']['refresh_chunk_size']); errors=[]; chunks=0; results=[]
@@ -234,7 +250,7 @@ def apply_rules(panel):
     return pd.DataFrame(rec)
 
 def build_context(c,signal_date):
-    scanner=load_scanner(c); idx,mpath,mhash=load_index_membership(c,signal_date); full,sector_errors=qmt_full_market(c)
+    scanner=load_scanner(c); idx,mpath,mhash=load_index_membership(c,signal_date); full,sector_errors=qmt_full_market(c,signal_date)
     fullset=set(full); csi1800=set().union(idx['CSI300'],idx['CSI500'],idx['CSI1000']); tail=fullset-csi1800
     tier_sets={'CSI300':idx['CSI300'],'CSI500':idx['CSI500'],'CSI1000':idx['CSI1000'],'EX_CSI1800':tail}
     return scanner,idx,mpath,mhash,full,fullset,csi1800,tail,tier_sets,sector_errors
@@ -273,16 +289,20 @@ def capture(c,signal_date):
     post_comp=pre_comp
     refresh={'requested':0,'chunks':0,'errors':[],'note':'capture_auto_refresh_disabled_v1_0_2'}
     panel=apply_rules(panel0); observed=iso_now(); panel['signal_date']=signal_date; panel['observed_at']=observed; panel['signal_representation']=c['signal']['representation']
+    if rq_input.enabled():
+        lineage=rq_input.open_inputs(signal_date).lineage('back_ratio')
+        for key,value in lineage.items(): panel['input_'+key]=value
+        panel['signal_representation']='RQDATA_' + rq_input.profile()['strategy_contracts']['back_ratio']['representation'] + '_CURRENT_FORWARD'
 
     capture_id=now_cst().strftime('%Y%m%dT%H%M%S+0800'); date_dir=Path(c['paths']['output_root'])/signal_date.replace('-','')
     if date_dir.exists() and any(date_dir.iterdir()): raise RuntimeError(f'immutable same-day capture already exists: {date_dir}')
     dest=date_dir/capture_id; dest.mkdir(parents=True,exist_ok=False)
-    close_path=dest/'qmt_back_ratio_close_raw.parquet'; ret_path=dest/'ret120_signal_snapshot.parquet'; panel_path=dest/'ret120_universe_prior_snapshot.parquet'
+    close_path=dest/('rq_compatible_close_raw.parquet' if rq_input.enabled() else 'qmt_back_ratio_close_raw.parquet'); ret_path=dest/'ret120_signal_snapshot.parquet'; panel_path=dest/'ret120_universe_prior_snapshot.parquet'
     close.to_parquet(close_path,index=False); ret.to_parquet(ret_path,index=False); panel.to_parquet(panel_path,index=False)
 
     def comp_public(x):
         y=dict(x); y['incomplete_symbols_count']=len(y.pop('incomplete_symbols',[])); return y
-    manifest={'schema_version':'RET120_UNIVERSE_PRIOR_FORWARD_V1_0_2','forward_id':c['forward_id'],'capture_id':capture_id,'signal_date':signal_date,'observed_at':observed,'status':'CAPTURED_RESEARCH_ONLY','membership':{'path':str(mpath),'sha256':mhash,'counts':{k:len(v) for k,v in idx.items()},'csi1800_union':len(csi1800)},'full_market':{'symbol_count':len(fullset),'tail_count':len(tail),'sector_errors':sector_errors},'acquisition_audit':{'pre_refresh':comp_public(pre_comp),'pre_refresh_tier_coverage':pre_cov,'refresh':refresh,'post_refresh':comp_public(post_comp)},'signal':{'representation':c['signal']['representation'],'ret120_formula':c['signal']['formula'],'raw_close_path':str(close_path),'raw_close_sha256':sha256_file(close_path),'ret120_path':str(ret_path),'ret120_sha256':sha256_file(ret_path),'panel_path':str(panel_path),'panel_sha256':sha256_file(panel_path),'coverage':coverage},'flag_counts':{'momentum_candidate':int(panel['momentum_candidate'].sum()),'momentum_penalty':int(panel['momentum_penalty'].sum()),'mean_reversion_candidate':int(panel['mean_reversion_candidate'].sum())},'guardrails':c['guardrails']}
+    manifest={'schema_version':'RET120_UNIVERSE_PRIOR_FORWARD_V1_0_2','forward_id':c['forward_id'],'capture_id':capture_id,'signal_date':signal_date,'observed_at':observed,'status':'CAPTURED_RESEARCH_ONLY','membership':{'path':str(mpath),'sha256':mhash,'counts':{k:len(v) for k,v in idx.items()},'csi1800_union':len(csi1800)},'full_market':{'symbol_count':len(fullset),'tail_count':len(tail),'sector_errors':sector_errors},'acquisition_audit':{'pre_refresh':comp_public(pre_comp),'pre_refresh_tier_coverage':pre_cov,'refresh':refresh,'post_refresh':comp_public(post_comp)},'signal':{'representation':str(panel['signal_representation'].iloc[0]),'ret120_formula':c['signal']['formula'],'raw_close_path':str(close_path),'raw_close_sha256':sha256_file(close_path),'ret120_path':str(ret_path),'ret120_sha256':sha256_file(ret_path),'panel_path':str(panel_path),'panel_sha256':sha256_file(panel_path),'coverage':coverage},'flag_counts':{'momentum_candidate':int(panel['momentum_candidate'].sum()),'momentum_penalty':int(panel['momentum_penalty'].sum()),'mean_reversion_candidate':int(panel['mean_reversion_candidate'].sum())},'guardrails':c['guardrails']}
     manifest['manifest_payload_sha256']=sha256_json(manifest); (dest/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2,default=str),encoding='utf-8')
     print(json.dumps(manifest,ensure_ascii=False,indent=2)); print('OUTPUT:',dest); return 0
 

@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from .models import AccountSnapshot, PositionSnapshot, TradingPlanItem, OrderIntent, now_iso
+from .models import AccountSnapshot, PositionSnapshot, TradingPlanItem, OrderIntent, now_iso, broker_order_key
 
 
 SCHEMA = """
@@ -77,7 +77,8 @@ CREATE TABLE IF NOT EXISTS order_intents (
 );
 
 CREATE TABLE IF NOT EXISTS broker_orders (
-    order_id INTEGER PRIMARY KEY,
+    order_key TEXT PRIMARY KEY,
+    order_id INTEGER NOT NULL CHECK(order_id >= 0),
     ts TEXT NOT NULL,
     symbol TEXT NOT NULL,
     direction TEXT NOT NULL,
@@ -89,6 +90,9 @@ CREATE TABLE IF NOT EXISTS broker_orders (
     remark TEXT,
     raw_json TEXT NOT NULL
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS broker_orders_positive_id
+ON broker_orders(order_id) WHERE order_id > 0;
 
 CREATE TABLE IF NOT EXISTS broker_trades (
     trade_id TEXT PRIMARY KEY,
@@ -131,6 +135,31 @@ class Database:
     @staticmethod
     def _migrate(conn):
         """Small forward-only migrations for an existing live SQLite DB."""
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(broker_orders)").fetchall()}
+        if "order_key" not in cols:
+            # Exact preservation of every legacy positive-ID row and raw_json.
+            # Preserve an existing zero-ID snapshot without inventing counter identity.
+            # LEGACY_UNPROVEN:0 is not a native ID and can never match new COUNTER rows.
+            if conn.execute("SELECT COUNT(*) FROM broker_orders WHERE order_id<0").fetchone()[0]:
+                raise ValueError("LEGACY_NEGATIVE_ORDER_ID_REQUIRES_REVIEW")
+            if conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE tbl_name='broker_orders' AND type IN ('trigger','index') AND sql IS NOT NULL AND name!='broker_orders_positive_id'").fetchone()[0]:
+                raise ValueError("BROKER_ORDER_CUSTOM_SCHEMA_REQUIRES_REVIEW")
+            conn.execute("SAVEPOINT broker_order_identity")
+            try:
+                conn.execute("""CREATE TABLE broker_orders_identity_v1 (
+                    order_key TEXT PRIMARY KEY, order_id INTEGER NOT NULL CHECK(order_id>=0),
+                    ts TEXT NOT NULL, symbol TEXT NOT NULL, direction TEXT NOT NULL,
+                    price REAL NOT NULL, volume INTEGER NOT NULL, traded_volume INTEGER NOT NULL,
+                    status TEXT NOT NULL, strategy_name TEXT, remark TEXT, raw_json TEXT NOT NULL)""")
+                conn.execute("INSERT INTO broker_orders_identity_v1 SELECT CASE WHEN order_id=0 THEN 'LEGACY_UNPROVEN:0' ELSE 'LOCAL:' || order_id END, * FROM broker_orders")
+                conn.execute("DROP TABLE broker_orders")
+                conn.execute("ALTER TABLE broker_orders_identity_v1 RENAME TO broker_orders")
+                conn.execute("CREATE UNIQUE INDEX broker_orders_positive_id ON broker_orders(order_id) WHERE order_id>0")
+                conn.execute("RELEASE broker_order_identity")
+            except Exception:
+                conn.execute("ROLLBACK TO broker_order_identity")
+                conn.execute("RELEASE broker_order_identity")
+                raise
         cols = {r[1] for r in conn.execute("PRAGMA table_info(trading_plan)").fetchall()}
         if "audit_json" not in cols:
             conn.execute("ALTER TABLE trading_plan ADD COLUMN audit_json TEXT")
@@ -300,13 +329,20 @@ class Database:
                          (status,broker_order_id,now_iso(),intent_key))
 
     def save_broker_orders(self, orders: Iterable[Dict[str, Any]]):
+        orders = list(orders)
+        keys = [broker_order_key(o) for o in orders]
+        if len(set(keys)) != len(keys):
+            raise ValueError("BROKER_ORDER_IDENTITY_DUPLICATE")
         with self.connection() as conn:
-            for o in orders:
-                conn.execute("""INSERT INTO broker_orders(order_id,ts,symbol,direction,price,volume,traded_volume,status,strategy_name,remark,raw_json)
-                                VALUES(?,?,?,?,?,?,?,?,?,?,?)
-                                ON CONFLICT(order_id) DO UPDATE SET ts=excluded.ts,traded_volume=excluded.traded_volume,
+            for key, o in zip(keys, orders):
+                existing = conn.execute("SELECT symbol FROM broker_orders WHERE order_key=?", (key,)).fetchone()
+                if existing and existing[0] != o["symbol"]:
+                    raise ValueError("BROKER_ORDER_IDENTITY_COLLISION")
+                conn.execute("""INSERT INTO broker_orders(order_key,order_id,ts,symbol,direction,price,volume,traded_volume,status,strategy_name,remark,raw_json)
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                                ON CONFLICT(order_key) DO UPDATE SET ts=excluded.ts,traded_volume=excluded.traded_volume,
                                 status=excluded.status,raw_json=excluded.raw_json""",
-                             (o["order_id"],o.get("ts",now_iso()),o["symbol"],o["direction"],o.get("price",0),o.get("volume",0),
+                             (key,o["order_id"],o.get("ts",now_iso()),o["symbol"],o["direction"],o.get("price",0),o.get("volume",0),
                               o.get("traded_volume",0),o.get("status",""),o.get("strategy_name",""),o.get("remark",""),json.dumps(o,ensure_ascii=False,default=str)))
 
     def save_broker_trades(self, trades: Iterable[Dict[str, Any]]):

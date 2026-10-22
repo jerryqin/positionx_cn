@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 import logging
 
-from .broker import MiniQmtBroker
+from .broker import QmtBrokerAdapter
 from .config import Settings
 from .data import MarketDataService
 from .db import Database
@@ -151,9 +151,9 @@ class TradingService:
         self.db = Database(self.settings.get("app.db_path", "data/positionx.db"))
         self.market = MarketDataService(self.db)
         q = self.settings.section("qmt")
-        self.broker: Optional[MiniQmtBroker] = None
+        self.broker: Optional[QmtBrokerAdapter] = None
         if q.get("account_id"):
-            self.broker = MiniQmtBroker(q.get("mini_path", ""), str(q.get("account_id")), q.get("account_type", "STOCK"), int(q.get("session_id",0) or 0), self._broker_event)
+            self.broker = QmtBrokerAdapter(q.get("mini_path", ""), str(q.get("account_id")), q.get("account_type", "STOCK"), int(q.get("session_id",0) or 0), self._broker_event)
         self.providers = build_legacy_xtquant_bundle(market_service=self.market, broker=self.broker)
         self.market_provider = self.providers.market_data
         self.broker_provider = self.providers.broker
@@ -163,9 +163,9 @@ class TradingService:
         self.log = logging.getLogger("positionx")
 
     def _broker_event(self, kind: str, payload: Dict):
-        level = "ERROR" if kind in {"DISCONNECTED","ORDER_ERROR","CANCEL_ERROR"} else "INFO"
+        level = "ERROR" if kind in {"DISCONNECTED","CAPTURE_ERROR","ORDER_ERROR","CANCEL_ERROR"} else "INFO"
         self.db.event(level, f"BROKER_{kind}", kind, payload)
-        if kind == "DISCONNECTED":
+        if kind in {"DISCONNECTED","CAPTURE_ERROR"}:
             self.db.set_state("ready", "0")
 
     def connect(self):
