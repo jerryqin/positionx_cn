@@ -1,7 +1,7 @@
 {
   "version": "deep-independent-v0.1",
   "enabled": true,
-  "start_date": "20261022",
+  "start_date": "20261023",
   "segment_root": "D:\\positionx_data\\research\\p0_core_recovery_v01\\deep_20261022",
   "segment_db": "D:\\positionx_data\\research\\p0_core_recovery_v01\\deep_20261022\\deep.duckdb",
   "output_dir": "D:\\positionx_data\\research\\p0_core_recovery_v01\\deep_20261022\\forward",

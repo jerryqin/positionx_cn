@@ -381,7 +381,7 @@ def record_price_basis(store, ledger, symbol, signal_date, target, phase, histor
          b['price_tick'], b['instrument_status'], b['available_at'], b['source'], b['version']])
 
 
-def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.DataFrame], target: str, market_dates: list[str], state: dict[str, Any]) -> dict[str, int]:
+def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.DataFrame], target: str, market_dates: list[str], state: dict[str, Any], *, instrument_details=None) -> dict[str, int]:
     pending = pending_signals(store)
     if not pending:
         return {"due": 0, "fillable": 0, "entered": 0, "blocked": 0, "no_slot": 0}
@@ -398,7 +398,7 @@ def process_entries(store: ResearchStore, xtdata: Any, histories: dict[str, pd.D
     for sig in due:
         symbol = sig["symbol"]
         op = day_field(histories, symbol, target, "open")
-        d = details(xtdata, symbol)
+        d = details(xtdata, symbol) if instrument_details is None else instrument_details[symbol]
         execution = None
         if rq_input.enabled():
             execution = rq_input.execution_bar(histories.get(symbol), target)
@@ -599,12 +599,12 @@ def persist_snapshot(store: ResearchStore, snapshot: pd.DataFrame, universe_sour
     return sha
 
 
-def detect_signals(store: ResearchStore, xtdata: Any, snapshot: pd.DataFrame, target: str, market_dates: list[str]) -> dict[str, int]:
+def detect_signals(store: ResearchStore, xtdata: Any, snapshot: pd.DataFrame, target: str, market_dates: list[str], *, instrument_details=None) -> dict[str, int]:
     q5 = snapshot[snapshot["selected_q5"]].sort_values("symbol")
     pending = dup = excluded = 0
     for r in q5.to_dict("records"):
         symbol = r["symbol"]
-        d = details(xtdata, symbol)
+        d = details(xtdata, symbol) if instrument_details is None else instrument_details[symbol]
         e = signal_day_eligibility(symbol, d, target, market_dates)
         if not e["eligible"]:
             status = "EXCLUDED_SIGNAL_HYGIENE"

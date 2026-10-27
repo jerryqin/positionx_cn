@@ -113,10 +113,15 @@ def capture_action_terms(provider, ids, previous, day, work):
     records = []
     for name, method in [('dividend', provider.get_dividend), ('split', provider.get_split),
                          ('rights', provider.get_allotment)]:
-        frame = normalize(method(ids, start_date=previous, end_date=day))
-        records.append(frame)
+        # Dividend uses announcement dates, not ex dates. Query only
+        # changed cohort IDs; retain raw response and normalize exact-day events.
+        start = (pd.Timestamp(day) - pd.Timedelta(days=90)).date() if name == 'dividend' else previous
+        frame = normalize(method(ids, start_date=start, end_date=day))
         if not frame.empty:
             frame.to_parquet(Path(work) / ('action_raw_' + name + '.parquet'), index=False)
+            ex_field = 'ex_right_date' if name == 'rights' else 'ex_dividend_date'
+            frame = frame.loc[pd.to_datetime(frame[ex_field]).dt.date.eq(pd.Timestamp(day).date())]
+        records.append(frame)
     observed = pd.Timestamp(rq.clock()).isoformat()
     try:
         actions = rq.normalize_actions(*records, pd.DataFrame(), observed_at=observed)

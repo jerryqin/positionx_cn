@@ -1,9 +1,11 @@
-"""Manual isolated preopen PIT capture; no Scheduler installation or production writes."""
+"""Manual isolated preopen/postclose data entry. No task installation or production writes."""
 from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
 import sys
+import shutil
+
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -18,6 +20,7 @@ def output_root(value):
     if p.resolve() != p or not p.is_relative_to(ROOT/'reports') or p == ROOT/'reports':
         raise ValueError('ISOLATED_REPORTS_OUTPUT_REQUIRED')
     return p
+
 
 def preopen(day, output, provider=None):
     root = output_root(output)
@@ -57,18 +60,74 @@ def preopen(day, output, provider=None):
     return {'status':'GREEN_PIT', 'members':len(frame), 'identity':len(identity),
             'capture_id':capture, 'production':False}
 
+
+def postclose(day, output, base_manifest, pit_output, provider=None):
+    root = output_root(output)
+    stock = close.run(day, base_manifest, root/'stock', provider=provider)
+    pit, reasons = False, []
+    try:
+        local.membership({'pit_root':str(output_root(pit_output)/'pit/manifests')}, day)
+        pit = True
+    except (Exception, SystemExit):
+        reasons.append('EXACT_DAY_PREOPEN_PIT_NOT_QUALIFIED')
+    # Candidate rows alone cannot promote unverified strategy representations.
+    return dict(status='RED', stock=stock['status'], pit=pit,
+                strategies={k:'BLOCKED_PENDING_CONSUMER_QUALIFICATION' for k in ('deep','ret120','funnel')},
+                reasons=reasons+['MERGED_STRATEGY_INPUT_SEAL_NOT_YET_QUALIFIED'], production=False)
+
+
+def merge_candidate(stock_output):
+    """Bind accepted old history and exact captured deltas without a production pointer."""
+    import duckdb
+    src = output_root(stock_output)
+    m = local.read_json(src/'manifest.json')
+    close.verified_existing(src, m['target_date'], m['base_manifest'])
+    dest = src/'merged'
+    if (dest/'COMPLETE.json').exists():
+        return rq.DailyInput(dest/'manifest.json', rq.profile())
+    dest.mkdir(exist_ok=False)
+    base = rq.DailyInput(m['base_manifest'], rq.profile())
+    db = dest/'daily.duckdb'
+    shutil.copyfile(base.db, db)
+    with duckdb.connect(str(db), config={'temp_directory':''}) as c:
+        c.execute("ATTACH '"+str(src/'increment.duckdb').replace("'","''")+"' AS delta (READ_ONLY)")
+        for name in ('raw_daily','execution_status'):
+            if c.execute('SELECT count(*) FROM '+name+' WHERE date>=?', [pd.Timestamp(m['dates'][0]).date()]).fetchone()[0]:
+                raise ValueError('MERGE_DUPLICATE_OR_FUTURE_ROWS')
+            c.execute('INSERT INTO '+name+' BY NAME SELECT * FROM delta.'+name)
+        c.execute('INSERT INTO suspension SELECT order_book_id,date,status_suspended FROM delta.execution_status WHERE status_suspended')
+        c.execute('CREATE OR REPLACE TABLE identity_observed_today AS SELECT * FROM delta.identity_observed_today')
+        c.execute('INSERT INTO security_identity BY NAME SELECT * FROM delta.identity_observed_today n WHERE NOT EXISTS (SELECT 1 FROM security_identity o WHERE o.order_book_id=n.order_book_id)')
+        if m['factor_events']:
+            c.execute('INSERT INTO factors SELECT order_book_id,ex_date,ex_cum_factor FROM delta.factors')
+        action_meta = close.old.bind_local_actions(c, pd.Timestamp(m['target_date']).date(), rq.clock())
+        c.execute('CHECKPOINT')
+    meta = dict(base.meta, asof=str(pd.Timestamp(m['target_date']).date()),
+                business_date=str(pd.Timestamp(m['target_date']).date()), availability=rq.clock().isoformat(),
+                version='asof_'+m['target_date']+'_'+rq.sha(db)[:12], database='daily.duckdb',
+                database_sha256=rq.sha(db), activated_in_production=False,
+                late_historical_increment_dates=m['dates'], **action_meta)
+    local.write_json(dest/'source_metadata.json', meta)
+    local.write_json(dest/'manifest.json', dict(version=meta['version'],files=[
+        dict(path=p.name,sha256=rq.sha(p)) for p in (db,dest/'source_metadata.json')]))
+    local.write_json(dest/'COMPLETE.json', dict(manifest_sha256=rq.sha(dest/'manifest.json')))
+    return rq.DailyInput(dest/'manifest.json', rq.profile())
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--phase', required=True, choices=['preopen'])
+    p.add_argument('--phase', required=True, choices=['preopen','postclose'])
     p.add_argument('--date', required=True)
     p.add_argument('--output', required=True)
+    p.add_argument('--base-manifest')
+    p.add_argument('--pit-output')
     a = p.parse_args()
     root = output_root(a.output)
     receipt = root/(a.phase+'_'+a.date+'_result.json')
     if receipt.exists():
         raise ValueError('RESULT_EXISTS_PRESERVED_USE_NEW_ATTEMPT_OUTPUT')
     try:
-        r = preopen(a.date, root)
+        r = preopen(a.date, root) if a.phase == 'preopen' else postclose(a.date, root, a.base_manifest, a.pit_output)
     except (Exception, SystemExit) as e:
         r = dict(status='RED', source='RQDATA', date=a.date, error_type=type(e).__name__,
                  source_step=close.SOURCE_STEP, production=False)

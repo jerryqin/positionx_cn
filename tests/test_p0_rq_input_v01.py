@@ -43,9 +43,7 @@ class InputsTest(unittest.TestCase):
         sys.meta_path.remove(cls.guard)
 
     def setUp(self):
-        scratch = ROOT.parent / 'test_work'
-        scratch.mkdir(exist_ok=True)
-        self.temp = tempfile.TemporaryDirectory(dir=scratch)
+        self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.db = self.root / 'daily.duckdb'
@@ -584,7 +582,9 @@ class InputsTest(unittest.TestCase):
                             {'rq_input': fake, 'xtdata': sentinel,
                              'POLICY': types.SimpleNamespace(dividend_type='front'),
                              'normalize_history': lambda frame: frame})
-        result = fun(['000001.SZ'], bars=120, refresh=True)
+        fake_runtime = types.SimpleNamespace(get_xtdata=lambda: sentinel)
+        with patch.dict(sys.modules, {'core.qmt_runtime': fake_runtime}):
+            result = fun(['000001.SZ'], bars=120, refresh=True)
         self.assertEqual(calls, [(sentinel, ['000001.SZ'], 120, 'front', 120)])
         self.assertEqual(result['000001.SZ'].attrs['source'], 'RQDATA')
 

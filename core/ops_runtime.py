@@ -127,6 +127,27 @@ def run_process(argv,cwd,log_path,env=None):
     log_path=Path(log_path); log_path.parent.mkdir(parents=True,exist_ok=True)
     e=os.environ.copy()
     if env:e.update(env)
-    cp=subprocess.run(list(argv),cwd=str(cwd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding="utf-8",errors="replace",check=False,env=e)
-    log_path.write_text(cp.stdout,encoding="utf-8")
-    return {"returncode":cp.returncode,"stdout":cp.stdout,"parsed_json":extract_json(cp.stdout),"log_path":str(log_path)}
+    broker_read=any(Path(str(a)).name.lower()=="main.py" for a in argv) and any(str(a) in ("check","reconcile") for a in argv)
+    if broker_read:
+        e["POSITIONX_BROKER_TRACE_PATH"]=str(log_path.resolve().with_suffix(".broker_trace.jsonl"))
+        cp=subprocess.Popen(list(argv),cwd=str(cwd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                            text=True,encoding="utf-8",errors="replace",env=e,
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        try:
+            stdout,_=cp.communicate(timeout=120)
+        except subprocess.TimeoutExpired:
+            log_path.write_text("BROKER_READ_TIMEOUT_120S; process tree cleanup requested\n",encoding="utf-8")
+            cleanup=subprocess.run(["taskkill.exe","/PID",str(cp.pid),"/T","/F"],
+                                   stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                                   text=True,encoding="utf-8",errors="replace",check=False,timeout=15)
+            if cleanup.returncode!=0:
+                raise RuntimeError(f"BROKER_READ_TIMEOUT_TREE_CLEANUP_FAILED: rc={cleanup.returncode}")
+            stdout,_=cp.communicate(timeout=10)
+            log_path.write_text(stdout or "BROKER_READ_TIMEOUT_120S; process tree stopped\n",encoding="utf-8")
+            raise RuntimeError("BROKER_READ_TIMEOUT_120S_TREE_STOPPED")
+        cp_stdout=stdout
+    else:
+        cp=subprocess.run(list(argv),cwd=str(cwd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding="utf-8",errors="replace",check=False,env=e)
+        cp_stdout=cp.stdout
+    log_path.write_text(cp_stdout,encoding="utf-8")
+    return {"returncode":cp.returncode,"stdout":cp_stdout,"parsed_json":extract_json(cp_stdout),"log_path":str(log_path)}

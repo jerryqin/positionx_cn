@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import itertools
+import datetime
 import math
 import numbers
 import re
@@ -15,6 +18,77 @@ from .models import AccountSnapshot, PositionSnapshot, now_iso, broker_order_key
 
 class BrokerError(RuntimeError):
     pass
+
+
+
+_STAGE_SEQUENCE = itertools.count(1)
+_STAGE_WRITE_LOCK = threading.Lock()
+_NO_TRACE_RESULT = object()
+
+def _broker_stage_trace(stage, status, *, call_id=None, result=_NO_TRACE_RESULT,
+                        error=None, elapsed_ns=None):
+    path = os.environ.get("POSITIONX_BROKER_TRACE_PATH")
+    if not path:
+        return
+    record = {"schema":"BROKER_STAGE_TRACE_V1", "stage":stage, "status":status,
+              "monotonic_ns":time.monotonic_ns(),
+              "observed_at":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "pid":os.getpid(), "parent_pid":os.getppid(),
+              "thread_id":threading.get_ident(), "call_id":call_id}
+    if result is not _NO_TRACE_RESULT:
+        typ = type(result)
+        record["result_type"] = typ.__name__ if typ in (type(None),list,dict,tuple,int,bool,float,str) else "object"
+        if typ is list:
+            record["result_count"] = len(result)
+        if stage in ("connect", "subscribe") and typ is int:
+            record["return_code_zero"] = result == 0
+    if error is not None:
+        record["error_type"] = type(error).__name__
+    if elapsed_ns is not None:
+        record["elapsed_ns"] = elapsed_ns
+    payload = (json.dumps(record, separators=(",",":"), allow_nan=False)+"\n").encode("utf-8")
+    try:
+        with _STAGE_WRITE_LOCK:
+            fd = os.open(path, os.O_WRONLY|os.O_CREAT|os.O_APPEND, 0o600)
+            with os.fdopen(fd, "ab") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+    except OSError:
+        raise BrokerError("BROKER_STAGE_TRACE_WRITE_FAILED") from None
+
+def _broker_traced_call(stage, operation, *args, **kwargs):
+    if not os.environ.get("POSITIONX_BROKER_TRACE_PATH"):
+        return operation(*args, **kwargs)
+    call_id = next(_STAGE_SEQUENCE)
+    try:
+        _broker_stage_trace(stage, "ENTER", call_id=call_id)
+    except Exception as trace_error:
+        # Trace failure must not prevent disconnect cleanup or risk callbacks.
+        if stage in ("stop", "stop_after_connect_error") or stage.startswith("callback/"):
+            try:
+                operation(*args, **kwargs)
+            except BaseException as primary:
+                raise primary from trace_error
+        raise
+    started = time.monotonic_ns()
+    try:
+        result = operation(*args, **kwargs)
+    except BaseException as primary:
+        try:
+            _broker_stage_trace(stage, "EXCEPTION", call_id=call_id,
+                                error=primary, elapsed_ns=time.monotonic_ns()-started)
+        except Exception as trace_error:
+            raise primary from trace_error
+        raise
+    _broker_stage_trace(stage, "RETURNED", call_id=call_id, result=result,
+                        elapsed_ns=time.monotonic_ns()-started)
+    return result
+
+def _broker_sdk_types():
+    from xtquant.xttrader import XtQuantTrader
+    from xtquant.xttype import StockAccount
+    return XtQuantTrader, StockAccount
 
 
 class _CallbackProxy:
@@ -97,21 +171,23 @@ class MiniQmtBroker:
                     if self._full_connect_attempted:raise BrokerError("FULL_QMT_RETRY_NOT_ALLOWED")
                     self._full_connect_attempted=True
                     if self.account_type!="STOCK":raise BrokerError("FULL_QMT_ACCOUNT_TYPE")
-                    verify_full_endpoint(qmt_profile());pin_sdk()
-                from xtquant.xttrader import XtQuantTrader
-                from xtquant.xttype import StockAccount
-                self.trader = XtQuantTrader(self.mini_path, self.session_id)
+                    _broker_traced_call("endpoint_identity", verify_full_endpoint, qmt_profile())
+                    _broker_traced_call("sdk_load", pin_sdk)
+                XtQuantTrader, StockAccount = _broker_traced_call("sdk_types_load", _broker_sdk_types)
+                self.trader = _broker_traced_call("trader_construct", XtQuantTrader, self.mini_path, self.session_id)
                 def sink(kind,payload):
-                    if kind in {"DISCONNECTED","CAPTURE_ERROR"}:self.connected=False
-                    if self.event_sink:self.event_sink(kind,payload)
-                self.callback = _CallbackProxy.build(sink,self.account_id if self._full_mode else None)
-                self.trader.register_callback(self.callback)
-                self.trader.start()
-                rc = self.trader.connect()
+                    def deliver():
+                        if kind in {"DISCONNECTED","CAPTURE_ERROR"}:self.connected=False
+                        if self.event_sink:self.event_sink(kind,payload)
+                    return _broker_traced_call("callback/"+kind, deliver)
+                self.callback = _broker_traced_call("callback_build", _CallbackProxy.build, sink, self.account_id if self._full_mode else None)
+                _broker_traced_call("register_callback", self.trader.register_callback, self.callback)
+                _broker_traced_call("start", self.trader.start)
+                rc = _broker_traced_call("connect", self.trader.connect)
                 if type(rc) is not int or rc != 0:
                     raise BrokerError(f"miniQMT交易连接失败 rc={rc}")
-                self.account = StockAccount(self.account_id, self.account_type)
-                sub = self.trader.subscribe(self.account)
+                self.account = _broker_traced_call("account_construct", StockAccount, self.account_id, self.account_type)
+                sub = _broker_traced_call("subscribe", self.trader.subscribe, self.account)
                 if type(sub) is not int or sub != 0:
                     raise BrokerError(f"资金账号订阅失败 rc={sub}")
                 self.connected = True
@@ -119,14 +195,14 @@ class MiniQmtBroker:
             except Exception:
                 self.connected = False
                 if self.trader is not None:
-                    try:self.trader.stop()
+                    try:_broker_traced_call("stop_after_connect_error", self.trader.stop)
                     except Exception:self.last_cleanup_error="STOP_FAILED_AFTER_PRIMARY_ERROR"
                 raise
 
     def disconnect(self):
         with self._lock:
             if self.trader:
-                try: self.trader.stop()
+                try: _broker_traced_call("stop", self.trader.stop)
                 except Exception:
                     self.last_cleanup_error="STOP_FAILED"
                     self.connected=False
@@ -153,7 +229,11 @@ class MiniQmtBroker:
                 if type(value) not in (str,int) or value=="" or type(value) is int and value<=0:raise BrokerError("BROKER_TRADE_ID")
             else:
                 if isinstance(value,bool) or not isinstance(value,numbers.Real) or not math.isfinite(value):raise BrokerError("BROKER_NUMERIC_FIELD")
-                if key in ("order_id","volume","can_use_volume","order_volume","traded_volume") and (not isinstance(value,numbers.Integral) or value<0 or key=="order_id" and value==0 and kind!="orders"):raise BrokerError("BROKER_INTEGER_FIELD")
+                if key in ("order_id","volume","can_use_volume","order_volume","traded_volume") and (not isinstance(value,numbers.Integral) or value<0 or key=="order_id" and value==0 and kind not in ("orders","trades")):raise BrokerError("BROKER_INTEGER_FIELD")
+        if kind=="trades" and obj.order_id==0:
+            # No local order ID: retain the native counter reference, never invent an ID.
+            sysid=getattr(obj,"order_sysid",None)
+            if type(sysid) is not str or not sysid:raise BrokerError("BROKER_TRADE_COUNTER_ID_MISSING_OR_INVALID")
         if kind=="orders" and obj.order_id==0:
             try:
                 broker_order_key({"order_id":obj.order_id,"symbol":obj.stock_code,
@@ -165,7 +245,7 @@ class MiniQmtBroker:
             price=getattr(obj,"avg_price",getattr(obj,"open_price",None))
             if isinstance(price,bool) or not isinstance(price,numbers.Real) or not math.isfinite(price) or price<0:raise BrokerError("BROKER_POSITION_PRICE")
     def _query_rows(self, method, kind):
-        value=getattr(self.trader,method)(self.account)
+        value=_broker_traced_call(method, getattr(self.trader,method), self.account)
         if value is None:raise BrokerError("BROKER_QUERY_RETURNED_NONE")
         if type(value) is not list:raise BrokerError("BROKER_QUERY_WRONG_TYPE")
         for obj in value:self._validate_row(obj,kind)
@@ -174,7 +254,7 @@ class MiniQmtBroker:
 
     def query_account(self) -> AccountSnapshot:
         self.ensure_connected()
-        a = self.trader.query_stock_asset(self.account)
+        a = _broker_traced_call("query_stock_asset", self.trader.query_stock_asset, self.account)
         if a is None:
             raise BrokerError("账户资产查询失败")
         self._validate_row(a,"asset")
@@ -240,6 +320,10 @@ class MiniQmtBroker:
                 "strategy_name": str(getattr(t, "strategy_name", "") or ""),
                 "remark": str(getattr(t, "order_remark", "") or ""),
             })
+            if self._full_mode and t.order_id==0:
+                out[-1]["order_sysid"] = t.order_sysid
+        if self._full_mode and len({t["trade_id"] for t in out}) != len(out):
+            raise BrokerError("BROKER_TRADE_IDENTITY_DUPLICATE")
         return out
 
     def active_external_orders(self) -> List[Dict]:

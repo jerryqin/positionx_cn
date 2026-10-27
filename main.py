@@ -12,6 +12,10 @@ os.chdir(ROOT)
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from core.broker import _broker_stage_trace, _broker_traced_call
+if __name__ == "__main__" and len(sys.argv)>1 and sys.argv[1] in ("check","reconcile"):
+    _broker_stage_trace("worker_start", "ENTER")
+
 from core.config import Settings
 from core.logging_setup import setup_logging
 from core.service import TradingService
@@ -41,7 +45,7 @@ def main():
         from gui.app import run_gui
         return run_gui(args.config)
 
-    svc = TradingService(args.config)
+    svc = _broker_traced_call("service_init", TradingService, args.config)
     try:
         if args.command == "init-db":
             print("DB initialized:", s.get("app.db_path")); return
@@ -87,8 +91,15 @@ def main():
                     svc.db.event("ERROR", "SCHEDULER", str(e))
                     print("scheduler error:", e)
                 time.sleep(poll)
+    except BaseException as primary:
+        try:
+            _broker_stage_trace("worker_exception", "EXCEPTION", error=primary)
+        except Exception as trace_error:
+            raise primary from trace_error
+        raise
     finally:
         svc.disconnect()
+        _broker_stage_trace("worker_exit", "RETURNED")
 
 
 if __name__ == "__main__":

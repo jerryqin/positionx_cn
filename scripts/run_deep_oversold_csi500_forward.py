@@ -13,8 +13,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import pandas as pd
 from core import p0_rq_input as rq_input
-from core.qmt_runtime import get_xtdata
-xtdata = get_xtdata()
 
 from research.forward_deep_oversold import (
     DeepOversoldForwardPolicy,
@@ -40,6 +38,8 @@ POLICY = DeepOversoldForwardPolicy()
 def current_universe() -> dict:
     if rq_input.enabled():
         return rq_input.current_universe()
+    from core.qmt_runtime import get_xtdata
+    xtdata = get_xtdata()
     sector = set()
     weights = set()
     sector_error = None
@@ -80,6 +80,8 @@ def load_histories(
     *,
     refresh: bool = False,
 ) -> dict[str, pd.DataFrame]:
+    from core.qmt_runtime import get_xtdata
+    xtdata = get_xtdata()
     if rq_input.enabled():
         frames = rq_input.strategy_histories(xtdata, symbols, bars, POLICY.dividend_type, 120)
         return {s: normalize_history(f) for s, f in frames.items()}
@@ -98,6 +100,8 @@ def load_histories(
 
 
 def details(symbol: str) -> dict:
+    from core.qmt_runtime import get_xtdata
+    xtdata = get_xtdata()
     try:
         d = xtdata.get_instrument_detail(symbol)
         return dict(d or {})
@@ -213,13 +217,13 @@ def set_ledger_cash(state: dict, ledger: str, cash: float):
         state["shadow_cash"] = cash
 
 
-def process_entries(store, histories, current_date, state):
+def process_entries(store, histories, current_date, state, *, instrument_details=None, market_sessions=None):
     pending = [x for x in pending_signals(store) if x["signal_date"] < current_date]
     if not pending:
         return
 
     # Exact next market session only; if signal skipped a session, fail closed.
-    all_dates = market_dates(histories[POLICY.benchmark])
+    all_dates = market_sessions if market_sessions is not None else market_dates(histories[POLICY.benchmark])
     prev_map = {all_dates[i]: all_dates[i-1] for i in range(1, len(all_dates))}
     prior = prev_map.get(current_date)
     due = [x for x in pending if x["signal_date"] == prior]
@@ -234,7 +238,7 @@ def process_entries(store, histories, current_date, state):
     for sig in due:
         symbol = sig["symbol"]
         op = open_price(histories, symbol, current_date)
-        d = details(symbol)
+        d = details(symbol) if instrument_details is None else instrument_details[symbol]
         up = d.get("UpStopPrice")
         status = d.get("InstrumentStatus")
         tick = d.get("PriceTick", 0.01)
@@ -329,8 +333,8 @@ def process_entries(store, histories, current_date, state):
         ])
 
 
-def process_exits_and_mark(store, histories, current_date, state):
-    dates = market_dates(histories[POLICY.benchmark])
+def process_exits_and_mark(store, histories, current_date, state, *, market_sessions=None):
+    dates = market_sessions if market_sessions is not None else market_dates(histories[POLICY.benchmark])
     for ledger, cost in (("BASE20", POLICY.main_round_trip_cost), ("SHADOW50", POLICY.shadow_round_trip_cost)):
         cash, _ = ledger_snapshot(store, ledger, state)
         half = cost / 2.0
