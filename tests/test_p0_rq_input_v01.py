@@ -318,19 +318,31 @@ class InputsTest(unittest.TestCase):
             calls.append((kind, symbols, kw))
             if kind != 'dividend':
                 return None
+            # The API filters announcements, not ex dates: the old one-day
+            # query would lose these actual target-day cash events entirely.
+            announced = pd.Timestamp('2026-09-01')
+            if not pd.Timestamp(kw['start_date']) <= announced <= pd.Timestamp(kw['end_date']):
+                return None
             return pd.DataFrame([dict(order_book_id=s, round_lot=10., dividend_cash_before_tax=.5,
-                declaration_announcement_date=pd.Timestamp('2026-10-19'),
-                ex_dividend_date=pd.Timestamp('2026-10-20')) for s in symbols])
+                declaration_announcement_date=announced,
+                ex_dividend_date=pd.Timestamp(ex_date)) for s,ex_date in
+                [(s,'2026-10-20') for s in symbols]+[(symbols[0],'2026-10-19')]])
         provider = types.SimpleNamespace(**{kind: (lambda ids, _kind=kind, **kw: fetch(_kind[4:], ids, **kw))
             for kind in ('get_dividend','get_split','get_allotment')})
         with patch.object(producer.rq, 'clock', return_value=pd.Timestamp('2026-10-20T16:00:00+08:00')):
             producer.capture_action_terms(provider, ids, '2026-10-19', '2026-10-20', self.root)
         self.assertEqual(len(calls), 3)
-        self.assertTrue(all(c[1] == ids and c[2] == dict(start_date='2026-10-19',end_date='2026-10-20') for c in calls))
+        self.assertTrue(all(c[1] == ids and pd.Timestamp(c[2]['end_date']) == pd.Timestamp('2026-10-20') for c in calls))
+        self.assertEqual(pd.Timestamp(calls[0][2]['start_date']), pd.Timestamp('2026-07-22'))
+        self.assertTrue(all(pd.Timestamp(c[2]['start_date']) == pd.Timestamp('2026-10-19') for c in calls[1:]))
         actions = pd.read_parquet(self.root / 'captured_actions.parquet')
         self.assertEqual(actions.cash_per_share.tolist(), [.05, .05])
         self.assertTrue(actions.observed_at.eq('2026-10-20T16:00:00+08:00').all())
         self.assertTrue(pd.to_datetime(actions.ex_date).eq(pd.Timestamp('2026-10-20')).all())
+        self.assertEqual(len(pd.read_parquet(self.root / 'action_raw_dividend.parquet')), 3)
+        receipt = json.loads((self.root / 'action_capture.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['queries'][0]['raw_rows'], 3)
+        self.assertEqual(receipt['events'], 2)
 
     def test_seal_saved_capture_preserves_new_factor_creation_time(self):
         producer = self.load_script('collect_p0_rq_close_v01')

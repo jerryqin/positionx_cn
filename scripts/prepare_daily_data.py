@@ -76,13 +76,13 @@ def postclose(day, output, base_manifest, pit_output, provider=None):
                 reasons=reasons+['MERGED_STRATEGY_INPUT_SEAL_NOT_YET_QUALIFIED'], production=False)
 
 
-def merge_candidate(stock_output):
+def merge_candidate(stock_output, live=False):
     """Bind accepted old history and exact captured deltas without a production pointer."""
     import duckdb
     src = output_root(stock_output)
     m = local.read_json(src/'manifest.json')
     close.verified_existing(src, m['target_date'], m['base_manifest'])
-    dest = src/'merged'
+    dest = src/('merged_live' if live else 'merged')
     if (dest/'COMPLETE.json').exists():
         return rq.DailyInput(dest/'manifest.json', rq.profile())
     dest.mkdir(exist_ok=False)
@@ -100,16 +100,41 @@ def merge_candidate(stock_output):
         c.execute('INSERT INTO security_identity BY NAME SELECT * FROM delta.identity_observed_today n WHERE NOT EXISTS (SELECT 1 FROM security_identity o WHERE o.order_book_id=n.order_book_id)')
         if m['factor_events']:
             c.execute('INSERT INTO factors SELECT order_book_id,ex_date,ex_cum_factor FROM delta.factors')
+        actions = src/'deep_actions/captured_actions.parquet'
+        if live and actions.exists():
+            frame = pd.read_parquet(actions)
+            c.register('captured_frame', frame)
+            c.execute('CREATE TABLE IF NOT EXISTS captured_actions AS SELECT * FROM captured_frame WHERE false')
+            c.execute('INSERT INTO captured_actions SELECT * FROM captured_frame n WHERE NOT EXISTS (SELECT 1 FROM captured_actions o WHERE o.order_book_id=n.order_book_id AND o.ex_date=n.ex_date)')
         action_meta = close.old.bind_local_actions(c, pd.Timestamp(m['target_date']).date(), rq.clock())
+        if live and action_meta.get('corporate_action_missing'):
+            if rq.clock().strftime('%H%M')>='1715':
+                raise ValueError('ACTION_GAP_AFTER_FINAL_DATA_DEADLINE')
+            provider=close.bounded_provider()
+            missing=action_meta['corporate_action_missing']
+            for event_day in sorted({x['ex_date'] for x in missing}):
+                work=src/'deep_actions'/event_day
+                work.mkdir(parents=True,exist_ok=True)
+                ids=sorted({x['order_book_id'] for x in missing if x['ex_date']==event_day})
+                close.old.capture_action_terms(provider,ids,pd.Timestamp(event_day).date()-pd.Timedelta(days=1),event_day,work)
+                path=work/'captured_actions.parquet'
+                if path.exists():
+                    c.register('new_actions',pd.read_parquet(path))
+                    c.execute('CREATE TABLE IF NOT EXISTS captured_actions AS SELECT * FROM new_actions WHERE false')
+                    c.execute('INSERT INTO captured_actions SELECT * FROM new_actions n WHERE NOT EXISTS (SELECT 1 FROM captured_actions o WHERE o.order_book_id=n.order_book_id AND o.ex_date=n.ex_date)')
+            action_meta=close.old.bind_local_actions(c,pd.Timestamp(m['target_date']).date(),rq.clock())
         c.execute('CHECKPOINT')
     meta = dict(base.meta, asof=str(pd.Timestamp(m['target_date']).date()),
                 business_date=str(pd.Timestamp(m['target_date']).date()), availability=rq.clock().isoformat(),
                 version='asof_'+m['target_date']+'_'+rq.sha(db)[:12], database='daily.duckdb',
                 database_sha256=rq.sha(db), activated_in_production=False,
                 late_historical_increment_dates=m['dates'], **action_meta)
+    meta['supplier_complete_observed_at'] = m['after']['available_at']
+    for name,receipt in [('supplier_ready.json',m['before']),('supplier_ready_after.json',m['after'])]:
+        local.write_json(dest/name,receipt)
     local.write_json(dest/'source_metadata.json', meta)
     local.write_json(dest/'manifest.json', dict(version=meta['version'],files=[
-        dict(path=p.name,sha256=rq.sha(p)) for p in (db,dest/'source_metadata.json')]))
+        dict(path=p.name,sha256=rq.sha(p)) for p in (db,dest/'source_metadata.json',dest/'supplier_ready.json',dest/'supplier_ready_after.json')]))
     local.write_json(dest/'COMPLETE.json', dict(manifest_sha256=rq.sha(dest/'manifest.json')))
     return rq.DailyInput(dest/'manifest.json', rq.profile())
 
