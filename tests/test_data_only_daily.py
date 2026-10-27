@@ -9,6 +9,13 @@ from scripts import run_data_only_daily as daily
 
 
 class DataOnlyTests(unittest.TestCase):
+    def test_nonretryable_source_failure_does_not_query_again(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t)
+            (root/'20261027_preopen_last_error.json').write_text('{"nonretryable":true}',encoding='utf-8')
+            with patch.object(daily,'OPS',root),patch.object(daily.prep,'preopen',side_effect=AssertionError('NETWORK')):
+                with self.assertRaisesRegex(ValueError,'NO_RETRY'):daily.run('preopen','20261027')
+
     def test_same_published_version_reuses_qualified_receipt(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t);manifest=root/'manifest.json';manifest.write_text('{}',encoding='utf-8')

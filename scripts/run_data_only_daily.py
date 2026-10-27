@@ -56,6 +56,9 @@ def run(phase, day=None):
     rq.require_trading_date(day)
     OPS.mkdir(parents=True,exist_ok=True)
     receipt=OPS/(day+'_'+phase+'.json')
+    error_path=OPS/(day+'_'+phase+'_last_error.json')
+    if error_path.exists() and local.read_json(error_path).get('nonretryable'):
+        raise ValueError('NONRETRYABLE_SOURCE_BLOCKED_NO_RETRY')
     if phase=='preopen':
         if rq.clock().strftime('%H%M')>='0920':raise ValueError('MISSED_PREOPEN')
         out=ROOT/'reports'/('data_only_'+day)
@@ -148,7 +151,9 @@ def main():
         print(json.dumps(r,ensure_ascii=False,default=str),flush=True)
         return 0 if r['status'] in ('GREEN','GREEN_PIT') else 3
     except Exception as e:
-        r=dict(date=day,phase=a.phase,status='RED',error=str(e) if isinstance(e,(ValueError,rq.InputBlocked)) else type(e).__name__)
+        error=str(e) if isinstance(e,(ValueError,rq.InputBlocked)) else type(e).__name__
+        permanent=any(k in error.lower() for k in ('auth','permission','license','schema','nonretryable','unsupported'))
+        r=dict(date=day,phase=a.phase,status='RED',error=error,nonretryable=permanent)
         local.write_json(OPS/(day+'_'+a.phase+'_last_error.json'),r);result_files(r)
         print(json.dumps(r),flush=True);return 3
     finally:
