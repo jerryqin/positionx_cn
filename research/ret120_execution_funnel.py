@@ -90,13 +90,34 @@ def entry_condition_state(raw_close: float, low: float, high: float) -> dict:
             'close_vs_open_zone_pct':0.0}
 
 
-def preview_size(entry: float, stop: float, adv20_amount: float, nav: float, lane: str, risk: dict) -> dict:
+def preview_size(entry: float, stop: float, adv20_amount: float, nav: float, lane: str, risk: dict,
+                 *, minimum_order_quantity: int | None = None, quantity_step: int | None = None) -> dict:
+    explicit = minimum_order_quantity is not None or quantity_step is not None
+    if explicit and (type(minimum_order_quantity) is not int or type(quantity_step) is not int
+                     or minimum_order_quantity <= 0 or quantity_step <= 0):
+        raise ValueError('EXPLICIT_EXECUTION_QUANTITY_CONSTRAINTS_REQUIRED')
     if not all(_finite(v) for v in [entry,stop,nav]) or entry<=0 or stop<=0 or entry<=stop or nav<=0:
-        return {'preview_shares':0,'preview_weight':0.0,'preview_notional':0.0,'risk_budget_amount':0.0}
-    lot=int(risk['board_lot'])
+        result={'preview_shares':0,'preview_weight':0.0,'preview_notional':0.0,'risk_budget_amount':0.0}
+        if explicit:result['sizing_status']='BLOCKED_INVALID_RISK_INPUT'
+        return result
     if lane=='MOMENTUM': rf=float(risk['momentum_risk_fraction_nav']); mw=float(risk['momentum_max_weight'])
     else: rf=float(risk['mean_reversion_risk_fraction_nav']); mw=float(risk['mean_reversion_max_weight'])
     risk_budget=nav*rf; per_share=entry-stop
+    if explicit:
+        bounds={'RISK_BUDGET':risk_budget/per_share,'MAX_WEIGHT':nav*mw/entry,
+                'ADV20_PARTICIPATION':adv20_amount*float(risk['adv20_participation_max'])/entry
+                if _finite(adv20_amount) and adv20_amount>0 else 0.0}
+        limiting=min(bounds,key=bounds.get);cap=bounds[limiting]
+        shares=(minimum_order_quantity+math.floor((cap-minimum_order_quantity)/quantity_step)*quantity_step
+                if cap>=minimum_order_quantity else 0)
+        notional=shares*entry
+        return {'preview_shares':shares,'preview_notional':notional,'preview_weight':notional/nav,
+                'risk_budget_amount':risk_budget,'minimum_order_quantity':minimum_order_quantity,
+                'quantity_step':quantity_step,'sizing_limit':limiting,
+                'sizing_status':'PASS_EXECUTION_QUANTITY_PREVIEW' if shares else 'SKIP_MIN_ORDER_RISK'}
+    # Compatibility for historical preview callers. The dated sealed-input path
+    # supplies both rule-derived constraints and never uses this generic lot.
+    lot=int(risk['board_lot'])
     by_risk=math.floor((risk_budget/per_share)/lot)*lot
     by_weight=math.floor(((nav*mw)/entry)/lot)*lot
     by_liq=math.floor(((adv20_amount*float(risk['adv20_participation_max']))/entry)/lot)*lot if _finite(adv20_amount) and adv20_amount>0 else 0

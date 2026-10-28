@@ -116,6 +116,47 @@ def audit_daily_research_asset(reader, day):
         admission_reason='Daily signal features use observed prices/trades/status, not quote increments; execution remains separately blocked')
 
 
+def audit_core_model_asset(reader, day, *, execution_symbols=None):
+    """Model input admission for its explicit execution set, never whole-pool P0."""
+    import pandas as pd
+    from core import p0_rq_input as rq
+    meta=reader.meta
+    if (meta.get('qualification_scope')!='CORE_MODELS_V1'
+            or meta.get('quality_status')!='CORE_MODELS_PASS_V1'
+            or meta.get('engineering_only') is not True or meta.get('full_p0_pass') is not False
+            or meta.get('execution_qualified') is not True
+            or meta.get('model_continuation_qualified') is not True):
+        raise ValueError('CORE_MODEL_INPUT_SCOPE_REQUIRED')
+    required=set(execution_symbols if execution_symbols is not None else meta.get('execution_qualified_symbols',[]))
+    if not required.issubset(set(meta.get('execution_qualified_symbols',[]))):
+        raise ValueError('ACTUAL_EXECUTION_SET_OUTSIDE_QUALIFIED_MODEL_INPUTS')
+    with local.read_db(reader.db) as con:
+        bars=con.execute('SELECT * FROM raw_daily WHERE date=?',[pd.Timestamp(day).date()]).df()
+        status=con.execute('SELECT * FROM execution_status WHERE date=?',[pd.Timestamp(day).date()]).df()
+        identity=con.execute('SELECT * FROM identity_observed_today').df()
+    quality=audit_stock_records(bars,status,identity,day,meta,rq.clock(),require_tick=False)
+    required_native={rq.rq_id(s) for s in required}
+    subset=bars.loc[bars.order_book_id.isin(required_native)].merge(
+        status,on=['order_book_id','date'],validate='one_to_one')
+    if set(subset.order_book_id)!=required_native:
+        raise ValueError('CORE_MODEL_EXECUTION_SET_ROWS_MISSING')
+    tick_sources={}
+    for row in subset.to_dict('records'):
+        row.update(research_factor=1.0,bar_available_at=meta['availability'])
+        for field in ('open','high','low','close'):row['raw_'+field]=row[field]
+        frame=pd.DataFrame([row],index=[day])
+        frame.attrs.update(reader.lineage('none'))
+        result=rq.execution_bar(frame,day)
+        tick_sources[rq.qmt_id(row['order_book_id'])]=result.get('price_tick_source','RQDATA_OBSERVED')
+    quality.update(status='CORE_MODELS_PASS_V1',qualification_scope='CORE_MODELS_V1',
+                   execution_qualified=True,raw_tick_unknown_rows=quality.pop('unknown_tick_rows',0),
+                   effective_execution_tick_unknown=0)
+    return dict(date=day,version=meta['version'],qualification_scope='CORE_MODELS_V1',
+        full_p0_pass=False,execution_qualified=True,quality=quality,
+        execution_symbols=sorted(required),execution_count=len(required),tick_sources=tick_sources,
+        database_sha256=rq.sha(reader.db),manifest_sha256=rq.sha(reader.root/'manifest.json'))
+
+
 def forward_start_decision(gates, plan, expected, now, plan_path=None):
     """Admission only. No historical holdings, dates or acceptance results are rewritten."""
     import pandas as pd

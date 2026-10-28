@@ -174,7 +174,7 @@ def merge_candidate(stock_output, live=False, output=None, *, scope='P0_COMPLETE
     import duckdb
     src = output_root(stock_output)
     m = local.read_json(src/'manifest.json')
-    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1', 'CORE_MODELS_V1'):
         raise ValueError('MERGE_UNKNOWN_QUALIFICATION_SCOPE')
     research_only = scope == 'DAILY_SIGNALS_V1'
     if m.get('qualification_scope', 'P0_COMPLETE') != scope:
@@ -191,12 +191,16 @@ def merge_candidate(stock_output, live=False, output=None, *, scope='P0_COMPLETE
             raise ValueError('MERGE_EXISTING_BINDING_MISMATCH_USE_NEW_OUTPUT')
         return reader
     dest.mkdir(parents=True, exist_ok=False)
-    base = rq.DailyInput(m['base_manifest'], rq.profile())
+    base_scope=local.read_json(Path(m['base_manifest']).parent/'source_metadata.json').get('qualification_scope','P0_COMPLETE')
+    base = rq.DailyInput(m['base_manifest'], rq.profile(),scope=base_scope)
     db = dest/'daily.duckdb'
     shutil.copyfile(base.db, db)
     with duckdb.connect(str(db), config={'temp_directory':''}) as c:
         c.execute("ATTACH '"+str(src/'increment.duckdb').replace("'","''")+"' AS delta (READ_ONLY)")
         c.execute('BEGIN TRANSACTION')
+        if scope=='CORE_MODELS_V1':
+            for name,dtype in [('rule_price_tick','DOUBLE'),('tick_rule_evidence','VARCHAR'),('tick_source','VARCHAR')]:
+                c.execute('ALTER TABLE execution_status ADD COLUMN IF NOT EXISTS '+name+' '+dtype)
         for name in ('raw_daily','execution_status'):
             if c.execute('SELECT count(*) FROM '+name+' WHERE date>=?', [pd.Timestamp(m['dates'][0]).date()]).fetchone()[0]:
                 raise ValueError('MERGE_DUPLICATE_OR_FUTURE_ROWS')
@@ -275,6 +279,12 @@ def merge_candidate(stock_output, live=False, output=None, *, scope='P0_COMPLETE
             factor_capture_coverage=m.get('factor_capture_coverage', {'status':'UNKNOWN'}),
             missing_execution_inputs=['price_tick', 'tick_effective_date_proof'],
             supplier_final_completeness=m['after']['status'])
+    elif scope=='CORE_MODELS_V1':
+        meta.update(qualification_scope='CORE_MODELS_V1',quality_status='CORE_MODELS_PASS_V1',
+            engineering_only=True,full_p0_pass=False,execution_qualified=True,
+            model_continuation_qualified=True,
+            execution_qualified_symbols=m['execution_qualified_symbols'],
+            execution_evidence_contract='RQ_OR_EXCHANGE_RULE_V1')
     if m.get('identity_capture'):
         meta['identity_capture'] = m['identity_capture']
         meta['identity_observed_range'] = m['identity_capture'].get('observed_range')
@@ -316,6 +326,61 @@ def seal(day, stock_output, output):
         return result
     except BaseException:
         (reader.root/'COMPLETE.json').unlink()
+        raise
+
+
+def qualify_core_models(source_manifest, output, execution_symbols):
+    """Create a new model-input version; retain all native missing tick evidence."""
+    import duckdb
+    import pandas as pd
+    from scripts.postclose_data_admission_v1 import audit_core_model_asset
+    source=rq.DailyInput(source_manifest,rq.profile(),scope='DAILY_SIGNALS_V1')
+    day=pd.Timestamp(source.meta['asof']).strftime('%Y%m%d')
+    out=output_root(output)
+    symbols=sorted(set(execution_symbols))
+    binding=dict(parent_manifest_sha256=rq.sha(source.root/'manifest.json'),execution_symbols=symbols,
+                 qualification_scope='CORE_MODELS_V1')
+    if (out/'COMPLETE.json').exists():
+        reader=rq.DailyInput(out/'manifest.json',rq.profile(),scope='CORE_MODELS_V1')
+        if reader.meta.get('qualification_binding')!=binding:raise ValueError('CORE_QUALIFICATION_BINDING_CHANGED')
+        audit_core_model_asset(reader,day,execution_symbols=symbols)
+        return reader
+    out.mkdir(parents=True,exist_ok=False)
+    db=out/'daily.duckdb';shutil.copyfile(source.db,db)
+    with duckdb.connect(str(db),config={'temp_directory':''}) as con:
+        identity=con.execute('SELECT * FROM identity_observed_today').df()
+        status=con.execute('SELECT * FROM execution_status WHERE date=?',[pd.Timestamp(day).date()]).df()
+        derived,proofs=close.apply_execution_rules(status,identity,symbols,day)
+        con.execute('BEGIN TRANSACTION')
+        for name,dtype in [('rule_price_tick','DOUBLE'),('tick_rule_evidence','VARCHAR'),('tick_source','VARCHAR')]:
+            con.execute('ALTER TABLE execution_status ADD COLUMN IF NOT EXISTS '+name+' '+dtype)
+        con.register('derived',derived)
+        con.execute('''UPDATE execution_status e SET rule_price_tick=n.rule_price_tick,
+            tick_rule_evidence=n.tick_rule_evidence,tick_source=n.tick_source FROM derived n
+            WHERE e.order_book_id=n.order_book_id AND e.date=n.date''')
+        con.execute('COMMIT');con.execute('CHECKPOINT')
+    now=rq.clock().isoformat()
+    meta=dict(source.meta,qualification_scope='CORE_MODELS_V1',quality_status='CORE_MODELS_PASS_V1',
+        engineering_only=True,full_p0_pass=False,execution_qualified=True,model_continuation_qualified=True,
+        execution_qualified_symbols=symbols,execution_rule_bindings=proofs,
+        execution_evidence_contract='RQ_OR_EXCHANGE_RULE_V1',qualification_binding=binding,
+        qualification_parent=dict(manifest=str(source.root/'manifest.json'),manifest_sha256=binding['parent_manifest_sha256'],
+            version=source.meta['version'],qualification_scope='DAILY_SIGNALS_V1',availability=source.meta['availability']),
+        availability=now,ingested_at=now,available_at=now,database_sha256=rq.sha(db),
+        version='asof_'+day+'_'+rq.sha(db)[:12],activated_in_production=False,
+        admission_reason='Explicit actual model execution set validated against versioned exchange rules; native quote-unit NULLs preserved')
+    for name in ('supplier_ready.json','supplier_ready_after.json'):
+        shutil.copyfile(source.root/name,out/name)
+    local.write_json(out/'source_metadata.json',meta)
+    local.write_json(out/'manifest.json',dict(version=meta['version'],files=[dict(path=p.name,sha256=rq.sha(p))
+        for p in (db,out/'source_metadata.json',out/'supplier_ready.json',out/'supplier_ready_after.json')]))
+    local.write_json(out/'COMPLETE.json',dict(manifest_sha256=rq.sha(out/'manifest.json')))
+    try:
+        reader=rq.DailyInput(out/'manifest.json',rq.profile(),scope='CORE_MODELS_V1')
+        audit_core_model_asset(reader,day,execution_symbols=symbols)
+        return reader
+    except BaseException:
+        (out/'COMPLETE.json').unlink()
         raise
 
 

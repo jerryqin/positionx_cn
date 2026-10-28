@@ -140,10 +140,12 @@ def previous_profiles(previous_run, day, dates, deep_profile, ret_profile):
     return *profiles, proofs
 
 
-def plan_freeze(out, day):
+def plan_freeze(out, day, *, actual_model_forward=False):
     """An actual write-time seal. A NOT_FORWARD replay is never promoted by this seal."""
     import pandas as pd
     from core import p0_rq_input as rq
+    if actual_model_forward:
+        require_actual_model_window(day)
     calendar = ROOT / 'config/ops/cn_exchange_calendar_2026.json'
     dates = sessions(calendar, read_json(calendar)['valid_to'])
     later = [d for d in dates if d > day]
@@ -151,6 +153,9 @@ def plan_freeze(out, day):
              'frozen_at': rq.clock().isoformat(), 'plan_sha256': rq.sha(out / 'plan.csv'),
              'ledger_sha256': rq.sha(out / 'model.duckdb'), 'research_state': 'NOT_FORWARD',
              'next_session': later[0] if later else None, 'forward_qualified': False}
+    if actual_model_forward:
+        proof.update(research_state='ACTUAL_MODEL_FORWARD', forward_qualified=True,
+                     authorization='CODEX_CLOSEOUT_20261028_SECTION_B')
     if later:
         proof['next_execution_not_before'] = pd.Timestamp(later[0]).tz_localize(rq.CST).replace(hour=9, minute=30).isoformat()
     write_json(out / 'plan_freeze.json', proof)
@@ -269,9 +274,21 @@ def model_exports(store, module, out, day, table, data_kind='MODEL_RESEARCH_ONLY
     return store.con.execute("SELECT trade_date,equity,cash,gross_market_value FROM forward_equity WHERE strategy_id=? AND ledger='BASE20' ORDER BY trade_date", [strategy]).df()
 
 
-def seed_research_ledger(dest, module, artifacts, dates, day, *, signals_only=False):
+def require_actual_model_window(day):
+    from core import p0_rq_input as rq
+    now = rq.clock()
+    if not (day > '20261028' and now.strftime('%Y%m%d') == day
+            and '1530' <= now.strftime('%H%M') < '1715'):
+        raise ValueError('ACTUAL_MODEL_FORWARD_OUTSIDE_AUTHORIZED_REAL_WINDOW')
+
+
+def seed_research_ledger(dest, module, artifacts, dates, day, *, signals_only=False, actual_forward_start=False):
     """Start an empty retrospective research day, without inventing a past session."""
     from research.research_store import ResearchStore
+    if actual_forward_start:
+        require_actual_model_window(day)
+        if signals_only:
+            raise ValueError('ACTUAL_MODEL_START_CANNOT_USE_SIGNAL_ONLY_SCOPE')
     dest = Path(dest).absolute()
     if (dest.resolve() != dest or not dest.is_relative_to(ROOT / 'reports')
             or dest.exists() or len(dates) < 2 or dates[-1] != day):
@@ -284,8 +301,15 @@ def seed_research_ledger(dest, module, artifacts, dates, day, *, signals_only=Fa
     if signals_only:
         proof.update(qualification_scope='DAILY_SIGNALS_V1', model_continuation_qualified=False,
                      execution_qualified=False)
+    if actual_forward_start:
+        proof.update(mode='EMPTY_ACTUAL_MODEL_FORWARD_START', forward_acceptance=True,
+                     actual_model_forward=True, model_continuation_qualified=True,
+                     authorization='CODEX_CLOSEOUT_20261028_SECTION_B')
     state.update(last_processed_date=dates[-2], status='EMPTY_RESEARCH_SEED_NOT_FORWARD',
                  research_seed=proof)
+    if actual_forward_start:
+        state.update(status='EMPTY_ACTUAL_MODEL_FORWARD_START', actual_model_forward=True,
+                     actual_model_start_date=day)
     fingerprint = policy.fingerprint(artifacts) if artifacts is not None else policy.fingerprint()
     with ResearchStore(dest) as store:
         store.con.execute('CREATE TABLE postclose_research_seed(proof_json VARCHAR)')
@@ -342,7 +366,7 @@ def signal_research_exports(store, module, source, day, out,
 
 
 def run_model(kind, source, profile, sets, details, dates, day, out, *, settlement_only=False,
-              fresh_research=False, signals_only=False):
+              fresh_research=False, signals_only=False, actual_forward_start=False, actual_model_forward=False):
     import pandas as pd
     from core import p0_rq_input as rq
     from research.research_store import ResearchStore
@@ -357,7 +381,16 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
         raise ValueError('SIGNALS_ONLY_REQUIRES_EMPTY_FRESH_RESEARCH_SEED')
     if getattr(source, 'meta', {}).get('qualification_scope') == 'DAILY_SIGNALS_V1' and not signals_only:
         raise ValueError('DAILY_SIGNALS_INPUT_CANNOT_RUN_MODEL_SESSION')
-    data_kind = 'SYNTHETIC_SAMPLE_NOT_MARKET' if sample else 'MODEL_RESEARCH_ONLY'
+    if actual_forward_start and (not fresh_research or not actual_model_forward):
+        raise ValueError('ACTUAL_MODEL_START_REQUIRES_NEW_EMPTY_ACCOUNT')
+    if actual_model_forward:
+        require_actual_model_window(day)
+        if sample or signals_only or settlement_only:
+            raise ValueError('ACTUAL_MODEL_REQUIRES_QUALIFIED_COMPLETE_SESSION')
+        # Validate actual preopen evidence even if this helper is called directly.
+        membership(profile, day)
+    data_kind = ('ACTUAL_QUALIFIED_POSTCLOSE' if actual_model_forward else
+                 'SYNTHETIC_SAMPLE_NOT_MARKET' if sample else 'MODEL_RESEARCH_ONLY')
     artifacts = ret.verify_frozen_prerequisites() if kind == 'ret120' else None
     fingerprint = policy.fingerprint(artifacts) if artifacts else policy.fingerprint()
     if kind == 'ret120' and not rq.enabled():
@@ -367,9 +400,11 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
     out.mkdir()
     if fresh_research:
         state, ledger_proof = seed_research_ledger(out / 'model.duckdb', module, artifacts, dates, day,
-                                                  signals_only=signals_only)
+                                                  signals_only=signals_only, actual_forward_start=actual_forward_start)
     else:
         state, ledger_proof = copy_ledger(profile['segment_db'], out / 'model.duckdb', policy.strategy_id, fingerprint, dates, day)
+        if actual_model_forward and state.get('actual_model_forward') is not True:
+            raise ValueError('ACTUAL_MODEL_CANNOT_INHERIT_HISTORICAL_STATE')
     if artifacts and state.get('artifact_hashes') != artifacts:
         raise ValueError('FROZEN_ARTIFACT_DRIFT')
     with ResearchStore(out / 'model.duckdb') as store:
@@ -428,22 +463,27 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
                                            table, snapshot, signal_diag, fingerprint, ledger_proof)
         store.con.execute('BEGIN TRANSACTION')
         try:
+            cash_before_entries = float(state['base_cash'])
+            pending_before = store.con.execute(f"SELECT count(*) FROM {table} WHERE strategy_id=? AND status='PENDING_ENTRY'", [policy.strategy_id]).fetchone()[0]
             if kind == 'deep':
                 deep.process_entries(store, histories, day, state, instrument_details=input_details, market_sessions=dates)
+                cash_before_exits = float(state['base_cash'])
                 deep.process_exits_and_mark(store, histories, day, state, market_sessions=dates)
                 signal_diag = {'new': 0, 'not_emitted': 'SETTLEMENT_SAMPLE_ONLY'} if settlement_only else {'new': deep.detect_signals(store, histories, members, day, state)}
                 exit_diag = {'rule': 'S20_CLOSE'}
             else:
                 entry_diag = ret.process_entries(store, None, histories, day, dates, state, instrument_details=input_details)
+                cash_before_exits = float(state['base_cash'])
                 exit_diag = ret.process_exits_and_mark(store, histories, day, dates, state)
                 if settlement_only:
                     signal_diag = {'new': 0, 'not_emitted': 'SETTLEMENT_SAMPLE_ONLY'}
                 else:
-                    ret.persist_snapshot(store, snapshot, 'LOCAL_SEALED_REPLAY_NOT_FORWARD')
+                    ret.persist_snapshot(store, snapshot, 'ACTUAL_QUALIFIED_POSTCLOSE' if actual_model_forward else 'LOCAL_SEALED_REPLAY_NOT_FORWARD')
                     signal_diag = ret.detect_signals(store, None, snapshot, day, dates, instrument_details=input_details)
                 signal_diag['entry'] = entry_diag
             state['last_processed_date'] = day
-            state['status'] = 'SYNTHETIC_SAMPLE_NOT_FORWARD' if sample else 'ISOLATED_MODEL_REPLAY_NOT_FORWARD'
+            state['status'] = ('ACTUAL_MODEL_FORWARD' if actual_model_forward else
+                               'SYNTHETIC_SAMPLE_NOT_FORWARD' if sample else 'ISOLATED_MODEL_REPLAY_NOT_FORWARD')
             module.state_counts(store, state)
             store.save_state(policy.strategy_id, fingerprint, state)
             # Never create an accepted historical forward_sessions row.
@@ -454,11 +494,23 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
             store.con.execute('ROLLBACK')
             raise
         curve = model_exports(store, module, out, day, table, data_kind)
+        entry_count = store.con.execute("SELECT count(*) FROM forward_positions WHERE strategy_id=? AND ledger='BASE20' AND entry_date=?", [policy.strategy_id, day]).fetchone()[0]
+        exit_count = store.con.execute("SELECT count(*) FROM forward_trades WHERE strategy_id=? AND ledger='BASE20' AND exit_date=?", [policy.strategy_id, day]).fetchone()[0]
+        mark_count = store.con.execute("SELECT count(*) FROM forward_equity WHERE strategy_id=? AND ledger='BASE20' AND trade_date=?", [policy.strategy_id, day]).fetchone()[0]
+        stages = {'entries': {'status': 'CALCULATED' if entry_count else 'CALCULATED_ZERO', 'count': entry_count,
+                              'pending_before_evaluation': pending_before},
+                  'exits': {'status': 'CALCULATED' if exit_count else 'CALCULATED_ZERO', 'count': exit_count,
+                            'frozen_exit_function_evaluated': True},
+                  'settlement': {'status': 'CALCULATED' if mark_count else 'BLOCKED', 'equity_rows': mark_count},
+                  'cash_order': {'opening_cash_before_entries': cash_before_entries,
+                                 'cash_after_entries_before_close_exits': cash_before_exits,
+                                 'close_exit_cash_used_for_open_entries': False}}
         write_json(out / 'state.json', state)
     summary = {'status': 'SAMPLE_SETTLEMENT_COMPLETE' if sample else 'MODEL_REPLAY_COMPLETE', 'strategy_id': policy.strategy_id,
                'policy_hash': fingerprint, 'ledger_source': ledger_proof,
                'state': state, 'signals': signal_diag, 'exit': exit_diag,
-               'data_kind': data_kind, 'forward_acceptance': False,
+                'data_kind': data_kind, 'forward_acceptance': actual_model_forward,
+                'calculation_stages': stages,
                'benchmark_close': None, 'benchmark_comparison_status': 'MISSING_LOCAL_BENCHMARK',
                'execution_units': 'LOT_ROUNDED_RESEARCH' if kind == 'deep' else 'FRACTIONAL_RESEARCH_UNITS'}
     if not sample:
@@ -472,7 +524,7 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
     if snapshot is not None:
         summary['snapshot'] = {'universe_count': len(snapshot), 'valid_feature_count': int(snapshot.feature_valid.sum()),
                                 'q5_count': int(snapshot.selected_q5.sum())}
-    summary['plan_freeze'] = plan_freeze(out, day)
+    summary['plan_freeze'] = plan_freeze(out, day, actual_model_forward=actual_model_forward)
     write_json(out / 'summary.json', summary)
     return summary, curve
 
@@ -518,7 +570,8 @@ def run_funnel(source, sets, day, out, *, amount_unit_binding=None, pit_proof=No
     if amount_unit_binding is not None:
         from scripts.qualify_postclose_funnel import run as qualify
         result = qualify(source.db, day, out, amount_unit_binding=amount_unit_binding,
-                         source=source, membership_sets=sets, membership_proof=pit_proof)
+                         source=source, membership_sets=sets, membership_proof=pit_proof,
+                         execution_preview=True, nav=1000000.0)
         result = dict(result, structure_input_status=result['status'],
                       status='STRUCTURE_RESEARCH_COMPLETE' if result['status'] == 'PASS_STRUCTURE_ADV20_INPUTS' else 'BLOCKED',
                       exit_qualification='UNQUALIFIED_NO_MODEL_HOLDINGS_OR_EXITS_EMITTED',

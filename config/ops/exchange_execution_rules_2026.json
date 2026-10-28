@@ -1,0 +1,334 @@
+{
+  "contract": "EXCHANGE_EXECUTION_RULE_V1",
+  "source": "EXCHANGE_RULE_DERIVED",
+  "description": "Explicit native CS identity + exchange + board + official code allocation jointly classify CNY A shares/CDRs; this is not an RQData price_tick observation. ST/name not inferred. Evidence is reusable until an explicit superseding/conflicting provision changes this version.",
+  "currency": "CNY",
+  "checked_sse_deferred_clauses": [
+    "3.6.2",
+    "3.6.3",
+    "3.6.4",
+    "3.6.9",
+    "3.6.10"
+  ],
+  "deferred_check_result": "No 1.2/3.3.8/3.3.11/3.3.12/6.1/6.7 deferral in attachment3.",
+  "sources": {
+    "sse_rules": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/sse2026_rules.docx",
+      "url": "https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/10816482/files/e3a3b98e36894edca77841837936e006.docx",
+      "sha256": "fc922c433438b2636cb631eab25cca405209712acbb6aaded768c45456ff8888",
+      "acquired_at": "2026-10-28T20:06:11.434515+08:00"
+    },
+    "sse_notice": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/sse2026_notice.html",
+      "url": "https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/c_20260424_10816482.shtml",
+      "sha256": "758840542d49dd5d448a4ff8f42e9210085afef7b5e5c01d2f56adfc4c8151c4",
+      "acquired_at": "2026-10-28T20:06:10.159069+08:00"
+    },
+    "sse_deferred": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/sse2026_suspended.docx",
+      "url": "https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/10816482/files/c4510656662e48dc9d8d0deb8cc864b3.docx",
+      "sha256": "f4a0d0976a01e3e95f82460170900993824b70d91183e42d09e13ba10a9958c5",
+      "acquired_at": "2026-10-28T20:06:19.122777+08:00"
+    },
+    "sse_codes": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/sse2026_codes.docx",
+      "url": "https://www.sse.com.cn/lawandrules/guide/stock/jyglywznylc/zn/c/10830435/files/efee43e6d2444a27b4e202c4ecb7c0ee.docx",
+      "sha256": "985519ef55e380edf86729db40d12674eccb1da89dacfd6809e1f17be1e527c4",
+      "acquired_at": "2026-10-28T20:06:11.454198+08:00"
+    },
+    "sse_codes_notice": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/sse2026_codes_notice.html",
+      "url": "https://www.sse.com.cn/lawandrules/guide/stock/jyglywznylc/zn/c/c_20260831_10830435.shtml",
+      "sha256": "e811e23aede6893dffa89a328039ac1498a01827c84215f78b9c3395751c5c48",
+      "acquired_at": "2026-10-28T20:07:31.203244+08:00"
+    },
+    "sse_star_qa": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/sse_star_qa.html",
+      "url": "https://edu.sse.com.cn/tib/qa/c/4761956.shtml",
+      "sha256": "4a728c699cb6af6723dfcf4524d0fbe4210bfe2ed6fe7869c01226d0e34bd263",
+      "acquired_at": "2026-10-28T20:06:16.721698+08:00"
+    },
+    "szse_rules": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/szse2026_rules.pdf",
+      "url": "https://docs.static.szse.cn/www/lawrules/rule/trade/current/W020260424690713155663.pdf",
+      "sha256": "9b66f8b0db70f84a25ef1ccb4ee2351001724e408117552d75f6d8993483c586",
+      "acquired_at": "2026-10-28T20:06:13.134295+08:00"
+    },
+    "szse_notice": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/szse2026_notice.html",
+      "url": "https://www.szse.cn/www/lawrules/rule/stock/t20260424_620190.html",
+      "sha256": "d3c1f49d3d3753f632fea90774f90852c81c2d38126cf4973d3b4b9661bc9fbc",
+      "acquired_at": "2026-10-28T20:07:29.839061+08:00"
+    },
+    "szse_codes": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/szse2026_codes.pdf",
+      "url": "https://www.szse.cn/marketServices/technicalservice/doc/P020260306733846760075.pdf",
+      "sha256": "1acbb35917105252edd5502377cc8ccfdd566d7cd62f37fc3838cf11483336c4",
+      "acquired_at": "2026-10-28T20:07:29.936838+08:00"
+    },
+    "szse_codes_index": {
+      "path": "reports/daily_closeout_20261028/TEMP/rules/szse_codes_index.html",
+      "url": "https://www.szse.cn/marketServices/technicalservice/doc/",
+      "sha256": "48e4cadcb010e418361fe0487a463f4d5bc3b94b246947c291bc62ca01aeeb42",
+      "acquired_at": "2026-10-28T20:06:13.488939+08:00"
+    }
+  },
+  "classifications": [
+    {
+      "classification_rule_id": "SSE_CODE_GUIDE_2026_REV3_MAIN_A",
+      "exchange": "XSHG",
+      "board_type": "MainBoard",
+      "code_ranges": [
+        [
+          "600000",
+          "600999"
+        ],
+        [
+          "601000",
+          "601999"
+        ],
+        [
+          "603000",
+          "603999"
+        ],
+        [
+          "605000",
+          "605999"
+        ]
+      ],
+      "instrument_class": "ORDINARY_A_SHARE",
+      "effective_from": "2026-08-31",
+      "source_ids": [
+        "sse_codes",
+        "sse_codes_notice"
+      ],
+      "additional_clauses": []
+    },
+    {
+      "classification_rule_id": "SSE_CODE_GUIDE_2026_REV3_STAR_A",
+      "exchange": "XSHG",
+      "board_type": "KSH",
+      "code_ranges": [
+        [
+          "688000",
+          "688999"
+        ]
+      ],
+      "instrument_class": "ORDINARY_A_SHARE",
+      "effective_from": "2026-08-31",
+      "source_ids": [
+        "sse_codes",
+        "sse_codes_notice"
+      ],
+      "additional_clauses": []
+    },
+    {
+      "classification_rule_id": "SSE_CODE_GUIDE_2026_REV3_STAR_CDR",
+      "exchange": "XSHG",
+      "board_type": "KSH",
+      "code_ranges": [
+        [
+          "689000",
+          "689999"
+        ]
+      ],
+      "instrument_class": "CDR_A_RULES",
+      "effective_from": "2026-08-31",
+      "source_ids": [
+        "sse_codes",
+        "sse_codes_notice"
+      ],
+      "additional_clauses": [
+        "1.2_CDR_APPLIES_A",
+        "6.1_STAR_CDR"
+      ]
+    },
+    {
+      "classification_rule_id": "SZSE_CODE_TABLE_202603_MAIN_A",
+      "exchange": "XSHE",
+      "board_type": "MainBoard",
+      "code_ranges": [
+        [
+          "000001",
+          "000999"
+        ],
+        [
+          "001200",
+          "001999"
+        ],
+        [
+          "002000",
+          "004999"
+        ]
+      ],
+      "instrument_class": "ORDINARY_A_SHARE",
+      "effective_from": "2026-03-06",
+      "source_ids": [
+        "szse_codes",
+        "szse_codes_index"
+      ],
+      "additional_clauses": []
+    },
+    {
+      "classification_rule_id": "SZSE_CODE_TABLE_202603_MAIN_CDR",
+      "exchange": "XSHE",
+      "board_type": "MainBoard",
+      "code_ranges": [
+        [
+          "001001",
+          "001199"
+        ]
+      ],
+      "instrument_class": "CDR_A_RULES",
+      "effective_from": "2026-03-06",
+      "source_ids": [
+        "szse_codes",
+        "szse_codes_index"
+      ],
+      "additional_clauses": [
+        "1.2_MAIN_CDR_APPLIES_MAIN_A"
+      ]
+    },
+    {
+      "classification_rule_id": "SZSE_CODE_TABLE_202603_GEM_A",
+      "exchange": "XSHE",
+      "board_type": "GEM",
+      "code_ranges": [
+        [
+          "300000",
+          "309799"
+        ]
+      ],
+      "instrument_class": "ORDINARY_A_SHARE",
+      "effective_from": "2026-03-06",
+      "source_ids": [
+        "szse_codes",
+        "szse_codes_index"
+      ],
+      "additional_clauses": []
+    },
+    {
+      "classification_rule_id": "SZSE_CODE_TABLE_202603_GEM_CDR",
+      "exchange": "XSHE",
+      "board_type": "GEM",
+      "code_ranges": [
+        [
+          "309800",
+          "309999"
+        ]
+      ],
+      "instrument_class": "CDR_A_RULES",
+      "effective_from": "2026-03-06",
+      "source_ids": [
+        "szse_codes",
+        "szse_codes_index"
+      ],
+      "additional_clauses": [
+        "1.2_GEM_CDR_APPLIES_GEM_A"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "XSHG_MainBoard_LIMIT_BUY_2026",
+      "version": "2026-07-06",
+      "exchange": "XSHG",
+      "board_type": "MainBoard",
+      "effective_from": "2026-07-06",
+      "effective_to": null,
+      "price_tick": "0.01",
+      "minimum_order_quantity": 100,
+      "quantity_step": 100,
+      "clauses": [
+        "1.2",
+        "3.3.11",
+        "3.3.12",
+        "3.3.8"
+      ],
+      "primary_source_id": "sse_rules",
+      "source_ids": [
+        "sse_rules",
+        "sse_notice",
+        "sse_deferred"
+      ],
+      "order_scope": "AUCTION_LIMIT_BUY",
+      "conflict": false
+    },
+    {
+      "rule_id": "XSHG_KSH_LIMIT_BUY_2026",
+      "version": "2026-07-06",
+      "exchange": "XSHG",
+      "board_type": "KSH",
+      "effective_from": "2026-07-06",
+      "effective_to": null,
+      "price_tick": "0.01",
+      "minimum_order_quantity": 200,
+      "quantity_step": 1,
+      "clauses": [
+        "1.2",
+        "3.3.11",
+        "3.3.12",
+        "6.1",
+        "6.7",
+        "SSE_EDU_4761956_Q7"
+      ],
+      "primary_source_id": "sse_rules",
+      "source_ids": [
+        "sse_rules",
+        "sse_notice",
+        "sse_deferred",
+        "sse_star_qa"
+      ],
+      "order_scope": "AUCTION_LIMIT_BUY",
+      "conflict": false
+    },
+    {
+      "rule_id": "XSHE_MainBoard_LIMIT_BUY_2026",
+      "version": "2026-07-06",
+      "exchange": "XSHE",
+      "board_type": "MainBoard",
+      "effective_from": "2026-07-06",
+      "effective_to": null,
+      "price_tick": "0.01",
+      "minimum_order_quantity": 100,
+      "quantity_step": 100,
+      "clauses": [
+        "1.2",
+        "3.3.11",
+        "3.3.12",
+        "3.3.8"
+      ],
+      "primary_source_id": "szse_rules",
+      "source_ids": [
+        "szse_rules",
+        "szse_notice"
+      ],
+      "order_scope": "AUCTION_LIMIT_BUY",
+      "conflict": false
+    },
+    {
+      "rule_id": "XSHE_GEM_LIMIT_BUY_2026",
+      "version": "2026-07-06",
+      "exchange": "XSHE",
+      "board_type": "GEM",
+      "effective_from": "2026-07-06",
+      "effective_to": null,
+      "price_tick": "0.01",
+      "minimum_order_quantity": 100,
+      "quantity_step": 100,
+      "clauses": [
+        "1.2",
+        "3.3.11",
+        "3.3.12",
+        "3.3.8"
+      ],
+      "primary_source_id": "szse_rules",
+      "source_ids": [
+        "szse_rules",
+        "szse_notice"
+      ],
+      "order_scope": "AUCTION_LIMIT_BUY",
+      "conflict": false
+    }
+  ]
+}

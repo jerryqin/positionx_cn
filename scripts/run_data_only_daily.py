@@ -1,4 +1,4 @@
-"""HTTPS data tasks and published-input local model reports; no Broker or Forward."""
+"""HTTPS data tasks and local model reports; no Broker or formal-ledger writes."""
 from __future__ import annotations
 import argparse
 import csv
@@ -51,6 +51,11 @@ def result_files(r):
     with ROOT.joinpath('DATA_STATUS.csv').open('w',encoding='utf-8-sig',newline='') as f:
         w=csv.writer(f);w.writerow(['target_date','strategy','status','version'])
         for key,value in r.get('strategies',{}).items():w.writerow([r['date'],key,value,r.get('version')])
+        funnel=r.get('funnel') or {}
+        structure=funnel.get('structure_input_status',funnel.get('status','NOT_RUN'))
+        risk=(funnel.get('execution_preview') or {}).get('status','NOT_RUN')
+        full=funnel.get('full_model_status','NOT_RUN')
+        w.writerow([r['date'],'funnel',f'structure={structure};risk={risk};full={full}',r.get('version')])
 
 
 def source_block(phase, day):
@@ -75,15 +80,25 @@ def require_source_allowed(phase, day):
 def latest_base(day):
     """Choose the newest accepted seal, never an older same-date path by name."""
     candidates=[]
-    for path in Path(rq.profile()['asset_root']).glob('versions/*/source_metadata.json'):
+    asset_root=Path(rq.profile()['asset_root'])
+    for path in list(asset_root.glob('versions/*/source_metadata.json'))+list(asset_root.glob('strategy_versions/*/source_metadata.json')):
         meta=local.read_json(path)
-        if (meta.get('quality_status')=='PASS' and meta.get('engineering_only') is False
+        full=meta.get('quality_status')=='PASS' and meta.get('engineering_only') is False
+        core=(meta.get('qualification_scope')=='CORE_MODELS_V1'
+              and meta.get('quality_status')=='CORE_MODELS_PASS_V1' and meta.get('engineering_only') is True
+              and meta.get('full_p0_pass') is False and meta.get('execution_qualified') is True
+              and meta.get('model_continuation_qualified') is True)
+        if ((full or core)
                 and meta.get('source')=='RQDATA' and meta['asof']<str(pd.Timestamp(day).date())
                 and pd.Timestamp(meta['availability'])<=pd.Timestamp(rq.clock())):
             candidates.append((meta['asof'],pd.Timestamp(meta['availability']),path.parent/'manifest.json'))
     if not candidates:
         raise ValueError('NO_ACCEPTED_HISTORY_BASE')
     selected=max((row[0],row[1]) for row in candidates)
+    profile=local.read_json(ROOT/'config/ops/p0_core_recovery_v01.json')
+    dates=local.sessions(profile['calendar'],day)
+    if len(dates)<2 or selected[0].replace('-','')!=dates[-2]:
+        raise ValueError('ADJACENT_ACCEPTED_HISTORY_BASE_MISSING')
     matches=[row[2] for row in candidates if row[:2]==selected]
     if len(matches)!=1:
         raise ValueError('AMBIGUOUS_ACCEPTED_HISTORY_BASE')
@@ -98,22 +113,32 @@ def model_report(reader, day):
         if (report.get('business_date')!=day or report.get('input',{}).get('version')!=reader.meta['version']
                 or report.get('database_sha256')!=reader.meta['database_sha256']
                 or report.get('manifest_sha256')!=rq.sha(reader.root/'manifest.json')
-                or report.get('forward_acceptance') is not False):
+                or report.get('closeout_version')!=report_entry.CLOSEOUT_VERSION):
             raise ValueError('MODEL_REPORT_PUBLISHED_INPUT_IDENTITY_MISMATCH')
         return root,report
     complete=[row for row in report_entry.daily_reports(day)
               if row[3].get('status')=='TWO_STRATEGY_REPORT_COMPLETE'
+               and row[3].get('closeout_version')==report_entry.CLOSEOUT_VERSION
+               and (not report_entry.actual_forward_window(day) or row[3].get('forward_acceptance') is True)
               and row[3].get('input',{}).get('version')==reader.meta['version']
               and row[3].get('database_sha256')==reader.meta['database_sha256']]
     if complete:
         root,report=validate(complete[-1][2])
         return root,report,True
+    timeout=600
+    now=rq.clock()
+    if day>'20261028' and day==now.strftime('%Y%m%d'):
+        deadline=now.replace(hour=17,minute=15,second=0,microsecond=0)
+        remaining=(deadline-now).total_seconds()
+        if remaining<=0:
+            raise ValueError('MODEL_REPORT_FINAL_DEADLINE_REACHED_NO_NEW_CALCULATION')
+        timeout=min(timeout,remaining)
     args=[str(ROOT/'.venv/Scripts/python.exe'),'-X','utf8','-B',
-          str(ROOT/'scripts/run_postclose_daily.py'),'--date',day]
+          str(ROOT/'scripts/run_postclose_daily.py'),'--date',day,'--allow-core-models']
     # A report from another same-day seal must not be mistaken for this input.
     if any(row[3].get('status')=='TWO_STRATEGY_REPORT_COMPLETE' for row in report_entry.daily_reports(day)):
         args.extend(['--output',str(report_entry.new_attempt(day))])
-    completed=subprocess.run(args,cwd=str(ROOT),capture_output=True,text=True,encoding='utf-8',timeout=240)
+    completed=subprocess.run(args,cwd=str(ROOT),capture_output=True,text=True,encoding='utf-8',timeout=timeout)
     try:
         summary=json.loads(completed.stdout.strip().splitlines()[-1])
         path=Path(summary['report']).resolve()
@@ -139,7 +164,8 @@ def run(phase, day=None):
         r=prep.preopen(day,out)
         register_pit(out/'pit/manifests',day)
         return dict(r,date=day)
-    try:reader=rq.open_inputs(day)
+    from scripts import run_postclose_daily as report_entry
+    try:reader=report_entry.full_model_input(day,allow_core_models=True)
     except rq.InputBlocked as exc:
         if not str(exc).startswith('RQ_EXACT_DATE_VERSION_MISSING:'):
             raise
@@ -153,15 +179,16 @@ def run(phase, day=None):
         if not (stock/'manifest.json').exists():
             if rq.clock().strftime('%H%M')>='1715':raise ValueError('FINAL_DEADLINE_NO_COMPLETE_STOCK_PARTITION')
             base=latest_base(day)
-            close.run(day,base,stock)
+            close.run(day,base,stock,scope='CORE_MODELS_V1',
+                      execution_symbols=report_entry.required_execution_symbols(day))
             if rq.clock().strftime('%H%M')>='1715':raise ValueError('CAPTURE_FINISHED_AFTER_FINAL_DEADLINE')
-        reader=prep.merge_candidate(stock,live=True)
+        reader=prep.merge_candidate(stock,live=True,scope='CORE_MODELS_V1')
         # Publish only an internally complete stock version; strategy gates remain separate.
         from scripts.collect_p0_rq_close_v01 import publish
-        from scripts.postclose_data_admission_v1 import audit_stock_asset
-        audit_stock_asset(reader,day)
-        publish(reader.root)
-        reader=rq.open_inputs(day)
+        from scripts.postclose_data_admission_v1 import audit_core_model_asset
+        audit_core_model_asset(reader,day)
+        publish(reader.root,scope='CORE_MODELS_V1')
+        reader=report_entry.full_model_input(day,allow_core_models=True)
     report_root,report,reused=model_report(reader,day)
     strategies={kind:('PASS' if report.get('strategies',{}).get(kind,{}).get('operations') else
                          'BLOCKED:'+str(report.get('strategies',{}).get(kind,{}).get('error',
@@ -173,7 +200,9 @@ def run(phase, day=None):
            strategies=strategies,details=report.get('strategies',{}),pit=report.get('pit'),
            report=str(report_root/'report.md'),report_status=report.get('status'),
            funnel=report.get('funnel'),idempotent_reuse=reused,transport=TRANSPORT,
-           consumer_versions={k:reader.meta['version'] for k in strategies},forward_or_trading_authorized=False)
+            consumer_versions={k:reader.meta['version'] for k in strategies},
+            model_forward=report.get('forward_acceptance') is True,
+            real_trading_authorized=False,forward_or_trading_authorized=False)
     local.write_json(receipt,r)
     local.write_json(OPS/'current.json',dict(date=day,version=r['version'],manifest_sha256=r['manifest_sha256']))
     result_files(r)

@@ -60,8 +60,122 @@ def bound_preopen_sets(sets, proof, day):
     return actual, current
 
 
+def build_execution_preview(candidates, features, identity, suspension, day, nav, config,
+                            *, rule_resolver=None):
+    """Run frozen ranking/risk preview on this seal, preserving every candidate."""
+    if rule_resolver is None:
+        from core.exchange_rule_evidence import resolve_rule
+        rule_resolver = resolve_rule
+    if not math.isfinite(float(nav)) or float(nav) <= 0:
+        raise ValueError('FUNNEL_PREVIEW_POSITIVE_CNY_NAV_REQUIRED')
+    if (candidates.symbol.duplicated().any() or features.symbol.duplicated().any()
+            or identity.order_book_id.duplicated().any()):
+        raise ValueError('FUNNEL_PREVIEW_DUPLICATE_INPUT_KEY')
+    if set(candidates.symbol) != set(features.symbol):
+        raise ValueError('FUNNEL_PREVIEW_FEATURE_BINDING_MISMATCH')
+    eng = funnel.load_engine()
+    panel = candidates.merge(features, on='symbol', validate='one_to_one')
+    panel['lane'] = np.where(panel.momentum_candidate.astype('boolean').fillna(False),
+                             'MOMENTUM', 'MEAN_REVERSION')
+    panel['nav'] = float(nav)
+    records = {rq.qmt_id(row['order_book_id']): row for row in identity.to_dict('records')}
+    ranked = []
+    for lane in ('MOMENTUM', 'MEAN_REVERSION'):
+        group = panel.loc[panel.lane.eq(lane)].copy()
+        if not group.empty:
+            ranked.append(eng.rank_panel(group, lane))
+    if not ranked:
+        panel['status'] = pd.Series(dtype='str')
+        return panel, {'status': 'PASS_EXECUTION_PREVIEW_NO_CANDIDATES', 'candidate_count': 0,
+                       'unknown_symbols': [], 'blocked_symbols': [], 'minimum_order_skips': [],
+                       'decision_counts': {}, 'output_counts': {}, 'nav': float(nav),
+                       'full_model_status': 'FUNNEL_FULL_MODEL_BLOCKED_EXIT_POLICY'}
+    rows = pd.concat(ranked, ignore_index=True).to_dict('records')
+    for row in rows:
+        symbol = row['symbol']
+        detail = records.get(symbol)
+        row.update(preview_decision='NOT_READY_STRUCTURE', classification='UNKNOWN',
+                   minimum_order_quantity=None, quantity_step=None, price_tick=None,
+                   rule_provenance=None, preview_shares=None, preview_notional=None,
+                   preview_weight=None, risk_budget_amount=None, executable_preview=False,
+                   future_open_price=None, future_entry_units=None,
+                   execution_status='CONDITIONAL_PREVIEW_NOT_A_MODEL_ENTRY',
+                   price_reference='T_CLOSE_ONLY_RECALCULATE_AT_ACTUAL_NEXT_OPEN')
+        if detail is None:
+            row['preview_decision'] = 'BLOCKED_EXACT_DAY_IDENTITY_MISSING'
+            continue
+        special = detail.get('special_type')
+        row['native_special_type'] = special
+        row['classification'] = special if special in ('Normal', 'ST', 'StarST') else 'UNKNOWN'
+        try:
+            rule = rule_resolver(dict(detail, qmt_symbol=symbol), day)
+            row.update(minimum_order_quantity=rule['minimum_order_quantity'],
+                       quantity_step=rule['quantity_step'], price_tick=rule['price_tick'],
+                       rule_provenance=json.dumps(rule, ensure_ascii=False, sort_keys=True, default=str))
+        except Exception as exc:
+            row['preview_decision'] = 'BLOCKED_TRADING_RULE_EVIDENCE'
+            row['rule_error'] = str(exc)
+            continue
+        if row['classification'] == 'UNKNOWN':
+            row['preview_decision'] = 'BLOCKED_UNKNOWN_SECURITY_CLASSIFICATION'
+            continue
+        suspended = suspension.get(symbol)
+        if not isinstance(suspended, (bool, np.bool_)):
+            row['preview_decision'] = 'BLOCKED_EXACT_DAY_SUSPENSION_UNKNOWN'
+            continue
+        if suspended:
+            row['preview_decision'] = 'SKIP_SUSPENDED'
+            continue
+        ready = row['setup_state'] == 'CONFIRMED_RETEST_T'
+        if row['lane'] == 'MEAN_REVERSION':
+            ready = ready and pd.notna(row.get('trend_recovered')) and bool(row['trend_recovered'])
+        if not ready:
+            continue
+        sizing = eng.preview_size(row.get('raw_close'), row.get('stop_raw'),
+                                  row.get('adv20_amount'), float(nav), row['lane'], config['risk_preview'],
+                                  minimum_order_quantity=row['minimum_order_quantity'],
+                                  quantity_step=row['quantity_step'])
+        row.update(sizing)
+        if sizing['sizing_status'] != 'PASS_EXECUTION_QUANTITY_PREVIEW':
+            row['preview_decision'] = sizing['sizing_status']
+            continue
+        row['executable_preview'] = True
+        row['preview_decision'] = 'CONDITIONAL_NEXT_OPEN_ZONE_AND_HUMAN_APPROVAL'
+    result = pd.DataFrame(rows)
+    for field in ('minimum_order_quantity', 'quantity_step', 'preview_shares'):
+        result[field] = pd.to_numeric(result[field], errors='raise').astype('Int64')
+    result['status'] = 'POOL'
+    for lane in ('MOMENTUM', 'MEAN_REVERSION'):
+        group = result.loc[result.lane.eq(lane)]
+        ready = group.loc[group.executable_preview]
+        cap = config['selection_caps']['prepare_manual_momentum' if lane == 'MOMENTUM'
+                                       else 'prepare_manual_mean_reversion']
+        prepared = set(ready.head(cap).symbol)
+        ready_symbols = set(ready.head(config['selection_caps']['ready_per_lane']).symbol) - prepared
+        watched = set(group.loc[~group.symbol.isin(prepared | ready_symbols)]
+                      .head(config['selection_caps']['watch_per_lane']).symbol)
+        result.loc[result.symbol.isin(watched), 'status'] = 'WATCH'
+        result.loc[result.symbol.isin(ready_symbols), 'status'] = 'READY'
+        result.loc[result.symbol.isin(prepared), 'status'] = 'PREPARE_MANUAL'
+    blocked = result.preview_decision.str.startswith('BLOCKED_')
+    summary = {'status': 'PARTIAL_EXECUTION_PREVIEW' if blocked.any() else 'PASS_EXECUTION_PREVIEW',
+               'candidate_count': len(result), 'nav': float(nav),
+               'nav_semantics': 'PREVIEW_ASSUMED_CNY_NAV_NOT_ACCOUNT_EQUITY',
+               'ranked_all_candidates_before_execution_constraints': True,
+               'decision_counts': {str(k): int(v) for k, v in result.preview_decision.value_counts().items()},
+               'unknown_symbols': sorted(result.loc[result.classification.eq('UNKNOWN'), 'symbol']),
+               'blocked_symbols': result.loc[blocked, ['symbol', 'preview_decision']].to_dict('records'),
+               'minimum_order_skips': result.loc[result.preview_decision.eq('SKIP_MIN_ORDER_RISK'),
+                   ['symbol', 'minimum_order_quantity', 'quantity_step', 'sizing_limit']].to_dict('records')
+                   if 'sizing_limit' in result else [],
+               'output_counts': result.groupby(['lane', 'status']).size().unstack(fill_value=0).to_dict(orient='index'),
+               'future_open_and_quantity': 'UNKNOWN_NOT_EXECUTED',
+               'full_model_status': 'FUNNEL_FULL_MODEL_BLOCKED_EXIT_POLICY'}
+    return result, summary
+
+
 def run(database, day, output, membership_database=None, amount_unit_binding=None, *,
-        source=None, membership_sets=None, membership_proof=None):
+        source=None, membership_sets=None, membership_proof=None, execution_preview=False, nav=1_000_000.0):
     out = Path(output).resolve()
     if not (out.is_relative_to(ROOT/'reports') or out.is_relative_to(Path('D:/positionx_data').resolve())):
         raise ValueError('OUTPUT_OUTSIDE_AUTHORIZED_DATA_ROOTS')
@@ -73,10 +187,17 @@ def run(database, day, output, membership_database=None, amount_unit_binding=Non
     if source is not None and (Path(source.db).resolve() != database
             or source.meta.get('business_date') != pd.Timestamp(day).date().isoformat()):
         raise ValueError('FUNNEL_SOURCE_VERSION_OR_DATE_MISMATCH')
+    if execution_preview and (source is None or pit is None or not verify_unit(amount_unit_binding)):
+        raise ValueError('FUNNEL_EXECUTION_PREVIEW_REQUIRES_SEALED_SOURCE_PIT_AND_CNY_BINDING')
     if (out/'summary.json').exists():
         old = local.read_json(out/'summary.json')
         if old['input_sha256'] != digest or old['target_date'] != day or old.get('actual_preopen_pit') != pit:
             raise ValueError('IMMUTABLE_FUNNEL_COLLISION')
+        if execution_preview and ('execution_preview' not in old
+                or old['execution_preview'].get('nav') != float(nav)
+                or old['execution_preview'].get('configuration_sha256') != rq.sha(funnel.CFG)
+                or old['execution_preview'].get('amount_unit_binding_sha256') != rq.sha(amount_unit_binding)):
+            raise ValueError('IMMUTABLE_FUNNEL_PREVIEW_SCOPE_OR_NAV_MISMATCH_USE_NEW_OUTPUT')
         if verify_unit(amount_unit_binding):
             old=dict(old,status='PASS_STRUCTURE_ADV20_INPUTS',amount_unit='CNY',
                      amount_unit_binding=str(amount_unit_binding),
@@ -88,6 +209,8 @@ def run(database, day, output, membership_database=None, amount_unit_binding=Non
         bars = c.execute('SELECT * FROM raw_daily ORDER BY order_book_id,date').df()
         identity = c.execute('SELECT * FROM identity_observed_today').df()
         full = set(identity.order_book_id.map(rq.qmt_id))
+        suspension = (c.execute('SELECT order_book_id,status_suspended FROM execution_status WHERE date=?',
+                               [pd.Timestamp(day).date()]).df() if execution_preview else None)
     if membership_sets is None:
         with local.read_db(membership_database or database) as c:
             mem = c.execute('SELECT * FROM postclose_membership').df()
@@ -149,9 +272,27 @@ def run(database, day, output, membership_database=None, amount_unit_binding=Non
         amount_unit='CNY' if qualified else 'RQ_VENDOR_ORIGINAL_UNQUALIFIED',
         amount_unit_binding=str(amount_unit_binding) if amount_unit_binding else None,
         forward_status='ISOLATED_RESEARCH_NOT_FORWARD' if pit else 'HISTORY_ONLY_PENDING_TRUE_PREOPEN_PIT',exit_rule='UNQUALIFIED_SEPARATE_FROM_DATA_SUPPLY')
+    preview = None
+    if execution_preview:
+        if suspension.order_book_id.duplicated().any():
+            raise ValueError('FUNNEL_PREVIEW_DUPLICATE_EXACT_DAY_STATUS')
+        status = {rq.qmt_id(r['order_book_id']): r['status_suspended'] for r in suspension.to_dict('records')}
+        preview, report['execution_preview'] = build_execution_preview(candidates, feature, identity,
+                                                                       status, day, nav, fc)
+        report['execution_preview']['amount_unit_binding_sha256'] = rq.sha(amount_unit_binding)
+        report['execution_preview']['risk_parameters'] = fc['risk_preview']
+        report['execution_preview']['next_open_policy'] = fc['next_open_policy']
+        report['execution_preview']['configuration_sha256'] = rq.sha(funnel.CFG)
+        report['full_model_status'] = 'FUNNEL_FULL_MODEL_BLOCKED_EXIT_POLICY'
+        report['input_version'] = source.meta['version']
     if rq.sha(database)!=digest:raise ValueError('SOURCE_CHANGED_DURING_FUNNEL_CHECK')
     out.mkdir(parents=True,exist_ok=False)
     candidates.to_parquet(out/'candidates.parquet',index=False)
     feature.to_parquet(out/'features.parquet',index=False)
+    if preview is not None:
+        preview.to_parquet(out/'execution_preview.parquet',index=False)
+        preview.to_csv(out/'execution_preview.csv',index=False,encoding='utf-8-sig')
+        preview.loc[preview.status.isin(['PREPARE_MANUAL','READY','WATCH'])].to_csv(
+            out/'action_sheet.csv',index=False,encoding='utf-8-sig')
     local.write_json(out/'summary.json',report)
     return report

@@ -57,8 +57,10 @@ def verified_existing(out, day, base, *, scope='P0_COMPLETE'):
         raise ValueError('INCOMPLETE_ATTEMPT_RETAINED_USE_NEW_OUTPUT')
     m = local.read_json(marker)
     research = scope == 'DAILY_SIGNALS_V1'
-    expected_status = 'PASS_DAILY_SIGNALS_CANDIDATE_NOT_P0' if research else 'PASS_CANDIDATE_NOT_PRODUCTION'
-    if (scope not in ('P0_COMPLETE','DAILY_SIGNALS_V1')
+    expected_status = {'P0_COMPLETE':'PASS_CANDIDATE_NOT_PRODUCTION',
+        'DAILY_SIGNALS_V1':'PASS_DAILY_SIGNALS_CANDIDATE_NOT_P0',
+        'CORE_MODELS_V1':'PASS_CORE_MODELS_CANDIDATE_NOT_P0'}.get(scope)
+    if (expected_status is None
             or m.get('qualification_scope','P0_COMPLETE') != scope
             or m.get('target_date') != day or m.get('status') != expected_status
             or m.get('base_manifest_sha256') != rq.sha(base)
@@ -68,6 +70,37 @@ def verified_existing(out, day, base, *, scope='P0_COMPLETE'):
     if identity_binding and rq.sha(identity_binding['manifest']) != identity_binding.get('manifest_sha256'):
         raise ValueError('EXISTING_IDENTITY_CAPTURE_BINDING_FAILED')
     return m
+
+
+def apply_execution_rules(status, identity, symbols, day):
+    """Add separately sourced rule evidence without overwriting native tick NULLs."""
+    from core.exchange_rule_evidence import resolve_rule, verify_rule_evidence
+    result=status.copy()
+    result['rule_price_tick']=float('nan')
+    result['tick_rule_evidence']=None
+    result['tick_source']=None
+    wanted={rq.rq_id(s) for s in symbols}
+    rows=identity.set_index('order_book_id',drop=False)
+    if not wanted.issubset(set(rows.index)):
+        raise rq.InputBlocked('RULE_EXECUTION_IDENTITY_MISSING')
+    bindings={}
+    for obid in sorted(wanted):
+        native=rows.loc[obid].to_dict()
+        proof=resolve_rule(native,day,decision=rq.clock())
+        verify_rule_evidence(proof,day,identity_row=native,decision=rq.clock())
+        select=result.order_book_id.eq(obid)&pd.to_datetime(result.date).dt.strftime('%Y%m%d').eq(day)
+        if int(select.sum())!=1:raise rq.InputBlocked('RULE_EXECUTION_STATUS_ROW_MISSING:'+obid)
+        existing=result.loc[select,'price_tick']
+        if existing.notna().any() and not existing.dropna().eq(proof['price_tick']).all():
+            raise rq.InputBlocked('RQ_AND_RULE_QUOTE_UNIT_CONFLICT:'+obid)
+        payload=json.dumps(dict(identity=proof['identity'],evidence=proof),ensure_ascii=False,default=str)
+        result.loc[select,'rule_price_tick']=proof['price_tick']
+        result.loc[select,'tick_rule_evidence']=payload
+        result.loc[select,'tick_source']='EXCHANGE_RULE_DERIVED'
+        bindings[rq.qmt_id(obid)]=dict(rule_id=proof['rule_id'],version=proof['version'],
+            effective_from=proof['effective_from'],source_sha256=proof['source_sha256'],
+            acquired_at=proof['acquired_at'],source='EXCHANGE_RULE_DERIVED')
+    return result,bindings
 
 
 def saved_research_candidate(day, base_manifest, output, *, session_manifest,
@@ -235,28 +268,36 @@ def validate_status_overlap(existing, incoming):
             raise rq.InputBlocked('CAPTURE_STATUS_KEY_CONFLICT:' + field)
 
 
-def run(day, base_manifest, output, provider=None):
+def run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', execution_symbols=None):
     try:
-        return _run(day, base_manifest, output, provider)
+        return _run(day, base_manifest, output, provider,scope=scope,execution_symbols=execution_symbols)
     finally:
         for guard in _WRITE_GUARDS:
             guard[0] = False
 
 
-def _run(day, base_manifest, output, provider=None):
+def _run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', execution_symbols=None):
+    if scope not in ('P0_COMPLETE','CORE_MODELS_V1'):
+        raise ValueError('LIVE_CAPTURE_SCOPE_INVALID')
+    core=scope=='CORE_MODELS_V1'
+    execution_symbols=sorted(set(execution_symbols or []))
     out = Path(output).absolute()
     if out.resolve() != out or not out.is_relative_to(ROOT / 'reports'):
         raise ValueError('OUTPUT_MUST_STAY_IN_REPOSITORY_REPORTS')
     base_manifest = Path(base_manifest).resolve()
-    existing = verified_existing(out, day, base_manifest) if (out/'manifest.json').exists() else None
+    existing = verified_existing(out, day, base_manifest,scope=scope) if (out/'manifest.json').exists() else None
     if existing:
+        if core and sorted(existing.get('execution_qualified_symbols',[]))!=execution_symbols:
+            raise ValueError('RESUME_BINDING_FAILED_EXECUTION_SET_CHANGED')
         return dict(existing, reused_without_download=True)
     rq.require_trading_date(day)
-    base = rq.DailyInput(base_manifest, rq.profile())
+    base_scope=local.read_json(base_manifest.parent/'source_metadata.json').get('qualification_scope','P0_COMPLETE')
+    base = rq.DailyInput(base_manifest, rq.profile(),scope=base_scope)
     dates = [d for d in local.sessions(ROOT / 'config/ops/cn_exchange_calendar_2026.json', day)
              if base.meta['asof'].replace('-', '') < d <= day]
     if not dates or len(dates) > 5:
         raise ValueError('REQUIRES_ONE_TO_FIVE_MISSING_SESSIONS')
+    if core and dates!=[day]:raise ValueError('CORE_MODELS_REQUIRES_IMMEDIATE_PREVIOUS_SESSION')
     # Only writes under this new candidate. Native DuckDB is also given an exact path.
     out.mkdir(parents=True, exist_ok=True)
     active = [True]
@@ -293,6 +334,7 @@ def _run(day, base_manifest, output, provider=None):
             return c.execute('SELECT * FROM '+name).df() if name in {r[0] for r in c.execute('SHOW TABLES').fetchall()} else pd.DataFrame()
     binding = out / 'capture.json'
     expected_binding = dict(target_date=day, base_manifest_sha256=rq.sha(base_manifest))
+    if core:expected_binding.update(qualification_scope=scope,execution_symbols=execution_symbols)
     if db.exists() and not binding.exists():
         raise ValueError('UNBOUND_PARTIAL_DATABASE')
     if binding.exists() and local.read_json(binding) != expected_binding:
@@ -340,8 +382,13 @@ def _run(day, base_manifest, output, provider=None):
             raise rq.InputBlocked('INCREMENT_STATUS_RESPONSE_EMPTY')
         s = s.rename_axis('date').reset_index().melt('date', var_name='order_book_id', value_name='status_suspended')
         s['status_available_at'] = rq.clock().isoformat()
-        s['price_tick'] = s.order_book_id.map(fetch(p, 'get_tick_size', missing))
-        s['tick_available_at'] = rq.clock().isoformat()
+        if core:
+            s['price_tick']=float('nan');s['tick_available_at']=None
+            incoming_execution=[symbol for symbol in execution_symbols if rq.rq_id(symbol) in set(missing)]
+            s,_=apply_execution_rules(s,identity,incoming_execution,day)
+        else:
+            s['price_tick'] = s.order_book_id.map(fetch(p, 'get_tick_size', missing))
+            s['tick_available_at'] = rq.clock().isoformat()
         validate_status_overlap(done_status, s)
         save('execution_status', s, append=True)
     missing = sorted(set(ids)-factor_ids)
@@ -359,7 +406,7 @@ def _run(day, base_manifest, output, provider=None):
         expected = set(identity.loc[pd.to_datetime(identity.listed_date).dt.date.le(d), 'order_book_id'])
         b = bars.loc[pd.to_datetime(bars.date).dt.date.eq(d)]
         s = states.loc[pd.to_datetime(states.date).dt.date.eq(d) & states.order_book_id.isin(expected)]
-        quality[date] = old.validate_day(b, s, expected, d)
+        quality[date] = old.validate_day(b, s, expected, d,require_tick=not core)
     reference_dir = ROOT/'reports'/('postclose_increment_'+day)
     ref = local.read_json(reference_dir/'references.json') if (reference_dir/'references.json').exists() else None
     if ref and rq.sha(reference_dir/'references.duckdb') == ref['sha256']:
@@ -399,6 +446,10 @@ def _run(day, base_manifest, output, provider=None):
         historical_observation_times_not_inferred=True, preopen_pit=False,
         corporate_action_terms_qualified=False, volume_unit=base.meta['volume_unit'],
         production_activated=False, scheduler_installed=False)
+    if core:
+        result.update(qualification_scope='CORE_MODELS_V1',
+            status='PASS_CORE_MODELS_CANDIDATE_NOT_P0',execution_qualified_symbols=execution_symbols,
+            execution_evidence_contract='RQ_OR_EXCHANGE_RULE_V1')
     # Completion manifest is last; failed captures never replace a complete candidate.
     local.write_json(out / 'manifest.json', result)
     return result

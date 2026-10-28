@@ -376,13 +376,17 @@ def publish(work, asset_root=ASSET_ROOT, *, scope='P0_COMPLETE'):
     work, root = Path(work).resolve(), Path(asset_root).resolve()
     if root != ASSET_ROOT.resolve():
         raise rq.InputBlocked('PUBLISH_OUTSIDE_AUTHORIZED_ASSET_ROOT')
-    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1', 'CORE_MODELS_V1'):
         raise rq.InputBlocked('PUBLISH_UNKNOWN_QUALIFICATION_SCOPE')
     reader = rq.DailyInput(work / 'manifest.json', {'enabled': False}, scope=scope)
     if scope == 'DAILY_SIGNALS_V1':
         from scripts.postclose_data_admission_v1 import audit_daily_research_asset
         audit_daily_research_asset(reader, pd.Timestamp(reader.meta['asof']).strftime('%Y%m%d'))
-    namespace = 'versions' if scope == 'P0_COMPLETE' else 'research_versions'
+    elif scope == 'CORE_MODELS_V1':
+        from scripts.postclose_data_admission_v1 import audit_core_model_asset
+        audit_core_model_asset(reader, pd.Timestamp(reader.meta['asof']).strftime('%Y%m%d'))
+    namespace = {'P0_COMPLETE':'versions','DAILY_SIGNALS_V1':'research_versions',
+                 'CORE_MODELS_V1':'strategy_versions'}[scope]
     target = root / namespace / reader.meta['version']
     if not target.resolve().is_relative_to(root) or not rq.re.fullmatch(r'asof_\d{8}_[0-9a-f]{12}', reader.meta['version']):
         raise rq.InputBlocked('PUBLISH_INVALID_VERSION_PATH')

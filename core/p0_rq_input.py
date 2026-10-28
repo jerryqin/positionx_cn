@@ -67,7 +67,7 @@ def qmt_id(symbol):
 
 
 def open_inputs(asof=None, *, scope='P0_COMPLETE'):
-    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1', 'CORE_MODELS_V1'):
         raise InputBlocked('RQ_INPUT_SCOPE_INVALID')
     p = profile()
     if not p['enabled']:
@@ -75,14 +75,15 @@ def open_inputs(asof=None, *, scope='P0_COMPLETE'):
     target = pd.Timestamp(asof or clock().date()).date().isoformat()
     # Exact-date, complete version only. Never use the nearest older snapshot.
     candidates = []
-    versions = 'research_versions' if scope == 'DAILY_SIGNALS_V1' else 'versions'
+    versions = {'P0_COMPLETE':'versions','DAILY_SIGNALS_V1':'research_versions',
+                'CORE_MODELS_V1':'strategy_versions'}[scope]
     for f in Path(p['asset_root']).glob(versions+'/*/source_metadata.json'):
         meta = json.loads(f.read_text(encoding='utf-8'))
         if meta.get('asof') == target and pd.Timestamp(meta['availability']) <= pd.Timestamp(clock()):
             candidates.append((meta['availability'], f.parent / 'manifest.json'))
     if not candidates:
         raise InputBlocked('RQ_EXACT_DATE_VERSION_MISSING:' + target)
-    if scope == 'DAILY_SIGNALS_V1':
+    if scope != 'P0_COMPLETE':
         return DailyInput(max(candidates)[1], p, scope=scope)
     return DailyInput(max(candidates)[1], p)
 
@@ -262,9 +263,30 @@ def execution_bar(frame, target, decision=None):
         observed = pd.Timestamp(r.get(name))
         if pd.isna(observed) or observed.tzinfo is None or observed > now:
             raise InputBlocked('EXECUTION_EVIDENCE_NOT_AVAILABLE')
-    if (tick is None or pd.isna(tick) or not np.isfinite(float(tick)) or float(tick) <= 0
+    source_tag = r.get('tick_source')
+    if pd.notna(source_tag) and source_tag not in ('RQDATA', 'RQDATA_OBSERVED', 'EXCHANGE_RULE_DERIVED'):
+        raise InputBlocked('EXECUTION_TICK_SOURCE_UNKNOWN')
+    rule_source = source_tag == 'EXCHANGE_RULE_DERIVED'
+    if rule_source:
+        from core.exchange_rule_evidence import verify_rule_evidence, ExchangeRuleEvidenceError
+        try:
+            payload = json.loads(r['tick_rule_evidence'])
+            identity = payload['identity']
+            if identity['order_book_id'] != r.get('order_book_id'):
+                raise InputBlocked('EXECUTION_RULE_SECURITY_CONFLICT')
+            proof = verify_rule_evidence(payload['evidence'], target, identity_row=identity, decision=now)
+            effective = float(proof['price_tick'])
+            if not np.isfinite(effective) or effective <= 0 or float(r['rule_price_tick']) != effective:
+                raise InputBlocked('EXECUTION_RULE_TICK_CONFLICT')
+            if tick is not None and pd.notna(tick) and float(tick) != effective:
+                raise InputBlocked('EXECUTION_RQ_AND_RULE_TICK_CONFLICT')
+            tick = effective
+        except (KeyError, TypeError, ValueError, ExchangeRuleEvidenceError) as exc:
+            raise InputBlocked('EXECUTION_RULE_EVIDENCE_INVALID:' + type(exc).__name__) from None
+    elif (tick is None or pd.isna(tick) or not np.isfinite(float(tick)) or float(tick) <= 0
             or pd.isna(tick_time) or tick_time.tzinfo is None or tick_time > now
             or tick_time.tz_convert(CST).date() != pd.Timestamp(target).date()):
+        # Preserve the original same-day observation contract for RQ facts.
         raise InputBlocked('EXECUTION_EXACT_DATE_TICK_MISSING')
     tradable = real_observation(r, now)
     out = {field: (float(r['raw_' + field]) if tradable else None)
@@ -274,12 +296,15 @@ def execution_bar(frame, target, decision=None):
                prev_close=r.get('prev_close'), tradable=tradable,
                factor=float(r['research_factor']), source=frame.attrs.get('source'),
                version=frame.attrs.get('version'), available_at=r.get('bar_available_at'))
+    if rule_source:
+        out.update(price_tick_source='EXCHANGE_RULE_DERIVED', price_tick_rule=proof,
+                   raw_price_tick=r.get('price_tick'))
     return out
 
 
 class DailyInput:
     def __init__(self, manifest_path, config, now=None, *, scope='P0_COMPLETE'):
-        if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+        if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1', 'CORE_MODELS_V1'):
             raise InputBlocked('RQ_INPUT_SCOPE_INVALID')
         self.root = Path(manifest_path).parent.resolve()
         self.config = config
@@ -304,6 +329,13 @@ class DailyInput:
                     or self.meta.get('full_p0_pass') is not False
                     or self.meta.get('execution_qualified') is not False):
                 raise InputBlocked('RQ_DAILY_SIGNALS_SCOPE_OR_QUALIFICATION_INVALID')
+        elif qualification == 'CORE_MODELS_V1':
+            if (scope != 'CORE_MODELS_V1' or self.meta.get('quality_status') != 'CORE_MODELS_PASS_V1'
+                    or self.meta.get('engineering_only') is not True
+                    or self.meta.get('full_p0_pass') is not False
+                    or self.meta.get('execution_qualified') is not True
+                    or self.meta.get('model_continuation_qualified') is not True):
+                raise InputBlocked('RQ_CORE_MODELS_SCOPE_OR_QUALIFICATION_INVALID')
         elif qualification != 'P0_COMPLETE' or scope != 'P0_COMPLETE':
             raise InputBlocked('RQ_INPUT_QUALIFICATION_SCOPE_MISMATCH')
         self.scope = scope
@@ -344,6 +376,9 @@ class DailyInput:
                 'availability': self.meta['availability'], 'version': self.meta['version']}
         if self.meta.get('qualification_scope') == 'DAILY_SIGNALS_V1':
             result.update(scope='DAILY_SIGNALS_V1', qualification_scope='DAILY_SIGNALS_V1')
+        elif self.meta.get('qualification_scope') == 'CORE_MODELS_V1':
+            result.update(scope='CORE_MODELS_V1', qualification_scope='CORE_MODELS_V1',
+                          execution_evidence_contract='RQ_OR_EXCHANGE_RULE_V1')
         return result
 
     def benchmark_history(self, symbol, dates):
