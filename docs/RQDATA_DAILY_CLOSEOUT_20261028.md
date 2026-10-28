@@ -1,5 +1,49 @@
 # RQData 单源日更与发布闭环：2026-10-28 候选核验
 
+## 28日日线信号研究资格修复（晚间后续）
+
+28日已发布 **`DAILY_SIGNALS_V1`** 研究版本
+`asof_20261028_41d83a1c2e34`，位于数据根目录的`research_versions/`。
+默认`P0_COMPLETE`仍只读`versions/`；完整P0最新日期仍为27日。
+研究版本的`quality_status=DAILY_SIGNALS_PASS_V1`、`engineering_only=true`、
+`full_p0_pass=false`、`execution_qualified=false`，不能当作完整P0或模型接续输入。
+
+真实入口及输出：
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/run_postclose_daily.py --date 20261028 --signals-only
+```
+
+日报为`reports/postclose_daily/20261028/report.md`，结果
+`TWO_STRATEGY_SIGNAL_RESEARCH_COMPLETE`：Deep **54** 个日线信号候选，RET120 **100** 个
+Q5候选；候选CSV保留冻结信号记录和排序，不是模型待入场计划。模型进入、容量、持仓
+接续、退出、权益与收益均未计算；后续模型父运行读取器拒绝该报告和研究账本。
+相同输入版本、真实PIT和策略指纹再次运行会复用结果，不重复入账。
+
+`price_tick`依赖按真实调用区分如下，冻结策略文件和容差不变：
+
+| 直接位置 | 实际用途及缺失影响 |
+|---|---|
+| `p0_rq_input.real_observation/histories`、Deep `ret20_at_close`、RET120 `build_daily_snapshot` | 真实成交观察与信号特征，不读取tick；原观察数、覆盖和排序门槛保留 |
+| 两模型的`entry_fillability/standard_open_v1` | 用`open >= up_stop - tick/2`判断涨停不可入场，确实需要适用tick，不能删除或改容差 |
+| `p0_rq_input.execution_bar`及本地模型wrapper | 要求tick及当日证据；Deep busy、RET待入场/持仓与价格依据会被未知tick阻断 |
+| 两模型退出及RET价格依据 | 数学退出规则读日历/有效收盘；现模型封装仍需执行证据，价格依据另外保存tick；本次不冒充已完成退出或结算 |
+| Funnel `features_for`/结构分支 | 读取冻结OHLC/金额窗口；本次未资格化风险预览与退出，也没有恢复该策略完整运行 |
+| `validate_day`及独立准入 | 原完整P0仍要求tick；新增研究资格只免除信号阶段不消费的缺失tick，不放行坏行情、非法已知tick或未知停牌 |
+
+原5,223条28日日线、日期化停牌、身份及CSI500直接复用，`price_tick/tick_available_at`
+保持NULL。现有两只证券的报价单位只有当日观察证据，没有开盘历史适用性证明，原件保留，
+不贴入历史执行字段。本轮get_tick_size调用为0；经补充批准的同一认证、4次API仅取得
+核心500只因子及2只真实行动缺项的原条款（分红、拆分、配股），Deep行动覆盖已通过。
+原采集、成员和身份观察时间分别保留；benchmark绑定原HTTP响应完成时间18:04:32，
+新封版时间独立记录，不冒充首次历史可用时间。
+
+新增验证覆盖缺tick时同输入特征/Q5/仿射值一致（包括保留`2.328`）、执行仍拒未知或
+不适用tick、两种发布资格隔离、失败staging保留旧版及实际日报入口幂等。未重跑旧套件。
+源码前像及回执位于`reports/rqdata_tick_scope_20261028/`，数据和运行原件不入Git。
+两个已有任务、时刻、截止及安全边界均未修改；完整模型成交/结算仍缺28日有效tick证据，
+不以此次研究发布追认Forward或宣称29日任务成功。
+
 ## 当前部署快照（2026-10-28 晚间）
 
 本节记录此次 Git checkpoint 对应的实际运行状态；下文保留早先隔离候选验收及其

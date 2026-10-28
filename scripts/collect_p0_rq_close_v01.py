@@ -67,7 +67,7 @@ def ready_receipt(provider, business_date, now):
             'availability_semantics': 'conservative actual ready-response observation, not historical publication time'}
 
 
-def validate_day(bars, status, ids, day):
+def validate_day(bars, status, ids, day, *, require_tick=True):
     expected = set(ids)
     for frame in (bars, status):
         if (frame.empty or frame.duplicated(['order_book_id', 'date']).any()
@@ -81,16 +81,24 @@ def validate_day(bars, status, ids, day):
     if (not np.isfinite(x[FIELDS].to_numpy(dtype=float)).all()
             or (prices <= 0).any() or (x[['volume', 'total_turnover', 'num_trades']] < 0).any().any()
             or (x.high < x[['open', 'close', 'low']].max(axis=1)).any()
-            or (x.low > x[['open', 'close', 'high']].min(axis=1)).any()
-            or (x.price_tick <= 0).any() or not np.isfinite(x.price_tick).all()):
+            or (x.low > x[['open', 'close', 'high']].min(axis=1)).any()):
+        raise rq.InputBlocked('INCREMENT_VALUE_QUALITY_FAILED')
+    ticks = pd.to_numeric(x['price_tick'], errors='raise') if 'price_tick' in x else pd.Series(np.nan, index=x.index)
+    known = ticks.dropna()
+    if ((known <= 0).any() or not np.isfinite(known).all()
+            or (require_tick and ticks.isna().any())):
         raise rq.InputBlocked('INCREMENT_VALUE_QUALITY_FAILED')
     # Contradictory actual trade/status evidence is a data error, never a fill.
     if (x.status_suspended & ((x.volume > 0) | (x.num_trades > 0))).any():
         raise rq.InputBlocked('INCREMENT_SUSPENSION_TRADE_CONFLICT')
-    return {'status': 'PASS', 'rows': len(x), 'symbols': len(expected),
+    result = {'status': 'PASS' if require_tick else 'DAILY_SIGNALS_PASS_V1', 'rows': len(x), 'symbols': len(expected),
             'suspended': int(x.status_suspended.sum()),
             'zero_trade_rows': int(((x.volume == 0) | (x.num_trades == 0)).sum()),
             'executions_created': 0}
+    if not require_tick:
+        result.update(qualification_scope='DAILY_SIGNALS_V1', full_p0_pass=False,
+                      execution_qualified=False, unknown_tick_rows=int(ticks.isna().sum()))
+    return result
 
 
 def capture_action_terms(provider, ids, previous, day, work):
@@ -364,16 +372,22 @@ def seal_capture(base, day, work, bars, status, identity, factors, receipt):
     return dict(quality, version=version, work=str(work), database_sha256=database_hash)
 
 
-def publish(work, asset_root=ASSET_ROOT):
+def publish(work, asset_root=ASSET_ROOT, *, scope='P0_COMPLETE'):
     work, root = Path(work).resolve(), Path(asset_root).resolve()
     if root != ASSET_ROOT.resolve():
         raise rq.InputBlocked('PUBLISH_OUTSIDE_AUTHORIZED_ASSET_ROOT')
-    reader = rq.DailyInput(work / 'manifest.json', {'enabled': False})
-    target = root / 'versions' / reader.meta['version']
+    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+        raise rq.InputBlocked('PUBLISH_UNKNOWN_QUALIFICATION_SCOPE')
+    reader = rq.DailyInput(work / 'manifest.json', {'enabled': False}, scope=scope)
+    if scope == 'DAILY_SIGNALS_V1':
+        from scripts.postclose_data_admission_v1 import audit_daily_research_asset
+        audit_daily_research_asset(reader, pd.Timestamp(reader.meta['asof']).strftime('%Y%m%d'))
+    namespace = 'versions' if scope == 'P0_COMPLETE' else 'research_versions'
+    target = root / namespace / reader.meta['version']
     if not target.resolve().is_relative_to(root) or not rq.re.fullmatch(r'asof_\d{8}_[0-9a-f]{12}', reader.meta['version']):
         raise rq.InputBlocked('PUBLISH_INVALID_VERSION_PATH')
     if target.exists():
-        existing = rq.DailyInput(target / 'manifest.json', {'enabled': False})
+        existing = rq.DailyInput(target / 'manifest.json', {'enabled': False}, scope=scope)
         if rq.sha(existing.db) != rq.sha(reader.db):
             raise rq.InputBlocked('PUBLISH_VERSION_COLLISION')
         return str(target)
@@ -387,16 +401,17 @@ def publish(work, asset_root=ASSET_ROOT):
         if p.is_file() and p.name != 'COMPLETE.json':
             shutil.copyfile(p, staging / p.name)
     shutil.copyfile(work / 'COMPLETE.json', staging / 'COMPLETE.json')
-    verified = rq.DailyInput(staging / 'manifest.json', {'enabled': False})
+    verified = rq.DailyInput(staging / 'manifest.json', {'enabled': False}, scope=scope)
     if rq.sha(verified.db) != rq.sha(reader.db):
         raise rq.InputBlocked('PUBLISH_STAGING_BINDING_MISMATCH')
     if target.exists():
-        existing = rq.DailyInput(target / 'manifest.json', {'enabled': False})
+        existing = rq.DailyInput(target / 'manifest.json', {'enabled': False}, scope=scope)
         if rq.sha(existing.db) != rq.sha(reader.db):
             raise rq.InputBlocked('PUBLISH_VERSION_COLLISION')
         return str(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
     staging.rename(target)
-    rq.DailyInput(target / 'manifest.json', {'enabled': False})
+    rq.DailyInput(target / 'manifest.json', {'enabled': False}, scope=scope)
     return str(target)
 
 

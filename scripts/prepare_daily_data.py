@@ -114,7 +114,8 @@ def merge_benchmark(con, capture, previous=None):
             con.execute(f'ALTER TABLE benchmark ADD COLUMN {name} {dtype}')
     frame['source'] = 'RQDATA'
     frame['price_unit'] = 'INDEX_POINTS'
-    frame['observed_at'] = capture['observed_at']
+    observed_at = capture.get('benchmark_observed_at', capture['observed_at'])
+    frame['observed_at'] = observed_at
     frame['source_database_sha256'] = capture['database_sha256']
     con.register('captured_benchmark', frame)
     if con.execute('SELECT count(*) FROM (SELECT order_book_id,date FROM benchmark GROUP BY 1,2 HAVING count(*)>1)').fetchone()[0]:
@@ -131,12 +132,12 @@ def merge_benchmark(con, capture, previous=None):
         bindings = {d: dict(source_database_sha256=previous['source_database_sha256'],
                             observed_at=previous['observed_at']) for d in previous['dates']}
     for day in capture['dates']:
-        binding = dict(source_database_sha256=capture['database_sha256'], observed_at=capture['observed_at'])
+        binding = dict(source_database_sha256=capture['database_sha256'], observed_at=observed_at)
         if day in bindings and bindings[day] != binding:
             raise ValueError('MERGE_BENCHMARK_DATE_BINDING_CONFLICT')
         bindings[day] = binding
     return dict(table='benchmark', source='RQDATA', symbol='000905.SH', order_book_id='000905.XSHG',
-                dates=capture['dates'], price_unit='INDEX_POINTS', observed_at=capture['observed_at'],
+                dates=capture['dates'], price_unit='INDEX_POINTS', observed_at=observed_at,
                 source_database_sha256=capture['database_sha256'], date_bindings=bindings, no_value_conversion=True)
 
 
@@ -168,17 +169,24 @@ def merge_factors(con, capture):
     con.execute('INSERT INTO factors SELECT order_book_id,ex_date,ex_cum_factor FROM delta.factors')
 
 
-def merge_candidate(stock_output, live=False, output=None):
+def merge_candidate(stock_output, live=False, output=None, *, scope='P0_COMPLETE'):
     """Bind accepted old history and exact captured deltas without a production pointer."""
     import duckdb
     src = output_root(stock_output)
     m = local.read_json(src/'manifest.json')
-    close.verified_existing(src, m['target_date'], m['base_manifest'])
+    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+        raise ValueError('MERGE_UNKNOWN_QUALIFICATION_SCOPE')
+    research_only = scope == 'DAILY_SIGNALS_V1'
+    if m.get('qualification_scope', 'P0_COMPLETE') != scope:
+        raise ValueError('MERGE_CAPTURE_QUALIFICATION_SCOPE_MISMATCH')
+    if research_only and live:
+        raise ValueError('DAILY_RESEARCH_MERGE_CANNOT_FETCH_EXECUTION_INPUTS')
+    close.verified_existing(src, m['target_date'], m['base_manifest'], scope=scope)
     dest = output_root(output) if output is not None else src/('merged_live' if live else 'merged')
     binding = dict(capture_manifest_sha256=rq.sha(src/'manifest.json'),
                    increment_database_sha256=m['database_sha256'], base_manifest_sha256=m['base_manifest_sha256'])
     if (dest/'COMPLETE.json').exists():
-        reader = rq.DailyInput(dest/'manifest.json', rq.profile())
+        reader = rq.DailyInput(dest/'manifest.json', rq.profile(), scope=scope)
         if reader.meta.get('merge_binding') != binding:
             raise ValueError('MERGE_EXISTING_BINDING_MISMATCH_USE_NEW_OUTPUT')
         return reader
@@ -205,6 +213,13 @@ def merge_candidate(stock_output, live=False, output=None):
             c.execute('CREATE TABLE IF NOT EXISTS captured_actions AS SELECT * FROM captured_frame WHERE false')
             c.execute('INSERT INTO captured_actions SELECT * FROM captured_frame n WHERE NOT EXISTS (SELECT 1 FROM captured_actions o WHERE o.order_book_id=n.order_book_id AND o.ex_date=n.ex_date)')
         action_meta = close.old.bind_local_actions(c, pd.Timestamp(m['target_date']).date(), rq.clock())
+        if research_only:
+            coverage = m.get('factor_capture_coverage', {})
+            if (coverage.get('status') != 'COMPLETE'
+                    or not set(action_meta.get('corporate_action_symbols', [])).issubset(
+                        set(coverage.get('order_book_ids', [])))):
+                action_meta.update(corporate_action_coverage_complete=False,
+                    corporate_action_reason='EXACT_DAY_FACTOR_EVENT_COVERAGE_UNKNOWN')
         if live and action_meta.get('corporate_action_missing'):
             if rq.clock().strftime('%H%M')>='1715':
                 raise ValueError('ACTION_GAP_AFTER_FINAL_DATA_DEADLINE')
@@ -250,6 +265,16 @@ def merge_candidate(stock_output, live=False, output=None):
                 identity_time_semantics='capture completion upper bound; no historical observation time inferred',
                 **action_meta)
     meta['supplier_complete_observed_at'] = m['after']['available_at']
+    if research_only:
+        meta.update(qualification_scope='DAILY_SIGNALS_V1', quality_status='DAILY_SIGNALS_PASS_V1',
+            engineering_only=True, full_p0_pass=False, execution_qualified=False,
+            model_continuation_qualified=False,
+            admission_version='DAILY_SIGNALS_V1',
+            admission_reason='Price/trade/status signal inputs qualified independently; quote increments and complete P0 execution remain unqualified',
+            signal_input_evidence=m.get('saved_input_evidence', {}),
+            factor_capture_coverage=m.get('factor_capture_coverage', {'status':'UNKNOWN'}),
+            missing_execution_inputs=['price_tick', 'tick_effective_date_proof'],
+            supplier_final_completeness=m['after']['status'])
     if m.get('identity_capture'):
         meta['identity_capture'] = m['identity_capture']
         meta['identity_observed_range'] = m['identity_capture'].get('observed_range')
@@ -261,7 +286,7 @@ def merge_candidate(stock_output, live=False, output=None):
         dict(path=p.name,sha256=rq.sha(p)) for p in (db,dest/'source_metadata.json',dest/'supplier_ready.json',dest/'supplier_ready_after.json')]))
     local.write_json(dest/'COMPLETE.json', dict(manifest_sha256=rq.sha(dest/'manifest.json')))
     try:
-        return rq.DailyInput(dest/'manifest.json', rq.profile())
+        return rq.DailyInput(dest/'manifest.json', rq.profile(), scope=scope)
     except BaseException:
         (dest/'COMPLETE.json').unlink()
         raise

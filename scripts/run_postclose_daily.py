@@ -259,6 +259,8 @@ def operational_summary(kind, root, day, dates, source=None, members=None, reuse
 
 
 def write_report(path, result):
+    if result.get('mode') == 'ISOLATED_DAILY_SIGNAL_RESEARCH':
+        return write_signal_report(path, result)
     lines = ['# PositionX-CN 两策略盘后日报', '',
              f"业务日：{result['business_date']}；生成：{result['generated_at']}。",
              f"数据：{result.get('input', {}).get('version', '未取得准确日期发布数据')}。",
@@ -307,10 +309,172 @@ def write_report(path, result):
     Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
-def run(day=None, output=None, previous_run=None, reuse_run=None):
+def signal_report(root):
+    """Validate an isolated signal report; it never qualifies as a model parent."""
+    root = Path(root).resolve()
+    if not root.is_relative_to((ROOT / 'reports').resolve()):
+        raise ValueError('SIGNAL_REPORT_MUST_BE_REPOSITORY_REPORTS')
+    hashes = inventory(root)
+    report = local.read_json(verified_file(root, 'report.json', hashes))
+    if (report.get('mode') != 'ISOLATED_DAILY_SIGNAL_RESEARCH'
+            or report.get('qualification_scope') != 'DAILY_SIGNALS_V1'
+            or report.get('forward_acceptance') is not False
+            or report.get('model_continuation_qualified') is not False
+            or report.get('execution_qualified') is not False
+            or report.get('boundary', {}).get('violations')):
+        raise ValueError('SIGNAL_REPORT_QUALIFICATION_INVALID')
+    return root, report, hashes
+
+
+def matching_signal_run(day, source, pit, manifest_sha, fingerprints, kind=None):
+    for _, _, root, report in reversed(daily_reports(day)):
+        if (report.get('mode') != 'ISOLATED_DAILY_SIGNAL_RESEARCH'
+                or report.get('input', {}).get('version') != source.meta['version']
+                or report.get('database_sha256') != source.meta['database_sha256']
+                or report.get('manifest_sha256') != manifest_sha
+                or any(report.get('pit', {}).get(k) != pit.get(k) for k in ('sha256', 'manifest_sha256'))):
+            continue
+        kinds = (kind,) if kind else ('deep', 'ret120')
+        if any(report.get('strategies', {}).get(k, {}).get('status') != 'SIGNAL_RESEARCH_ONLY'
+               or report['strategies'][k].get('policy_hash') != fingerprints[k] for k in kinds):
+            continue
+        root, report, hashes = signal_report(root)
+        for k in kinds:
+            for name in ('model.duckdb', 'signals.csv', 'signal_candidates.csv', 'summary.json'):
+                verified_file(root, k + '/' + name, hashes)
+            if k == 'ret120':
+                verified_file(root, k + '/snapshot.csv', hashes)
+        return root, report, hashes
+    return None
+
+
+def write_signal_report(path, result):
+    lines = ['# PositionX-CN 盘后信号研究', '',
+             f"业务日：{result['business_date']}；生成：{result['generated_at']}。",
+             f"数据版本：{result.get('input', {}).get('version', '未取得合格输入')}。",
+             f"结果：{result['status']}；NOT_FORWARD；DAILY_SIGNALS_V1。", '',
+             '本次只计算日线信号。未运行模型入场、持仓接续、退出或结算；容量未评估。',
+             '候选不是模型待入场计划；未来开盘价及数量未知。真实账户未查询。', '',
+             '| 策略 | 原始候选 / Q5 | 冻结信号记录 | 信号日排除 |',
+             '|---|---:|---:|---:|']
+    details = []
+    for kind, label in (('deep', 'Deep'), ('ret120', 'RET120')):
+        item = result['strategies'].get(kind, {})
+        summary = item.get('signal_summary')
+        if not summary:
+            lines.append(f"| {label} | 阻断：{item.get('error', '未运行')} | — | — |")
+            continue
+        excluded = summary['signal_status_counts'].get('EXCLUDED_SIGNAL_HYGIENE', 0)
+        hygiene = str(excluded) if kind == 'ret120' else '冻结信号函数不做此项筛选'
+        lines.append(f"| {label} | {summary['raw_candidate_count']} | {summary['new_signal_record_count']} | {hygiene} |")
+        details += ['', f"{label}：[原始信号]({kind}/signals.csv)，"
+                  f"[按冻结顺序排列的研究候选及原排除原因]({kind}/signal_candidates.csv)。",
+                  f"策略指纹：{item['policy_hash']}。"]
+    lines += details
+    lines += ['', f"实际 PIT：{result.get('pit', {}).get('manifest', '未取得')}。",
+              f"输入库：{result.get('published_database', '未取得')}。",
+              '模型进入数、待入场计划、持仓、退出及收益均为未计算，不是零。',
+              '该结果不能作为完整模型接续或正式 Forward 的父运行。Funnel 本次未运行。']
+    if result.get('input_error'):
+        lines += ['', '输入阻断：' + result['input_error']]
+    Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def run_signals(day, output=None):
+    """Use the explicit research publication, real PIT, and frozen signal chain."""
+    from core import p0_rq_input as rq
+    out = local.output_path(Path(output or new_attempt(day)).absolute())
+    out.mkdir(parents=True)
+    guard = local.OfflineBoundary(out)
+    guard.install()
+    result = {'schema': 'POSITIONX_DAILY_POSTCLOSE_V1', 'daily_entry': 'run_postclose_daily.py',
+              'business_date': day, 'generated_at': rq.clock().isoformat(),
+              'mode': 'ISOLATED_DAILY_SIGNAL_RESEARCH', 'qualification_scope': 'DAILY_SIGNALS_V1',
+              'forward_acceptance': False, 'model_continuation_qualified': False,
+              'execution_qualified': False, 'output_directory': str(out),
+              'real_account': {'status': 'UNKNOWN_NOT_QUERIED', 'cash': None, 'positions': None, 'fills': None},
+              'entry_sha256': rq.sha(Path(__file__)), 'strategies': {},
+              'funnel': {'status': 'NOT_RUN_DAILY_SIGNAL_SCOPE', 'exit_qualification': 'UNQUALIFIED'}}
+    try:
+        source = rq.open_inputs(day, scope='DAILY_SIGNALS_V1')
+        if (source.meta.get('qualification_scope') != 'DAILY_SIGNALS_V1'
+                or source.meta.get('quality_status') != 'DAILY_SIGNALS_PASS_V1'
+                or source.meta.get('engineering_only') is not True
+                or source.meta.get('full_p0_pass') is not False
+                or source.meta.get('execution_qualified') is not False):
+            raise ValueError('DAILY_SIGNALS_PUBLICATION_NOT_QUALIFIED')
+        manifest_sha = rq.sha(source.root / 'manifest.json')
+        result.update(input=source.lineage('back_ratio'), published_database=str(source.db),
+                      database_sha256=source.meta['database_sha256'], manifest_sha256=manifest_sha)
+        profiles = {'ret120': local.read_json(ROOT / 'config/ops/p0_core_recovery_v01.json'),
+                    'deep': local.read_json(ROOT / 'config/ops/deep_forward_segment_v01.json')}
+        dates = local.sessions(profiles['ret120']['calendar'], day)
+        sets, result['pit'] = local.membership(profiles['ret120'], day)
+        fingerprints = {}
+        for kind in ('deep', 'ret120'):
+            try:
+                fingerprints[kind] = policy(kind)[1]
+            except (Exception, SystemExit) as exc:
+                result['strategies'][kind] = {'status': 'BLOCKED', 'error': str(exc),
+                    'forward_acceptance': False, 'execution_qualified': False,
+                    'model_continuation_qualified': False}
+        existing = (matching_signal_run(day, source, result['pit'], manifest_sha, fingerprints)
+                    if len(fingerprints) == 2 else None)
+        if existing and output is None:
+            out.rmdir()
+            print('EXISTING_DAILY_SIGNAL_REPORT_NO_RECOMPUTE', flush=True)
+            return existing[1]
+        details = local.local_details(source, day)
+        for kind in ('deep', 'ret120'):
+            if kind not in fingerprints:
+                continue
+            try:
+                existing = matching_signal_run(day, source, result['pit'], manifest_sha, fingerprints, kind)
+                if existing:
+                    old, report, hashes = existing
+                    (out / kind).mkdir()
+                    names = ['model.duckdb', 'signals.csv', 'signal_candidates.csv', 'summary.json']
+                    if kind == 'ret120':
+                        names.append('snapshot.csv')
+                    for name in names:
+                        key = kind + '/' + name
+                        shutil.copyfile(verified_file(old, key, hashes), out / key)
+                        if rq.sha(out / key) != hashes[key]:
+                            raise ValueError('SIGNAL_REUSE_COPY_MISMATCH:' + key)
+                    result['strategies'][kind] = dict(report['strategies'][kind])
+                    result.setdefault('strategy_reused_from', {})[kind] = str(old)
+                else:
+                    result['strategies'][kind], _ = local.run_model(kind, source, profiles[kind], sets,
+                        details, dates, day, out / kind, fresh_research=True, signals_only=True)
+            except (Exception, SystemExit) as exc:
+                result['strategies'][kind] = {'status': 'BLOCKED', 'error': str(exc),
+                    'forward_acceptance': False, 'execution_qualified': False,
+                    'model_continuation_qualified': False}
+    except (Exception, SystemExit) as exc:
+        result['input_error'] = str(exc)
+    passed = sum(result['strategies'].get(k, {}).get('status') == 'SIGNAL_RESEARCH_ONLY'
+                 for k in ('deep', 'ret120'))
+    result['status'] = ('TWO_STRATEGY_SIGNAL_RESEARCH_COMPLETE' if passed == 2 and not result.get('input_error')
+                        else 'SIGNAL_RESEARCH_PARTIAL' if passed else 'SIGNAL_RESEARCH_BLOCKED')
+    result['boundary'] = {'violations': guard.violations, 'blocked_sdk_modules': list(guard.blocked)}
+    if guard.violations:
+        result['status'] = 'BOUNDARY_VALIDATION_FAILED'
+    local.write_json(out / 'report.json', result)
+    write_report(out / 'report.md', result)
+    local.write_json(out / 'artifacts_manifest.json', {'schema': 'POSTCLOSE_LOCAL_ARTIFACTS_V1',
+        'files': [{'path': p.relative_to(out).as_posix(), 'sha256': rq.sha(p)}
+                  for p in sorted(out.rglob('*')) if p.is_file()]})
+    return result
+
+
+def run(day=None, output=None, previous_run=None, reuse_run=None, *, signals_only=False):
     import pandas as pd
     from core import p0_rq_input as rq
     day = pd.Timestamp(day or rq.clock().date()).strftime('%Y%m%d')
+    if signals_only:
+        if previous_run or reuse_run:
+            raise ValueError('SIGNALS_ONLY_CANNOT_USE_MODEL_PARENT_OR_ACCEPTED_RUN')
+        return run_signals(day, output)
     if output is None:
         completed = [row for row in daily_reports(day) if row[3].get('status') == 'TWO_STRATEGY_REPORT_COMPLETE']
         if completed:
@@ -414,22 +578,23 @@ def main():
     parser.add_argument('--previous-run', help='Adjacent NOT_FORWARD model day; default prior daily report directory')
     parser.add_argument('--reuse-run', help='Exact accepted 20261027 run; no strategy recomputation')
     parser.add_argument('--latest-report', action='store_true', help='Read the latest completed report only; never declares today ready')
+    parser.add_argument('--signals-only', action='store_true', help='Explicit DAILY_SIGNALS_V1 research; no model entries, holdings, exits or settlement')
     args = parser.parse_args()
     from core import p0_rq_input as rq
-    if args.latest_report and any((args.date, args.output, args.previous_run, args.reuse_run)):
+    if args.latest_report and any((args.date, args.output, args.previous_run, args.reuse_run, args.signals_only)):
         parser.error('--latest-report is read-only and cannot be combined with calculation arguments')
     before_close = (rq.clock().hour, rq.clock().minute) < (15, 30)
-    if args.latest_report or (before_close and not any((args.date, args.output, args.previous_run, args.reuse_run))):
+    if args.latest_report or (before_close and not any((args.date, args.output, args.previous_run, args.reuse_run, args.signals_only))):
         report_dir, result = latest_report()
         print(json.dumps({'status': 'LATEST_COMPLETED_REPORT_READ_ONLY',
                           'business_date': result['business_date'], 'data_version': result['input']['version'],
                           'research_state': 'NOT_FORWARD', 'today_data_status': 'NOT_EVALUATED',
                           'report': str(report_dir / 'report.md')}, ensure_ascii=False))
         return 0
-    result = run(args.date, args.output, args.previous_run, args.reuse_run)
+    result = run(args.date, args.output, args.previous_run, args.reuse_run, signals_only=args.signals_only)
     report_dir = Path(args.output or result.get('output_directory') or DAILY_ROOT / result['business_date']).resolve()
     print(json.dumps({'status': result['status'], 'report': str(report_dir / 'report.md')}, ensure_ascii=False))
-    return 0 if result['status'] == 'TWO_STRATEGY_REPORT_COMPLETE' else 3
+    return 0 if result['status'] in ('TWO_STRATEGY_REPORT_COMPLETE', 'TWO_STRATEGY_SIGNAL_RESEARCH_COMPLETE') else 3
 
 
 if __name__ == '__main__':

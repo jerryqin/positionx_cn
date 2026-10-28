@@ -66,19 +66,24 @@ def qmt_id(symbol):
     return symbol.replace('.XSHG', '.SH').replace('.XSHE', '.SZ')
 
 
-def open_inputs(asof=None):
+def open_inputs(asof=None, *, scope='P0_COMPLETE'):
+    if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+        raise InputBlocked('RQ_INPUT_SCOPE_INVALID')
     p = profile()
     if not p['enabled']:
         return None
     target = pd.Timestamp(asof or clock().date()).date().isoformat()
     # Exact-date, complete version only. Never use the nearest older snapshot.
     candidates = []
-    for f in Path(p['asset_root']).glob('versions/*/source_metadata.json'):
+    versions = 'research_versions' if scope == 'DAILY_SIGNALS_V1' else 'versions'
+    for f in Path(p['asset_root']).glob(versions+'/*/source_metadata.json'):
         meta = json.loads(f.read_text(encoding='utf-8'))
         if meta.get('asof') == target and pd.Timestamp(meta['availability']) <= pd.Timestamp(clock()):
             candidates.append((meta['availability'], f.parent / 'manifest.json'))
     if not candidates:
         raise InputBlocked('RQ_EXACT_DATE_VERSION_MISSING:' + target)
+    if scope == 'DAILY_SIGNALS_V1':
+        return DailyInput(max(candidates)[1], p, scope=scope)
     return DailyInput(max(candidates)[1], p)
 
 
@@ -237,6 +242,9 @@ def feature_histories(histories, decision=None):
 
 def execution_bar(frame, target, decision=None):
     """Exact-session raw execution inputs; adjusted prices remain research units."""
+    if frame is not None and (frame.attrs.get('scope') == 'DAILY_SIGNALS_V1'
+            or frame.attrs.get('qualification_scope') == 'DAILY_SIGNALS_V1'):
+        raise InputBlocked('EXECUTION_DAILY_SIGNALS_SCOPE_FORBIDDEN')
     day = pd.Timestamp(target).strftime('%Y%m%d')
     if frame is None or day not in frame.index:
         raise InputBlocked('EXECUTION_EXACT_BAR_MISSING')
@@ -270,7 +278,9 @@ def execution_bar(frame, target, decision=None):
 
 
 class DailyInput:
-    def __init__(self, manifest_path, config, now=None):
+    def __init__(self, manifest_path, config, now=None, *, scope='P0_COMPLETE'):
+        if scope not in ('P0_COMPLETE', 'DAILY_SIGNALS_V1'):
+            raise InputBlocked('RQ_INPUT_SCOPE_INVALID')
         self.root = Path(manifest_path).parent.resolve()
         self.config = config
         self.now = pd.Timestamp(now or clock())
@@ -286,6 +296,17 @@ class DailyInput:
             if not path.is_relative_to(self.root) or sha(path) != item['sha256']:
                 raise InputBlocked('RQ_FILE_HASH_MISMATCH')
         self.meta = json.loads((self.root / 'source_metadata.json').read_text(encoding='utf-8'))
+        qualification = self.meta.get('qualification_scope', 'P0_COMPLETE')
+        if qualification == 'DAILY_SIGNALS_V1':
+            if (scope != 'DAILY_SIGNALS_V1'
+                    or self.meta.get('quality_status') != 'DAILY_SIGNALS_PASS_V1'
+                    or self.meta.get('engineering_only') is not True
+                    or self.meta.get('full_p0_pass') is not False
+                    or self.meta.get('execution_qualified') is not False):
+                raise InputBlocked('RQ_DAILY_SIGNALS_SCOPE_OR_QUALIFICATION_INVALID')
+        elif qualification != 'P0_COMPLETE' or scope != 'P0_COMPLETE':
+            raise InputBlocked('RQ_INPUT_QUALIFICATION_SCOPE_MISMATCH')
+        self.scope = scope
         self.db = self.root / self.meta['database']
         if (self.meta['database'] not in inventory or self.meta['source'] != 'RQDATA'
                 or self.meta['raw_adjustment'] != 'none'
@@ -318,9 +339,12 @@ class DailyInput:
 
     def lineage(self, adjustment):
         actual = self.config.get('strategy_contracts', {}).get(adjustment, {}).get('representation', adjustment)
-        return {'source': 'RQDATA', 'adjustment': actual, 'requested_adjustment': adjustment,
+        result = {'source': 'RQDATA', 'adjustment': actual, 'requested_adjustment': adjustment,
                 'unit': self.meta['volume_unit'], 'asof': self.meta['asof'],
                 'availability': self.meta['availability'], 'version': self.meta['version']}
+        if self.meta.get('qualification_scope') == 'DAILY_SIGNALS_V1':
+            result.update(scope='DAILY_SIGNALS_V1', qualification_scope='DAILY_SIGNALS_V1')
+        return result
 
     def benchmark_history(self, symbol, dates):
         """Read exact native index observations from this seal, without SDK fallback."""
@@ -352,6 +376,8 @@ class DailyInput:
         frame.index = pd.to_datetime(frame.date).dt.strftime('%Y%m%d')
         frame.attrs.update(source='RQDATA', price_unit='INDEX_POINTS', version=self.meta['version'],
                            date_bindings={d.strftime('%Y%m%d'): bindings[d.strftime('%Y%m%d')] for d in requested})
+        if self.meta.get('qualification_scope') == 'DAILY_SIGNALS_V1':
+            frame.attrs.update(scope='DAILY_SIGNALS_V1', qualification_scope='DAILY_SIGNALS_V1')
         return frame
 
     def histories(self, symbols, asof, bars, adjustment='none', min_bars=1, no_fill=False,

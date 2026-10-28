@@ -33,7 +33,7 @@ def compute_permissions(gates):
             'explanation': 'Data readiness alone cannot authorize a Forward start or ledger advance.'}
 
 
-def audit_stock_records(bars, statuses, identity, day, meta, now):
+def audit_stock_records(bars, statuses, identity, day, meta, now, *, require_tick=True):
     """The existing producer quality gate plus exact-day identity/time bindings."""
     import pandas as pd
     from scripts.collect_p0_rq_close_v01 import validate_day
@@ -49,8 +49,8 @@ def audit_stock_records(bars, statuses, identity, day, meta, now):
             raise ValueError('IDENTITY_FIELD_MISSING:' + name)
     if (identity.round_lot <= 0).any() or (identity.round_lot % 1 != 0).any():
         raise ValueError('MINIMUM_LOT_INVALID')
-    result = validate_day(bars, statuses, set(identity.order_book_id), target)
-    for name in ('status_available_at', 'tick_available_at'):
+    result = validate_day(bars, statuses, set(identity.order_book_id), target, require_tick=require_tick)
+    for name in (('status_available_at', 'tick_available_at') if require_tick else ('status_available_at',)):
         times = pd.to_datetime(statuses[name], utc=True, errors='coerce')
         if times.isna().any() or (times > pd.Timestamp(now)).any() or not times.dt.tz_convert('Asia/Shanghai').dt.date.eq(target).all():
             raise ValueError('STATUS_OR_TICK_EXACT_DAY_TIME_INVALID')
@@ -62,7 +62,8 @@ def audit_stock_records(bars, statuses, identity, day, meta, now):
 def audit_stock_asset(reader, day):
     import pandas as pd
     from core import p0_rq_input as rq
-    if reader.meta.get('quality_status') != 'PASS' or reader.meta.get('engineering_only') is not False:
+    if (reader.meta.get('qualification_scope') == 'DAILY_SIGNALS_V1'
+            or reader.meta.get('quality_status') != 'PASS' or reader.meta.get('engineering_only') is not False):
         raise ValueError('STOCK_ASSET_NOT_QUALIFIED')
     with local.read_db(reader.db) as con:
         bars = con.execute('SELECT * FROM raw_daily WHERE date=?', [pd.Timestamp(day).date()]).df()
@@ -90,6 +91,29 @@ def audit_stock_asset(reader, day):
             'database_sha256': rq.sha(reader.db), 'manifest_sha256': rq.sha(reader.root / 'manifest.json'),
             'quality': quality, 'strategy_contracts': contracts, 'supplier_receipts': receipts,
             'availability': reader.meta['availability']}
+
+
+def audit_daily_research_asset(reader, day):
+    """Exact observed daily inputs only; this never grants P0 execution admission."""
+    import pandas as pd
+    from core import p0_rq_input as rq
+    meta = reader.meta
+    if (meta.get('qualification_scope') != 'DAILY_SIGNALS_V1'
+            or meta.get('quality_status') != 'DAILY_SIGNALS_PASS_V1'
+            or meta.get('engineering_only') is not True or meta.get('full_p0_pass') is not False
+            or meta.get('execution_qualified') is not False):
+        raise ValueError('DAILY_SIGNAL_RESEARCH_SCOPE_REQUIRED')
+    with local.read_db(reader.db) as con:
+        bars = con.execute('SELECT * FROM raw_daily WHERE date=?', [pd.Timestamp(day).date()]).df()
+        statuses = con.execute('SELECT * FROM execution_status WHERE date=?', [pd.Timestamp(day).date()]).df()
+        identity = con.execute('SELECT * FROM identity_observed_today').df()
+    quality = audit_stock_records(bars, statuses, identity, day, meta, rq.clock(), require_tick=False)
+    return dict(date=day, version=meta['version'], database=str(reader.db),
+        qualification_scope='DAILY_SIGNALS_V1', full_p0_pass=False, execution_qualified=False,
+        quality=quality, database_sha256=rq.sha(reader.db),
+        manifest_sha256=rq.sha(reader.root/'manifest.json'),
+        availability=meta['availability'],
+        admission_reason='Daily signal features use observed prices/trades/status, not quote increments; execution remains separately blocked')
 
 
 def forward_start_decision(gates, plan, expected, now, plan_path=None):

@@ -225,6 +225,10 @@ def require_details(details, symbols):
 def copy_ledger(source_path, dest, strategy, policy_hash, dates, day):
     from core import p0_rq_input as rq
     with read_db(source_path) as con:
+        if con.execute("SELECT count(*) FROM information_schema.tables WHERE table_name='postclose_research_seed'").fetchone()[0]:
+            proof = con.execute('SELECT proof_json FROM postclose_research_seed').fetchone()
+            if proof and json.loads(proof[0]).get('model_continuation_qualified') is False:
+                raise ValueError('SIGNAL_RESEARCH_LEDGER_CANNOT_BE_MODEL_PARENT')
         row = con.execute('SELECT state_json,policy_hash FROM forward_state WHERE strategy_id=?', [strategy]).fetchone()
         if not row or row[1] != policy_hash:
             raise ValueError('SOURCE_POLICY_IDENTITY_MISMATCH')
@@ -265,7 +269,7 @@ def model_exports(store, module, out, day, table, data_kind='MODEL_RESEARCH_ONLY
     return store.con.execute("SELECT trade_date,equity,cash,gross_market_value FROM forward_equity WHERE strategy_id=? AND ledger='BASE20' ORDER BY trade_date", [strategy]).df()
 
 
-def seed_research_ledger(dest, module, artifacts, dates, day):
+def seed_research_ledger(dest, module, artifacts, dates, day, *, signals_only=False):
     """Start an empty retrospective research day, without inventing a past session."""
     from research.research_store import ResearchStore
     dest = Path(dest).absolute()
@@ -277,6 +281,9 @@ def seed_research_ledger(dest, module, artifacts, dates, day):
     proof = {'mode': 'EMPTY_RESEARCH_SEED_NOT_FORWARD', 'signal_date': day,
              'boundary_cursor_only_not_a_session': dates[-2],
              'inherited_positions': [], 'inherited_plans': [], 'forward_acceptance': False}
+    if signals_only:
+        proof.update(qualification_scope='DAILY_SIGNALS_V1', model_continuation_qualified=False,
+                     execution_qualified=False)
     state.update(last_processed_date=dates[-2], status='EMPTY_RESEARCH_SEED_NOT_FORWARD',
                  research_seed=proof)
     fingerprint = policy.fingerprint(artifacts) if artifacts is not None else policy.fingerprint()
@@ -287,8 +294,55 @@ def seed_research_ledger(dest, module, artifacts, dates, day):
     return state, proof
 
 
+def signal_research_exports(store, module, source, day, out,
+                            table, snapshot, signal_diag, fingerprint, ledger_proof):
+    """Export frozen signals without qualifying a model plan or a settlement."""
+    frame = store.con.execute(f'''SELECT * FROM {table}
+        WHERE strategy_id=? AND signal_date=? ORDER BY symbol''',
+        [module.POLICY.strategy_id, day]).df()
+    frame['data_kind'] = 'DAILY_SIGNAL_RESEARCH_ONLY'
+    frame.to_csv(out / 'signals.csv', index=False, encoding='utf-8-sig')
+    candidates = frame.copy()
+    candidates['frozen_symbol_order'] = range(1, len(candidates) + 1)
+    candidates['interpretation'] = 'RESEARCH_CANDIDATE_NOT_MODEL_PLAN'
+    candidates['entry_decision'] = 'NOT_EVALUATED_SIGNAL_RESEARCH_ONLY'
+    candidates['capacity_evaluated'] = False
+    candidates['future_open_price'] = None
+    candidates['future_entry_units'] = None
+    candidates.to_csv(out / 'signal_candidates.csv', index=False, encoding='utf-8-sig')
+    counts = {str(k): int(v) for k, v in frame.status.value_counts().items()}
+    raw_count = len(frame)
+    snapshot_summary = None
+    if snapshot is not None:
+        snapshot.to_csv(out / 'snapshot.csv', index=False, encoding='utf-8-sig')
+        raw_count = int(snapshot.selected_q5.sum())
+        snapshot_summary = {'universe_count': len(snapshot),
+                            'valid_feature_count': int(snapshot.feature_valid.sum()),
+                            'q5_count': raw_count}
+    summary = {'status': 'SIGNAL_RESEARCH_ONLY', 'strategy_id': module.POLICY.strategy_id,
+               'policy_hash': fingerprint, 'data_kind': 'DAILY_SIGNAL_RESEARCH_ONLY',
+               'qualification_scope': 'DAILY_SIGNALS_V1', 'forward_acceptance': False,
+               'model_continuation_qualified': False, 'execution_qualified': False,
+               'ledger_source': ledger_proof, 'input': source.lineage(module.POLICY.dividend_type),
+               'signals': signal_diag,
+               'signal_summary': {'raw_candidate_count': raw_count,
+                   'new_signal_record_count': len(frame), 'signal_status_counts': counts,
+                   'signal_day_hygiene': 'FROZEN_RET120_SIGNAL_DAY_ELIGIBILITY' if snapshot is not None
+                                         else 'NOT_APPLIED_BY_FROZEN_DEEP_SIGNAL_FUNCTION',
+                   'ordering': 'symbol_asc; frozen signal order only',
+                   'capacity_status': 'NOT_EVALUATED', 'final_model_entered_count': None,
+                   'model_pending_plan_count': None, 'actual_model_entries_today': None,
+                   'current_positions': None, 'exits_today': None,
+                   'settlement': {'status': 'NOT_RUN', 'equity': None, 'cash': None, 'return': None},
+                   'candidates_file': 'signal_candidates.csv'}}
+    if snapshot_summary is not None:
+        summary['snapshot'] = snapshot_summary
+    write_json(out / 'summary.json', summary)
+    return summary, None
+
+
 def run_model(kind, source, profile, sets, details, dates, day, out, *, settlement_only=False,
-              fresh_research=False):
+              fresh_research=False, signals_only=False):
     import pandas as pd
     from core import p0_rq_input as rq
     from research.research_store import ResearchStore
@@ -299,6 +353,10 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
     sample = getattr(source, 'synthetic_sample', False) is True
     if settlement_only and not sample:
         raise ValueError('SETTLEMENT_ONLY_IS_SYNTHETIC_TEST_ONLY')
+    if signals_only and (not fresh_research or settlement_only or sample):
+        raise ValueError('SIGNALS_ONLY_REQUIRES_EMPTY_FRESH_RESEARCH_SEED')
+    if getattr(source, 'meta', {}).get('qualification_scope') == 'DAILY_SIGNALS_V1' and not signals_only:
+        raise ValueError('DAILY_SIGNALS_INPUT_CANNOT_RUN_MODEL_SESSION')
     data_kind = 'SYNTHETIC_SAMPLE_NOT_MARKET' if sample else 'MODEL_RESEARCH_ONLY'
     artifacts = ret.verify_frozen_prerequisites() if kind == 'ret120' else None
     fingerprint = policy.fingerprint(artifacts) if artifacts else policy.fingerprint()
@@ -308,7 +366,8 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
         raise ValueError('RESEARCH_SEED_CANNOT_SETTLE_INHERITED_PLANS')
     out.mkdir()
     if fresh_research:
-        state, ledger_proof = seed_research_ledger(out / 'model.duckdb', module, artifacts, dates, day)
+        state, ledger_proof = seed_research_ledger(out / 'model.duckdb', module, artifacts, dates, day,
+                                                  signals_only=signals_only)
     else:
         state, ledger_proof = copy_ledger(profile['segment_db'], out / 'model.duckdb', policy.strategy_id, fingerprint, dates, day)
     if artifacts and state.get('artifact_hashes') != artifacts:
@@ -318,6 +377,8 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
             ret.ensure_ret120_tables(store)
         table = 'forward_signals' if kind == 'deep' else 'ret120_forward_signals'
         busy = busy_symbols(store, policy.strategy_id, table)
+        if signals_only and busy:
+            raise ValueError('SIGNALS_ONLY_CANNOT_INHERIT_POSITIONS_OR_PLANS')
         members = sorted(sets['000905.SH'])
         symbols = sorted(set(busy) if settlement_only else set(members) | set(busy))
         require_details(details, symbols)
@@ -348,6 +409,23 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
         snapshot = None
         if kind == 'ret120' and not settlement_only:
             snapshot = ret.build_daily_snapshot(rq.feature_histories({s: histories[s] for s in symbols if s in histories}), members, day, policy.feature_min_valid)
+        if signals_only:
+            store.con.execute('BEGIN TRANSACTION')
+            try:
+                if kind == 'deep':
+                    signal_diag = {'new': deep.detect_signals(store, histories, members, day, state)}
+                else:
+                    ret.persist_snapshot(store, snapshot, 'DAILY_SIGNALS_RESEARCH_NOT_FORWARD')
+                    signal_diag = ret.detect_signals(store, None, snapshot, day, dates,
+                                                     instrument_details=input_details)
+                store.con.execute('COMMIT')
+            except BaseException:
+                store.con.execute('ROLLBACK')
+                raise
+            # Keep the empty seed cursor: no entries, exits, equity marks,
+            # model session, plan seal, or financially meaningful state export.
+            return signal_research_exports(store, module, source, day, out,
+                                           table, snapshot, signal_diag, fingerprint, ledger_proof)
         store.con.execute('BEGIN TRANSACTION')
         try:
             if kind == 'deep':
