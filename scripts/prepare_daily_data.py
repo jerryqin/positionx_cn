@@ -169,6 +169,29 @@ def merge_factors(con, capture):
     con.execute('INSERT INTO factors SELECT order_book_id,ex_date,ex_cum_factor FROM delta.factors')
 
 
+def core_factor_coverage(con, capture, binding):
+    """Bind exact daily request coverage, including legitimately empty events."""
+    if capture.get('dates') != [capture.get('target_date')]:
+        raise ValueError('CORE_FACTOR_COVERAGE_EXACT_DAY_REQUIRED')
+    try:
+        covered = con.execute('SELECT order_book_id FROM delta.factor_capture_coverage').df()
+        identity = con.execute('SELECT order_book_id FROM delta.identity_observed_today').df()
+    except Exception as exc:
+        raise ValueError('CORE_FACTOR_CAPTURE_COVERAGE_MISSING') from exc
+    if (identity.empty or identity.order_book_id.isna().any()
+            or identity.order_book_id.duplicated().any()
+            or covered.order_book_id.isna().any() or covered.order_book_id.duplicated().any()
+            or set(covered.order_book_id) != set(identity.order_book_id)):
+        raise ValueError('CORE_FACTOR_CAPTURE_COVERAGE_INCOMPLETE_OR_CONFLICT')
+    day = str(pd.Timestamp(capture['target_date']).date())
+    return dict(status='COMPLETE', source='RQDATA', dates=list(capture['dates']),
+        business_date=day, start_date=day, end_date=day,
+        order_book_ids=sorted(covered.order_book_id),
+        capture_manifest_sha256=binding['capture_manifest_sha256'],
+        increment_database_sha256=binding['increment_database_sha256'],
+        semantics='Actual completed get_ex_factor request coverage; event absence alone is not coverage')
+
+
 def merge_candidate(stock_output, live=False, output=None, *, scope='P0_COMPLETE'):
     """Bind accepted old history and exact captured deltas without a production pointer."""
     import duckdb
@@ -199,6 +222,7 @@ def merge_candidate(stock_output, live=False, output=None, *, scope='P0_COMPLETE
         c.execute("ATTACH '"+str(src/'increment.duckdb').replace("'","''")+"' AS delta (READ_ONLY)")
         c.execute('BEGIN TRANSACTION')
         if scope=='CORE_MODELS_V1':
+            factor_coverage = core_factor_coverage(c, m, binding)
             for name,dtype in [('rule_price_tick','DOUBLE'),('tick_rule_evidence','VARCHAR'),('tick_source','VARCHAR')]:
                 c.execute('ALTER TABLE execution_status ADD COLUMN IF NOT EXISTS '+name+' '+dtype)
         for name in ('raw_daily','execution_status'):
@@ -283,6 +307,7 @@ def merge_candidate(stock_output, live=False, output=None, *, scope='P0_COMPLETE
         meta.update(qualification_scope='CORE_MODELS_V1',quality_status='CORE_MODELS_PASS_V1',
             engineering_only=True,full_p0_pass=False,execution_qualified=True,
             model_continuation_qualified=True,
+            factor_capture_coverage=factor_coverage,
             execution_qualified_symbols=m['execution_qualified_symbols'],
             execution_evidence_contract='RQ_OR_EXCHANGE_RULE_V1')
     if m.get('identity_capture'):

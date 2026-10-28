@@ -565,17 +565,107 @@ def funnel_market_dependencies(candidates, day, config=None):
             'history_65_count': sum(x['history_65'] for x in records), 'symbols': records}
 
 
-def run_funnel(source, sets, day, out, *, amount_unit_binding=None, pit_proof=None):
+def run_funnel(source, sets, day, out, *, amount_unit_binding=None, pit_proof=None,
+               previous_run=None, actual_model_forward=False):
     import pandas as pd
     if amount_unit_binding is not None:
         from scripts.qualify_postclose_funnel import run as qualify
-        result = qualify(source.db, day, out, amount_unit_binding=amount_unit_binding,
-                         source=source, membership_sets=sets, membership_proof=pit_proof,
-                         execution_preview=True, nav=1000000.0)
-        result = dict(result, structure_input_status=result['status'],
-                      status='STRUCTURE_RESEARCH_COMPLETE' if result['status'] == 'PASS_STRUCTURE_ADV20_INPUTS' else 'BLOCKED',
-                      exit_qualification='UNQUALIFIED_NO_MODEL_HOLDINGS_OR_EXITS_EMITTED',
-                      data_kind='INDEPENDENT_RESEARCH_ONLY', forward_acceptance=False)
+        from scripts import run_postclose_daily as daily
+        from core import p0_rq_input as rq
+        from research import funnel_daily_model as model
+        from core.exchange_rule_evidence import resolve_rule
+        model_config_path=ROOT/'config/execution/funnel_model_v1.json'
+        model_config=read_json(model_config_path)
+        initial_nav=float(model_config['initial_nav_cny'])
+        out=Path(out)
+        result=None
+        for _,_,root,report in reversed(daily.daily_reports(day)):
+            if (report.get('database_sha256')!=source.meta['database_sha256']
+                    or report.get('manifest_sha256')!=rq.sha(source.root/'manifest.json')
+                    or report.get('pit')!=pit_proof):continue
+            try:
+                _,_,hashes=daily.model_report(root)
+                old=read_json(daily.verified_file(root,'funnel/summary.json',hashes))
+                if (old.get('input_sha256')!=source.meta['database_sha256']
+                        or old.get('execution_preview',{}).get('amount_unit_binding_sha256')!=rq.sha(amount_unit_binding)):
+                    continue
+                from scripts import run_ret120_execution_funnel_v01 as cfg
+                if old['execution_preview'].get('configuration_sha256')!=rq.sha(cfg.CFG):continue
+                names=['summary.json','candidates.parquet','features.parquet','execution_preview.parquet',
+                       'execution_preview.csv','action_sheet.csv']
+                originals=[daily.verified_file(root,'funnel/'+name,hashes) for name in names]
+            except (ValueError,KeyError,FileNotFoundError):continue
+            out.mkdir(parents=True,exist_ok=False)
+            for name,path in zip(names,originals):shutil.copyfile(path,out/name)
+            result=old
+            break
+        if result is None:
+            result = qualify(source.db, day, out, amount_unit_binding=amount_unit_binding,
+                             source=source, membership_sets=sets, membership_proof=pit_proof,
+                             execution_preview=True, nav=initial_nav)
+        if actual_model_forward:require_actual_model_window(day)
+        profile=read_json(ROOT/'config/ops/p0_core_recovery_v01.json')
+        dates=sessions(profile['calendar'],day)
+        preview=pd.read_parquet(out/'execution_preview.parquet')
+        plan_fields=['symbol','lane','lane_rank','status','stop_raw','open_valid_low','open_valid_high',
+                     'adv20_amount','minimum_order_quantity','quantity_step','classification']
+        plans=preview.loc[preview.status.eq('PREPARE_MANUAL'),plan_fields].to_dict('records')
+        parent=Path(previous_run) if previous_run else None
+        parent_db=parent/'model.duckdb' if parent else None
+        proof=read_json(parent/'plan_freeze.json') if parent else None
+        symbols=set()
+        if parent:
+            symbols.update(pd.read_csv(parent/'plan.csv').symbol)
+            with read_db(parent_db) as con:
+                symbols.update(row[0] for row in con.execute('SELECT symbol FROM forward_positions').fetchall())
+        if symbols:
+            coverage=source.meta.get('factor_capture_coverage',{})
+            covered={rq.qmt_id(symbol) for symbol in coverage.get('order_book_ids',[])}
+            if (coverage.get('status')!='COMPLETE' or day not in coverage.get('dates',[])
+                    or not symbols.issubset(covered)):
+                raise ValueError('FUNNEL_EXACT_DAY_ACTION_COVERAGE_UNKNOWN:'+','.join(sorted(symbols-covered)))
+        with read_db(source.db) as con:
+            native=con.execute('SELECT * FROM identity_observed_today').df()
+            changes={rq.qmt_id(row[0]) for row in con.execute('''SELECT order_book_id FROM factors
+                WHERE ex_date>? AND ex_date<=? UNION SELECT order_book_id FROM corporate_actions
+                WHERE ex_date>? AND ex_date<=?''',[pd.Timestamp(dates[-2]).date(),pd.Timestamp(day).date(),
+                pd.Timestamp(dates[-2]).date(),pd.Timestamp(day).date()]).fetchall()}
+        identities={rq.qmt_id(row['order_book_id']):row for row in native.to_dict('records')}
+        histories=source.histories(sorted(symbols),day,2,'none',1) if symbols else {}
+        for symbol,frame in histories.items():
+            rule=resolve_rule(identities[symbol],day,decision=rq.clock())
+            frame.loc[day,'rule_price_tick']=rule['price_tick']
+            frame.loc[day,'tick_source']='EXCHANGE_RULE_DERIVED'
+            frame.loc[day,'order_book_id']=rq.rq_id(symbol)
+            frame.loc[day,'tick_rule_evidence']=json.dumps(dict(identity=rule['identity'],evidence=rule),default=str)
+            frame.loc[day,'corporate_action_affected']=symbol in changes
+        binding=dict(version=source.meta['version'],database_sha256=source.meta['database_sha256'],
+            manifest_sha256=rq.sha(source.root/'manifest.json'),pit=pit_proof,
+            model_research_authorized=True,actual_model_forward=actual_model_forward,
+            capital_source=str(model_config_path),capital_config_sha256=rq.sha(model_config_path))
+        model_result=model.run_session(day=day,market_dates=dates,output_db=out/'model.duckdb',
+            histories=histories,plans=plans,identities=identities,input_binding=binding,
+            parent_db=parent_db,parent_day=dates[-2] if parent else None,
+            parent_frozen_at=proof['frozen_at'] if proof else None,initial_nav=initial_nav)
+        pd.DataFrame(plans,columns=plan_fields).to_csv(out/'plan.csv',index=False,encoding='utf-8-sig')
+        all_dates=sessions(profile['calendar'],read_json(profile['calendar'])['valid_to'])
+        later=[date for date in all_dates if date>day]
+        frozen=dict(schema='FUNNEL_MODEL_PLAN_FREEZE_V1',signal_date=day,frozen_at=rq.clock().isoformat(),
+            plan_sha256=rq.sha(out/'plan.csv'),ledger_sha256=rq.sha(out/'model.duckdb'),
+            next_session=later[0] if later else None,forward_qualified=actual_model_forward,
+            research_state='ACTUAL_MODEL_FORWARD' if actual_model_forward else 'NOT_FORWARD',
+            policy_hash=model_result.get('policy_hash'),input_binding=binding)
+        if actual_model_forward:require_actual_model_window(day)
+        write_json(out/'plan_freeze.json',frozen)
+        model_result.update(plan_freeze=frozen,forward_acceptance=actual_model_forward)
+        write_json(out/'model_summary.json',model_result)
+        structure_status=result.get('structure_input_status',result['status'])
+        result = dict(result, structure_input_status=structure_status,
+                      status='STRUCTURE_RESEARCH_COMPLETE' if structure_status == 'PASS_STRUCTURE_ADV20_INPUTS' else 'BLOCKED',
+                      exit_qualification='APPROVED_FIXED_PROTECTION_V1',model=model_result,
+                      full_model_status=model_result['status'],
+                      data_kind='ACTUAL_QUALIFIED_POSTCLOSE' if actual_model_forward else 'INDEPENDENT_RESEARCH_ONLY',
+                      forward_acceptance=actual_model_forward)
         write_json(out / 'summary.json', result)
         return result
     from scripts import run_ret120_universe_prior_forward_v10 as prior

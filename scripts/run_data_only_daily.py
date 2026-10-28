@@ -54,7 +54,7 @@ def result_files(r):
         funnel=r.get('funnel') or {}
         structure=funnel.get('structure_input_status',funnel.get('status','NOT_RUN'))
         risk=(funnel.get('execution_preview') or {}).get('status','NOT_RUN')
-        full=funnel.get('full_model_status','NOT_RUN')
+        full=(funnel.get('model') or {}).get('status',funnel.get('full_model_status','NOT_RUN'))
         w.writerow([r['date'],'funnel',f'structure={structure};risk={risk};full={full}',r.get('version')])
 
 
@@ -118,6 +118,7 @@ def model_report(reader, day):
         return root,report
     complete=[row for row in report_entry.daily_reports(day)
               if row[3].get('status')=='TWO_STRATEGY_REPORT_COMPLETE'
+               and row[3].get('funnel',{}).get('model',{}).get('status')=='FUNNEL_MODEL_SESSION_COMPLETE'
                and row[3].get('closeout_version')==report_entry.CLOSEOUT_VERSION
                and (not report_entry.actual_forward_window(day) or row[3].get('forward_acceptance') is True)
               and row[3].get('input',{}).get('version')==reader.meta['version']
@@ -147,7 +148,7 @@ def model_report(reader, day):
         root,report=validate(path.parent)
     except (KeyError,IndexError,json.JSONDecodeError) as exc:
         raise ValueError('MODEL_REPORT_CHILD_DID_NOT_RETURN_A_REPORT') from exc
-    if (completed.returncode==0)!=(report.get('status')=='TWO_STRATEGY_REPORT_COMPLETE'):
+    if (completed.returncode==0)!=(report.get('three_strategy_status')=='THREE_STRATEGY_MODELS_COMPLETE'):
         raise ValueError('MODEL_REPORT_CHILD_EXIT_STATUS_CONFLICT')
     return root,report,False
 
@@ -195,11 +196,15 @@ def run(phase, day=None):
                          report.get('strategies',{}).get(kind,{}).get('operations_error',report.get('input_error','NO_MODEL_OPERATIONS')))))
                 for kind in ('deep','ret120')}
     status='GREEN' if report.get('status')=='TWO_STRATEGY_REPORT_COMPLETE' and all(v=='PASS' for v in strategies.values()) else 'PARTIAL' if 'PASS' in strategies.values() else 'RED'
+    funnel_model_status=report.get('funnel',{}).get('model',{}).get('status','NOT_RUN')
+    if status=='GREEN' and funnel_model_status!='FUNNEL_MODEL_SESSION_COMPLETE':
+        status='PARTIAL'
     r=dict(date=day,phase=phase,status=status,
            version=reader.meta['version'],manifest_sha256=rq.sha(reader.root/'manifest.json'),
            strategies=strategies,details=report.get('strategies',{}),pit=report.get('pit'),
            report=str(report_root/'report.md'),report_status=report.get('status'),
            funnel=report.get('funnel'),idempotent_reuse=reused,transport=TRANSPORT,
+           funnel_model_status=funnel_model_status,three_strategy_status=report.get('three_strategy_status'),
             consumer_versions={k:reader.meta['version'] for k in strategies},
             model_forward=report.get('forward_acceptance') is True,
             real_trading_authorized=False,forward_or_trading_authorized=False)

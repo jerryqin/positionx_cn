@@ -1,0 +1,7 @@
+{
+  "model_id": "FUNNEL_MODEL_V1",
+  "initial_nav_cny": 1000000.0,
+  "capital_basis": "Reuse existing Funnel daily preview NAV; independent empty research model, not real account equity",
+  "authorization": "USER_FINAL_DELIVERY_20261028",
+  "real_orders_authorized": false
+}

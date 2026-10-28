@@ -24,7 +24,7 @@ DAILY_ROOT = ROOT / 'reports/postclose_daily'
 ACCEPTED_RUN = ROOT / 'reports/rqdata_consumer_acceptance_20261028/TEMP/strategy_run'
 ACCEPTED_VERSION = 'asof_20261027_5b3800ece8a8'
 ACCEPTED_DATABASE_SHA = '5b3800ece8a8754140670309eefe3bd0d6fc08d9ac06c432d496982f03bc3a9f'
-CLOSEOUT_VERSION = 'THREE_STRATEGY_CLOSEOUT_V1'
+CLOSEOUT_VERSION = 'THREE_STRATEGY_CLOSEOUT_V2_FUNNEL_MODEL'
 FUNNEL_AMOUNT_BINDING = ROOT / 'reports/postclose_stock_20261027_resume/funnel_live/amount_unit_binding.json'
 
 
@@ -68,6 +68,34 @@ def actual_model_parent(day, kind):
                   and r[3].get('forward_acceptance') is True
                   and r[3].get('strategies', {}).get(kind, {}).get('status') == 'MODEL_REPLAY_COMPLETE']
     return candidates[-1][2] if candidates else None
+
+
+def funnel_parent(day, dates, *, actual_model_forward=False):
+    """Use only an adjacent, sealed Funnel model; a first actual account is empty."""
+    import pandas as pd
+    from core import p0_rq_input as rq
+    candidates = [row for row in daily_reports() if row[0] < day
+                  and row[3].get('funnel', {}).get('model', {}).get('status') == 'FUNNEL_MODEL_SESSION_COMPLETE'
+                  and row[3]['funnel']['model'].get('forward_acceptance') is actual_model_forward]
+    if not candidates:
+        if actual_model_forward or day == '20261028':
+            return None
+        raise ValueError('ADJACENT_FUNNEL_MODEL_PARENT_MISSING')
+    _, _, root, _ = candidates[-1]
+    root, report, hashes = model_report(root)
+    local.require_next_session({'last_processed_date': report['business_date']}, dates, day)
+    model = report['funnel']['model']
+    if model.get('forward_acceptance') is not actual_model_forward:
+        raise ValueError('FUNNEL_PARENT_FORWARD_STATE_MISMATCH')
+    for name in ('model.duckdb', 'plan.csv', 'plan_freeze.json', 'model_summary.json'):
+        verified_file(root, 'funnel/' + name, hashes)
+    proof = local.read_json(root / 'funnel/plan_freeze.json')
+    if (proof.get('next_session') != day or proof.get('forward_qualified') is not actual_model_forward
+            or proof.get('ledger_sha256') != hashes['funnel/model.duckdb']):
+        raise ValueError('FUNNEL_PARENT_PLAN_BINDING_MISMATCH')
+    event = pd.Timestamp(day).tz_localize(rq.CST).replace(hour=9, minute=30)
+    local.require_plan_before_event(root / 'funnel/plan.csv', proof, event)
+    return root / 'funnel'
 
 
 def required_execution_symbols(day):
@@ -194,7 +222,7 @@ def parent_profile(root, kind, profile, dates, day):
     return dict(profile, segment_db=str(root / kind / 'model.duckdb'), actual_model_forward=forward)
 
 
-def reuse_model(root, kind, out):
+def reuse_model(root, kind, out, *, reuse_operations=False):
     """Carry a completed same-input sleeve into a new recovery report unchanged."""
     from core import p0_rq_input as rq
     root, report, hashes = model_report(root)
@@ -209,7 +237,14 @@ def reuse_model(root, kind, out):
         shutil.copyfile(verified_file(root, key, hashes), out / key)
         if rq.sha(out / key) != hashes[key]:
             raise ValueError('RECOVERY_MODEL_COPY_MISMATCH:' + key)
-    item.pop('operations', None)
+    if reuse_operations and item.get('operations'):
+        for name in ('operations.csv', 'entry_decisions.csv', 'position_actions.csv'):
+            key = kind + '/' + name
+            shutil.copyfile(verified_file(root, key, hashes), out / key)
+            if rq.sha(out / key) != hashes[key]:
+                raise ValueError('RECOVERY_OPERATIONS_COPY_MISMATCH:' + key)
+    else:
+        item.pop('operations', None)
     item.pop('operations_error', None)
     return item
 
@@ -335,7 +370,7 @@ def operational_summary(kind, root, day, dates, source=None, members=None, reuse
 def write_report(path, result):
     if result.get('mode') == 'ISOLATED_DAILY_SIGNAL_RESEARCH':
         return write_signal_report(path, result)
-    lines = ['# PositionX-CN 两策略盘后日报', '',
+    lines = ['# PositionX-CN 三策略盘后日报', '',
              f"业务日：{result['business_date']}；生成：{result['generated_at']}。",
              f"数据：{result.get('input', {}).get('version', '未取得准确日期发布数据')}。",
              f"运行：{result['status']}；模型模式：{result.get('mode')}；研究状态：{result.get('research_state', 'NOT_FORWARD')}。真实账户、资金、持仓、成交未知，未查询。", '',
@@ -379,7 +414,13 @@ def write_report(path, result):
         lines.append('- 准确日期输入：' + result['input_error'])
     f = result.get('funnel', {})
     lines += [f"Funnel：{f.get('status', 'NOT_RUN')}；完整模型：{f.get('full_model_status', 'NOT_RUN')}。",
-               f"候选 {f.get('candidate_count', '未计算')}；结构 {f.get('feature_count', '未计算')}；风险预览：{f.get('execution_preview', {}).get('status', 'NOT_RUN')}。明细：[summary.json](funnel/summary.json)。Funnel未生成完整持仓或策略收益。",
+               f"候选 {f.get('candidate_count', '未计算')}；结构 {f.get('feature_count', '未计算')}；风险预览：{f.get('execution_preview', {}).get('status', 'NOT_RUN')}。明细：[summary.json](funnel/summary.json)。"]
+    model = f.get('model', {})
+    state = model.get('state', {})
+    lines += [f"Funnel模型：{model.get('status', 'NOT_RUN')}；条件计划 {len(model.get('plans', []))}；当日模型进入 {len(model.get('entries', []))}；持仓 {len(model.get('positions', []))}；应退出计划 {len(model.get('exit_plans', []))}；退出 {len(model.get('exits', []))}；延期 {len(model.get('delayed', []))}。",
+              f"Funnel现金 {state.get('cash', '未计算')}；权益 {state.get('equity', '未计算')}；结算 {json.dumps(model.get('settlement', {'status': 'NOT_RUN'}), ensure_ascii=False)}。",
+              f"进入/未进入原因：{json.dumps(model.get('entry_decisions', []), ensure_ascii=False)}。阻断：{json.dumps(model.get('blocked', []), ensure_ascii=False)}。延期：{json.dumps(model.get('delayed', []), ensure_ascii=False)}。",
+              f"Funnel模型明细：[model_summary.json](funnel/model_summary.json)；条件计划：[plan.csv](funnel/plan.csv)。未来价格、数量与成交继续保持未知；模型不是实盘账户。",
               '', '后续运行仍使用本入口与准确业务日，只有相邻研究日可接续；失败目录保留，再次运行会新建同日尝试目录，保留已完成策略的原计算。次日逐策略选择前一研究日最新可用尝试，不覆盖旧产物。',
               '本入口只读发布数据和真实PIT，所有新写入限制在本次reports目录，不采集数据、不连接Broker、不推进正式账本。']
     Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
@@ -555,6 +596,7 @@ def run(day=None, output=None, previous_run=None, reuse_run=None, *, signals_onl
     def matches(report):
         return (report.get('status') == 'TWO_STRATEGY_REPORT_COMPLETE'
                 and report.get('closeout_version') == CLOSEOUT_VERSION
+                and report.get('funnel', {}).get('model', {}).get('status') == 'FUNNEL_MODEL_SESSION_COMPLETE'
                 and report.get('input', {}).get('version') == source.meta['version']
                 and report.get('database_sha256') == source.meta['database_sha256']
                 and (not actual_forward_window(day) or previous_run or reuse_run
@@ -623,7 +665,7 @@ def run(day=None, output=None, previous_run=None, reuse_run=None, *, signals_onl
                     except LookupError:
                         same_day = None
                     if same_day is not None:
-                        result['strategies'][kind] = reuse_model(same_day, kind, out)
+                        result['strategies'][kind] = reuse_model(same_day, kind, out, reuse_operations=True)
                         result.setdefault('strategy_reused_from', {})[kind] = str(same_day)
                         continue
                     forward_parent = actual_model_parent(day, kind) if actual_forward else None
@@ -643,14 +685,17 @@ def run(day=None, output=None, previous_run=None, reuse_run=None, *, signals_onl
         # Funnel is independent of model parent/exit eligibility and uses the same sealed input and real PIT.
         if not result.get('reused_run'):
             try:
+                previous_funnel = funnel_parent(day, dates, actual_model_forward=actual_forward)
                 result['funnel'] = local.run_funnel(source, sets, day, out / 'funnel',
-                    amount_unit_binding=FUNNEL_AMOUNT_BINDING, pit_proof=result['pit'])
+                    amount_unit_binding=FUNNEL_AMOUNT_BINDING, pit_proof=result['pit'],
+                    previous_run=previous_funnel, actual_model_forward=actual_forward)
             except (Exception, SystemExit) as exc:
                 result['funnel'] = {'status': 'BLOCKED', 'error': str(exc),
-                    'full_model_status': 'FUNNEL_FULL_MODEL_BLOCKED_EXIT_POLICY', 'forward_acceptance': False}
+                    'full_model_status': 'FUNNEL_MODEL_BLOCKED', 'model': {'status': 'BLOCKED', 'error': str(exc)},
+                    'forward_acceptance': False}
         for kind in ('deep', 'ret120'):
             item = result['strategies'].get(kind, {})
-            if item.get('status') == 'MODEL_REPLAY_COMPLETE':
+            if item.get('status') == 'MODEL_REPLAY_COMPLETE' and not item.get('operations'):
                 try:
                     item['operations'] = operational_summary(kind, out, day, dates, source=source,
                                     members=sets['000905.SH'], reused=bool(result.get('reused_run')),
@@ -661,6 +706,9 @@ def run(day=None, output=None, previous_run=None, reuse_run=None, *, signals_onl
         result['input_error'] = str(exc)
     passed = [k for k in ('deep', 'ret120') if result['strategies'].get(k, {}).get('operations')]
     result['status'] = 'TWO_STRATEGY_REPORT_COMPLETE' if len(passed) == 2 and not result.get('input_error') else 'PARTIAL' if passed else 'BLOCKED'
+    funnel_complete = result.get('funnel', {}).get('model', {}).get('status') == 'FUNNEL_MODEL_SESSION_COMPLETE'
+    result['three_strategy_status'] = ('THREE_STRATEGY_MODELS_COMPLETE' if len(passed) == 2 and funnel_complete
+                                       and not result.get('input_error') else 'PARTIAL' if passed or funnel_complete else 'BLOCKED')
     result['boundary'] = {'violations': guard.violations, 'blocked_sdk_modules': list(guard.blocked)}
     if guard.violations:
         result['status'] = 'BOUNDARY_VALIDATION_FAILED'
@@ -708,8 +756,10 @@ def main():
     result = run(args.date, args.output, args.previous_run, args.reuse_run,
                  signals_only=args.signals_only, allow_core_models=args.allow_core_models)
     report_dir = Path(args.output or result.get('output_directory') or DAILY_ROOT / result['business_date']).resolve()
-    print(json.dumps({'status': result['status'], 'report': str(report_dir / 'report.md')}, ensure_ascii=False))
-    return 0 if result['status'] in ('TWO_STRATEGY_REPORT_COMPLETE', 'TWO_STRATEGY_SIGNAL_RESEARCH_COMPLETE') else 3
+    print(json.dumps({'status': result['status'], 'three_strategy_status': result.get('three_strategy_status'),
+                      'report': str(report_dir / 'report.md')}, ensure_ascii=False))
+    return 0 if (result['status'] == 'TWO_STRATEGY_SIGNAL_RESEARCH_COMPLETE'
+                 or result.get('three_strategy_status') == 'THREE_STRATEGY_MODELS_COMPLETE') else 3
 
 
 if __name__ == '__main__':
