@@ -7,10 +7,7 @@ Only a supplier-ready complete day may be published; failed captures stay TEMP.
 from __future__ import annotations
 
 import argparse
-import contextlib
-import io
 import json
-import os
 from pathlib import Path
 import shutil
 import sys
@@ -43,17 +40,8 @@ def normalize(value):
 
 
 def init_provider():
-    # SDK imported only on the explicitly requested network path; plugins disabled.
-    import rqdatac
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        kw = dict(auto_load_plugins=False, connect_timeout=10, timeout=30)
-        if os.environ.get('RQDATAC_CONF') or os.environ.get('RQDATAC2_CONF'):
-            rqdatac.init(**kw)
-        elif os.environ.get('RQDATA_LICENSE'):
-            rqdatac.init(username='license', password=os.environ['RQDATA_LICENSE'], **kw)
-        else:
-            raise rq.InputBlocked('RQDATA_AUTH_MISSING')
-    return rqdatac
+    from core.rqdata_https import get_provider
+    return get_provider()
 
 
 def ready_receipt(provider, business_date, now):
@@ -112,14 +100,34 @@ def capture_action_terms(provider, ids, previous, day, work):
     observed = pd.Timestamp(rq.clock()).isoformat()
     target = pd.Timestamp(day).date()
     previous = pd.Timestamp(previous).date()
+    from scripts import run_postclose_local_candidate as local
+    dates = local.sessions(ROOT / 'config/ops/cn_exchange_calendar_2026.json',
+                           target.strftime('%Y%m%d'))
+    if len(dates) < 2:
+        raise rq.InputBlocked('ACTION_PREVIOUS_APPROVED_SESSION_MISSING')
+    split_start = pd.Timestamp(dates[-2]).date()
     records, queries = [], []
     for name, method in [('dividend', provider.get_dividend), ('split', provider.get_split),
                          ('rights', provider.get_allotment)]:
-        # Dividend uses announcement dates, not ex dates. Query only
-        # changed cohort IDs; retain raw response and normalize exact-day events.
-        start = (pd.Timestamp(target) - pd.Timedelta(days=90)).date() if name == 'dividend' else previous
-        frame = normalize(method(ids, start_date=start, end_date=target))
-        queries.append(dict(dataset=name, start=str(start), end=str(target), raw_rows=len(frame)))
+        # Query only this missing cohort. Split filters record dates, which can
+        # precede a weekend/holiday. A rights announcement can be much earlier
+        # than its ex date; do not invent a lower bound for the provider filter.
+        kwargs = dict(end_date=target)
+        if name == 'dividend':
+            start = (pd.Timestamp(target) - pd.Timedelta(days=90)).date()
+            filter_semantics = 'declaration_announcement_date'
+        elif name == 'split':
+            start = split_start
+            filter_semantics = 'book_closure_date'
+        else:
+            start = None
+            filter_semantics = 'provider date filter; lower bound omitted, not assumed to be ex date'
+        if start is not None:
+            kwargs['start_date'] = start
+        frame = normalize(method(ids, **kwargs))
+        queries.append(dict(dataset=name, start=str(start) if start is not None else None,
+                            start_omitted=start is None, end=str(target),
+                            filter_semantics=filter_semantics, raw_rows=len(frame)))
         if not frame.empty:
             frame.to_parquet(Path(work) / ('action_raw_' + name + '.parquet'), index=False)
             ex_field = 'ex_right_date' if name == 'rights' else 'ex_dividend_date'
@@ -130,14 +138,16 @@ def capture_action_terms(provider, ids, previous, day, work):
         actions = rq.normalize_actions(*records, pd.DataFrame(), observed_at=observed)
     except rq.InputBlocked as exc:
         write_json(Path(work) / 'action_capture.json', dict(status='BLOCKED', reason=str(exc),
-            observed_at=observed, symbols=ids, start=str(previous), end=str(target), queries=queries))
+            observed_at=observed, symbols=ids, start=str(split_start), caller_previous=str(previous),
+            end=str(target), queries=queries))
         return
     if not actions.empty:
         actions = actions.loc[pd.to_datetime(actions.ex_date).dt.date.eq(target)]
         if not actions.empty:
             actions.to_parquet(Path(work) / 'captured_actions.parquet', index=False)
     write_json(Path(work) / 'action_capture.json', dict(status='OBSERVED', observed_at=observed,
-        symbols=ids, start=str(previous), end=str(target), events=len(actions), queries=queries,
+        symbols=ids, start=str(split_start), caller_previous=str(previous), end=str(target),
+        events=len(actions), queries=queries,
         scope='existing RQ source; changed cohort members only; actual observation, no historical PIT'))
 
 
@@ -229,31 +239,24 @@ def collect(provider, base_manifest, business_date, work, now=None):
         raise rq.InputBlocked('INCREMENT_STOCK_POOL_TOO_SMALL')
     for obid in ids:
         rq.qmt_id(obid)
-    frames, statuses, factors = [], [], []
-    for i in range(0, len(ids), 200):
-        batch = ids[i:i + 200]
-        raw = normalize(provider.get_price(batch, start_date=day, end_date=day,
-            frequency='1d', fields=FIELDS, adjust_type='none', skip_suspended=False, expect_df=True))
-        stamp = pd.Timestamp(rq.clock()).isoformat()
-        raw['source_version'] = 'RQDATA_CLOSE_' + day.strftime('%Y%m%d') + '_' + stamp
-        frames.append(raw)
-        raw.to_parquet(work / f'raw_{i // 200:03}.parquet', index=False)
-        matrix = provider.is_suspended(batch, start_date=day, end_date=day)
-        if matrix is None or matrix.empty:
-            raise rq.InputBlocked('INCREMENT_STATUS_RESPONSE_EMPTY')
-        s = matrix.rename_axis('date').reset_index().melt('date', var_name='order_book_id', value_name='status_suspended')
-        s['status_available_at'] = pd.Timestamp(rq.clock()).isoformat()
-        ticks = provider.get_tick_size(batch)
-        s['price_tick'] = s.order_book_id.map(ticks)
-        s['tick_available_at'] = pd.Timestamp(rq.clock()).isoformat()
-        statuses.append(s)
-        s.to_parquet(work / f'status_{i // 200:03}.parquet', index=False)
-        f = normalize(provider.get_ex_factor(batch, start_date=day, end_date=day))
-        if not f.empty:
-            factors.append(f)
-            f.to_parquet(work / f'factor_{i // 200:03}.parquet', index=False)
-    bars = pd.concat(frames, ignore_index=True)
-    status = pd.concat(statuses, ignore_index=True)
+    # Batch the complete missing day once per method; no per-security requests.
+    bars = normalize(provider.get_price(ids, start_date=day, end_date=day,
+        frequency='1d', fields=FIELDS, adjust_type='none', skip_suspended=False, expect_df=True))
+    stamp = pd.Timestamp(rq.clock()).isoformat()
+    bars['source_version'] = 'RQDATA_CLOSE_' + day.strftime('%Y%m%d') + '_' + stamp
+    bars.to_parquet(work / 'raw_000.parquet', index=False)
+    matrix = provider.is_suspended(ids, start_date=day, end_date=day)
+    if matrix is None or matrix.empty:
+        raise rq.InputBlocked('INCREMENT_STATUS_RESPONSE_EMPTY')
+    status = matrix.rename_axis('date').reset_index().melt('date', var_name='order_book_id', value_name='status_suspended')
+    status['status_available_at'] = pd.Timestamp(rq.clock()).isoformat()
+    status['price_tick'] = status.order_book_id.map(provider.get_tick_size(ids))
+    status['tick_available_at'] = pd.Timestamp(rq.clock()).isoformat()
+    status.to_parquet(work / 'status_000.parquet', index=False)
+    f = normalize(provider.get_ex_factor(ids, start_date=day, end_date=day))
+    factors = [f] if not f.empty else []
+    if factors:
+        f.to_parquet(work / 'factor_000.parquet', index=False)
     quality = validate_day(bars, status, ids, day)
     # Supplier must still report the exact complete date after the full capture.
     after = ready_receipt(provider, day, rq.clock())
@@ -315,6 +318,8 @@ def seal_capture(base, day, work, bars, status, identity, factors, receipt):
                 if not pd.api.types.is_integer_dtype(f.rice_create_tm):
                     raise rq.InputBlocked('FACTOR_RAW_CREATION_TYPE_CHANGED')
                 c.execute('ALTER TABLE factor_raw_versions ADD COLUMN IF NOT EXISTS rice_create_tm BIGINT')
+            if 'rice_create_tm_http_native' in f:
+                c.execute('ALTER TABLE factor_raw_versions ADD COLUMN IF NOT EXISTS rice_create_tm_http_native VARCHAR')
             c.execute('INSERT INTO factor_raw_versions BY NAME SELECT * FROM new_factors')
             c.execute('INSERT INTO factors SELECT order_book_id,ex_date,ex_cum_factor FROM new_factors')
         if (work / 'captured_actions.parquet').exists():
@@ -339,7 +344,7 @@ def seal_capture(base, day, work, bars, status, identity, factors, receipt):
         supplier_complete_observed_at=receipt['available_at'],
         historical_availability_not_inferred=True,
         current_status_and_tick='exact-day observed; no historical tick reconstruction',
-        factor_rice_create_tm='vendor raw integer preserved; never substituted for available_at or our observation time',
+        factor_rice_create_tm='vendor integer retained; HTTP native datetime text retained separately without timezone inference; neither substitutes observation time',
         adjustments=dict(base.meta['adjustments'], QMT_FRONT='BLOCKED_PENDING_ACTION_AND_NUMERIC_CONTRACT'),
         activated_in_production=False)
     # Frozen old preview remains old-date evidence; it is never an increment source.
@@ -372,12 +377,25 @@ def publish(work, asset_root=ASSET_ROOT):
         if rq.sha(existing.db) != rq.sha(reader.db):
             raise rq.InputBlocked('PUBLISH_VERSION_COLLISION')
         return str(target)
-    target.mkdir(parents=False, exist_ok=False)
-    # COMPLETE is copied last. Interrupted writes remain visibly unsealed.
+    # Keep interrupted copies outside the directory scanned by normal readers.
+    # The final rename is on this volume and exposes only a verified seal.
+    staging_root = root / 'publication_staging'
+    staging_root.mkdir(parents=True, exist_ok=True)
+    staging = staging_root / (reader.meta['version'] + '_' + uuid.uuid4().hex)
+    staging.mkdir(exist_ok=False)
     for p in work.iterdir():
         if p.is_file() and p.name != 'COMPLETE.json':
-            shutil.copyfile(p, target / p.name)
-    shutil.copyfile(work / 'COMPLETE.json', target / 'COMPLETE.json')
+            shutil.copyfile(p, staging / p.name)
+    shutil.copyfile(work / 'COMPLETE.json', staging / 'COMPLETE.json')
+    verified = rq.DailyInput(staging / 'manifest.json', {'enabled': False})
+    if rq.sha(verified.db) != rq.sha(reader.db):
+        raise rq.InputBlocked('PUBLISH_STAGING_BINDING_MISMATCH')
+    if target.exists():
+        existing = rq.DailyInput(target / 'manifest.json', {'enabled': False})
+        if rq.sha(existing.db) != rq.sha(reader.db):
+            raise rq.InputBlocked('PUBLISH_VERSION_COLLISION')
+        return str(target)
+    staging.rename(target)
     rq.DailyInput(target / 'manifest.json', {'enabled': False})
     return str(target)
 

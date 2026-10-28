@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import pandas as pd
+
 from core import p0_rq_input as rq
 from scripts import collect_postclose_candidate as candidate
 
@@ -64,6 +66,35 @@ class CandidateTests(unittest.TestCase):
         self.assertEqual(method.call_count, 1)
         self.assertEqual(candidate.SOURCE_STEP, dict(method='get_price', start='20261026',
                                                     end='20261027', batch_size=1))
+
+    def test_partial_status_requires_each_session_and_respects_listing_date(self):
+        identity = pd.DataFrame({'order_book_id': ['000001.XSHE', '000002.XSHE'],
+                                 'listed_date': ['1991-01-01', '2026-10-27']})
+        retained = pd.DataFrame({'order_book_id': ['000001.XSHE', '000002.XSHE'],
+                                 'date': ['2026-10-26', '2026-10-27']})
+        self.assertEqual(candidate.completed_capture_ids(retained, identity, ['20261026', '20261027']),
+                         {'000002.XSHE'})
+
+    def test_status_retry_preserves_real_times_but_rejects_fact_conflicts(self):
+        previous = pd.DataFrame({'order_book_id': ['000001.XSHE'], 'date': ['2026-10-26'],
+                                 'status_suspended': [False], 'price_tick': [0.01],
+                                 'status_available_at': ['2026-10-27T16:00:00+08:00']})
+        retry = previous.copy()
+        retry['status_available_at'] = '2026-10-27T16:01:00+08:00'
+        candidate.validate_status_overlap(previous, retry)
+        self.assertEqual(previous.iloc[0].status_available_at, '2026-10-27T16:00:00+08:00')
+        for field, value in [('status_suspended', True), ('price_tick', 0.02)]:
+            changed = retry.copy()
+            changed[field] = value
+            with self.assertRaisesRegex(rq.InputBlocked, 'CAPTURE_STATUS_KEY_CONFLICT:' + field):
+                candidate.validate_status_overlap(previous, changed)
+
+    def test_status_duplicate_keys_are_not_silently_ignored(self):
+        rows = pd.DataFrame({'order_book_id': ['000001.XSHE'] * 2,
+                             'date': ['2026-10-27'] * 2,
+                             'status_suspended': [False, True], 'price_tick': [0.01, 0.01]})
+        with self.assertRaisesRegex(rq.InputBlocked, 'CAPTURE_STATUS_DUPLICATE_KEY'):
+            candidate.validate_status_overlap(pd.DataFrame(), rows)
 
 
 if __name__ == '__main__':

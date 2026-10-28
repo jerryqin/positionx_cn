@@ -22,8 +22,10 @@ class DataOnlyTests(unittest.TestCase):
             result=dict(date='20261027',status='GREEN',version='v1',manifest_sha256=daily.rq.sha(manifest))
             (root/'20261027_postclose.json').write_text(json.dumps(result),encoding='utf-8')
             reader=SimpleNamespace(meta={'version':'v1'},root=root)
-            with patch.object(daily,'OPS',root),patch.object(daily.rq,'open_inputs',return_value=reader),patch.object(daily.close,'run',side_effect=AssertionError('DOWNLOAD')):
+            report={'status':'TWO_STRATEGY_REPORT_COMPLETE','strategies':{k:{'operations':{'pending':1}} for k in ('deep','ret120')}}
+            with patch.object(daily,'OPS',root),patch.object(daily,'result_files'),patch.object(daily.rq,'open_inputs',return_value=reader),patch.object(daily.close,'run',side_effect=AssertionError('DOWNLOAD')),patch.object(daily,'model_report',return_value=(root,report,True)) as consume:
                 self.assertTrue(daily.run('postclose','20261027')['idempotent_reuse'])
+                consume.assert_called_once_with(reader,'20261027')
 
     def test_missed_preopen_refuses_capture(self):
         import pandas as pd

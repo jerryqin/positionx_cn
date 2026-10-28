@@ -195,16 +195,23 @@ def local_details(source, day):
     result = {}
     for row in frame.to_dict('records'):
         symbol = rq.qmt_id(row['order_book_id'])
-        name = row['symbol']
+        raw_name = row['symbol']
+        name = raw_name
         if not isinstance(name, str) or '\ufffd' in name:
             name = None
         # Vendor special_type is retained factual ST evidence even if a name is damaged.
         if row['special_type'] in ('ST', 'StarST'):
             name = 'ST' if row['special_type'] == 'ST' else '*ST'
+        elif row['special_type'] != 'Normal':
+            # Other is not a factual ST classification. Do not feed its name
+            # into the frozen name-based adapter and infer a classification.
+            name = None
         result[symbol] = {
             'InstrumentName': name, 'OpenDate': str(row['listed_date']).replace('-', ''),
             'InstrumentStatus': None if pd.isna(row['status_suspended']) else int(row['status_suspended']),
             'MinLimitOrderVolume': row['round_lot'],
+            'RawInstrumentName': raw_name, 'VendorSpecialType': row['special_type'],
+            'STClassification': row['special_type'] if row['special_type'] in ('Normal', 'ST', 'StarST') else 'UNKNOWN',
         }
     return result
 
@@ -258,7 +265,30 @@ def model_exports(store, module, out, day, table, data_kind='MODEL_RESEARCH_ONLY
     return store.con.execute("SELECT trade_date,equity,cash,gross_market_value FROM forward_equity WHERE strategy_id=? AND ledger='BASE20' ORDER BY trade_date", [strategy]).df()
 
 
-def run_model(kind, source, profile, sets, details, dates, day, out, *, settlement_only=False):
+def seed_research_ledger(dest, module, artifacts, dates, day):
+    """Start an empty retrospective research day, without inventing a past session."""
+    from research.research_store import ResearchStore
+    dest = Path(dest).absolute()
+    if (dest.resolve() != dest or not dest.is_relative_to(ROOT / 'reports')
+            or dest.exists() or len(dates) < 2 or dates[-1] != day):
+        raise ValueError('NEW_ISOLATED_RESEARCH_SEED_REQUIRED')
+    policy = module.POLICY
+    state = module.initial_state(policy, artifacts) if artifacts is not None else module.initial_state(policy)
+    proof = {'mode': 'EMPTY_RESEARCH_SEED_NOT_FORWARD', 'signal_date': day,
+             'boundary_cursor_only_not_a_session': dates[-2],
+             'inherited_positions': [], 'inherited_plans': [], 'forward_acceptance': False}
+    state.update(last_processed_date=dates[-2], status='EMPTY_RESEARCH_SEED_NOT_FORWARD',
+                 research_seed=proof)
+    fingerprint = policy.fingerprint(artifacts) if artifacts is not None else policy.fingerprint()
+    with ResearchStore(dest) as store:
+        store.con.execute('CREATE TABLE postclose_research_seed(proof_json VARCHAR)')
+        store.con.execute('INSERT INTO postclose_research_seed VALUES (?)', [json.dumps(proof)])
+        store.save_state(policy.strategy_id, fingerprint, state)
+    return state, proof
+
+
+def run_model(kind, source, profile, sets, details, dates, day, out, *, settlement_only=False,
+              fresh_research=False):
     import pandas as pd
     from core import p0_rq_input as rq
     from research.research_store import ResearchStore
@@ -274,8 +304,13 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
     fingerprint = policy.fingerprint(artifacts) if artifacts else policy.fingerprint()
     if kind == 'ret120' and not rq.enabled():
         raise ValueError('RETAINED_RQ_CONTRACT_NOT_ENABLED')
+    if fresh_research and settlement_only:
+        raise ValueError('RESEARCH_SEED_CANNOT_SETTLE_INHERITED_PLANS')
     out.mkdir()
-    state, ledger_proof = copy_ledger(profile['segment_db'], out / 'model.duckdb', policy.strategy_id, fingerprint, dates, day)
+    if fresh_research:
+        state, ledger_proof = seed_research_ledger(out / 'model.duckdb', module, artifacts, dates, day)
+    else:
+        state, ledger_proof = copy_ledger(profile['segment_db'], out / 'model.duckdb', policy.strategy_id, fingerprint, dates, day)
     if artifacts and state.get('artifact_hashes') != artifacts:
         raise ValueError('FROZEN_ARTIFACT_DRIFT')
     with ResearchStore(out / 'model.duckdb') as store:
@@ -348,6 +383,14 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
                'data_kind': data_kind, 'forward_acceptance': False,
                'benchmark_close': None, 'benchmark_comparison_status': 'MISSING_LOCAL_BENCHMARK',
                'execution_units': 'LOT_ROUNDED_RESEARCH' if kind == 'deep' else 'FRACTIONAL_RESEARCH_UNITS'}
+    if not sample:
+        try:
+            benchmark = source.benchmark_history(policy.benchmark, [day])
+            summary.update(benchmark_close=float(benchmark.loc[day, 'close']),
+                           benchmark_comparison_status='EXACT_CLOSE_READ_NO_RETURN_BASELINE',
+                           benchmark_lineage=dict(benchmark.attrs))
+        except Exception as e:
+            summary['benchmark_error'] = str(e)
     if snapshot is not None:
         summary['snapshot'] = {'universe_count': len(snapshot), 'valid_feature_count': int(snapshot.feature_valid.sum()),
                                 'q5_count': int(snapshot.selected_q5.sum())}
@@ -392,15 +435,27 @@ def funnel_market_dependencies(candidates, day, config=None):
             'history_65_count': sum(x['history_65'] for x in records), 'symbols': records}
 
 
-def run_funnel(source, sets, day, out):
+def run_funnel(source, sets, day, out, *, amount_unit_binding=None, pit_proof=None):
     import pandas as pd
+    if amount_unit_binding is not None:
+        from scripts.qualify_postclose_funnel import run as qualify
+        result = qualify(source.db, day, out, amount_unit_binding=amount_unit_binding,
+                         source=source, membership_sets=sets, membership_proof=pit_proof)
+        result = dict(result, structure_input_status=result['status'],
+                      status='STRUCTURE_RESEARCH_COMPLETE' if result['status'] == 'PASS_STRUCTURE_ADV20_INPUTS' else 'BLOCKED',
+                      exit_qualification='UNQUALIFIED_NO_MODEL_HOLDINGS_OR_EXITS_EMITTED',
+                      data_kind='INDEPENDENT_RESEARCH_ONLY', forward_acceptance=False)
+        write_json(out / 'summary.json', result)
+        return result
     from scripts import run_ret120_universe_prior_forward_v10 as prior
     config = prior.cfg()
     scanner = prior.load_scanner(config)
-    # Full universe is the retained identity inventory, including invalid histories.
+    # Full universe is the exact-day observed inventory; history is retained separately.
+    if source.meta.get('business_date') != pd.Timestamp(day).date().isoformat():
+        raise ValueError('EXACT_DAY_IDENTITY_BINDING_MISSING')
     with read_db(source.db) as con:
         from core import p0_rq_input as rq
-        full = sorted({rq.qmt_id(r[0]) for r in con.execute('SELECT order_book_id FROM security_identity').fetchall()})
+        full = sorted({rq.qmt_id(r[0]) for r in con.execute('SELECT order_book_id FROM identity_observed_today').fetchall()})
     if len(full) < config['full_market']['min_symbol_count']:
         raise ValueError('FUNNEL_FULL_MARKET_TOO_SMALL')
     frames = {}
@@ -467,7 +522,8 @@ def historical_runs(day):
     return {'status': 'READ_ONLY_HISTORICAL_SNAPSHOT', 'runs': result}
 
 
-def run(day, output, previous_run=None):
+def run(day, output, previous_run=None, *, input_manifest=None, pit_root=None,
+        fresh_research=False, amount_unit_binding=None):
     import pandas as pd
     from core import p0_rq_input as rq
     out = output_path(output)
@@ -481,29 +537,41 @@ def run(day, output, previous_run=None):
     proofs = []
     curves = {}
     try:
+        if fresh_research and previous_run:
+            raise ValueError('FRESH_RESEARCH_AND_PARENT_ARE_MUTUALLY_EXCLUSIVE')
         day = pd.Timestamp(day).strftime('%Y%m%d')
         result['business_date'] = day
         ret_profile = read_json(ROOT / 'config/ops/p0_core_recovery_v01.json')
         deep_profile = read_json(ROOT / 'config/ops/deep_forward_segment_v01.json')
+        if pit_root is not None:
+            ret_profile = dict(ret_profile, pit_root=str(Path(pit_root).resolve()))
         dates = sessions(ret_profile['calendar'], day)
         if previous_run:
             deep_profile, ret_profile, parent_proofs = previous_profiles(previous_run, day, dates, deep_profile, ret_profile)
             proofs.extend(parent_proofs)
             result['parent_run'] = str(Path(previous_run).resolve())
-        source = rq.open_inputs(day)
+        source = rq.DailyInput(input_manifest, rq.profile()) if input_manifest is not None else rq.open_inputs(day)
         if source.meta.get('quality_status') != 'PASS' or source.meta.get('engineering_only') is not False:
             raise ValueError('LOCAL_ASSET_NOT_QUALIFIED')
+        if input_manifest is not None and pd.Timestamp(source.meta['asof']).strftime('%Y%m%d') != day:
+            raise ValueError('RQ_STALE_OR_WRONG_BUSINESS_DATE')
+        if input_manifest is not None:
+            from scripts.postclose_data_admission_v1 import audit_stock_asset
+            result['stock_acceptance'] = audit_stock_asset(source, day)
         result['input'] = source.lineage('back_ratio')
+        result['fresh_research_seed'] = fresh_research
         sets, result['pit'] = membership(ret_profile, day)
         proofs += [{'path': str(source.root / name), 'sha256': rq.sha(source.root / name)}
                    for name in ('manifest.json', 'COMPLETE.json', 'source_metadata.json')]
         proofs.append({'path': str(source.db), 'sha256': rq.sha(source.db)})
         proofs += [{'path': result['pit']['path'], 'sha256': result['pit']['sha256']},
                    {'path': result['pit']['manifest'], 'sha256': result['pit']['manifest_sha256']}]
-        for p in (ret_profile['segment_db'], deep_profile['segment_db']):
-            proofs.append({'path': str(p), 'sha256': rq.sha(p)})
+        if not fresh_research:
+            for p in (ret_profile['segment_db'], deep_profile['segment_db']):
+                proofs.append({'path': str(p), 'sha256': rq.sha(p)})
         for p in (Path(__file__), ROOT / 'scripts/run_deep_oversold_csi500_forward.py',
                   ROOT / 'scripts/run_ret120_csi500_forward.py', ROOT / 'core/p0_rq_input.py',
+                  ROOT / 'scripts/qualify_postclose_funnel.py',
                   ROOT / 'config/ops/cn_exchange_calendar_2026.json',
                   ROOT / 'config/ops/p0_rq_input_v01.json',
                   ROOT / 'config/ops/deep_forward_segment_v01.json',
@@ -516,17 +584,24 @@ def run(day, output, previous_run=None):
         details = local_details(source, day)
         print('LOCAL_INPUT_AND_PIT_VERIFIED; running Deep', flush=True)
         try:
-            result['strategies']['deep'], curves['deep'] = run_model('deep', source, deep_profile, sets, details, dates, day, out / 'deep')
+            options = {'fresh_research': True} if fresh_research else {}
+            result['strategies']['deep'], curves['deep'] = run_model('deep', source, deep_profile, sets, details, dates, day, out / 'deep', **options)
         except (Exception, SystemExit) as e:
             result['strategies']['deep'] = {'status': 'BLOCKED', 'error': str(e)}
         print('Running RET120 from local CSI500 histories; no download or SDK', flush=True)
         try:
-            result['strategies']['ret120'], curves['ret120'] = run_model('ret120', source, ret_profile, sets, details, dates, day, out / 'ret120')
+            result['strategies']['ret120'], curves['ret120'] = run_model('ret120', source, ret_profile, sets, details, dates, day, out / 'ret120', **options)
         except (Exception, SystemExit) as e:
             result['strategies']['ret120'] = {'status': 'BLOCKED', 'error': str(e)}
         try:
             print('Running independent Funnel local coverage; no refresh', flush=True)
-            result['strategies']['funnel'] = run_funnel(source, sets, day, out / 'funnel')
+            if amount_unit_binding:
+                binding = read_json(amount_unit_binding)
+                evidence = read_json(binding['evidence_path'])
+                for p in (Path(amount_unit_binding), Path(binding['evidence_path']), Path(evidence['reference_unit_proof'])):
+                    proofs.append({'path': str(p.resolve()), 'sha256': rq.sha(p)})
+            funnel_options = {'amount_unit_binding': amount_unit_binding, 'pit_proof': result['pit']} if amount_unit_binding else {}
+            result['strategies']['funnel'] = run_funnel(source, sets, day, out / 'funnel', **funnel_options)
         except (Exception, SystemExit) as e:
             result['strategies']['funnel'] = {'status': 'BLOCKED', 'error': str(e), 'exit_qualification': 'UNQUALIFIED'}
         if len(curves) == 2:
@@ -566,11 +641,20 @@ def write_report(path, result):
         item = result['strategies'].get(name, {'status': 'NOT_RUN'})
         st = item.get('state', {})
         lines.append(f"| {name} | {item['status']} | {st.get('active_positions', '未输出')} | {st.get('pending_signals', '未输出')} | {st.get('completed_trades', '未输出')} |")
+    for name in ('deep', 'ret120'):
+        item = result['strategies'].get(name, {})
+        if item.get('benchmark_close') is not None:
+            lines.append(f"\n{name} 精确日 CSI500 指数收盘：{item['benchmark_close']} 点；{item['benchmark_comparison_status']}。")
     lines += ['', 'Deep 使用冻结 ret20≤-25%、S1 开盘、S20 收盘、整手向下取整；RET120 使用 CSI500 Q5、S1 开盘、S120 收盘及有效收盘延期规则，碎股仅为研究单位。两者保留 20/50bp 往返成本及原容量限制。',
               '组合沿用 50% / 50% 初始资本分袖，不再平衡；Funnel 独立研究，退出未资格化，不生成该策略模型持仓与退出。', '',
               '影响本次输出的缺项：', '',
-              '- 封版股票输入没有 CSI500 指数行情：指数比较与原 Forward session 验收未输出；交易日距离使用已有批准的本地交易日历。']
+              '- 指数读取及基准比较以本次显式绑定版本的独立验收为准；原 Forward session 验收未输出；交易日距离使用已有批准的本地交易日历。']
+    if result.get('fresh_research_seed'):
+        lines += ['- 本次从空持仓、空旧计划的新研究种子开始；前一交易日仅为边界游标，没有补造过去session或连续Forward。']
     f = result['strategies'].get('funnel', {})
+    if f.get('security_status_qualification'):
+        unknown = f['security_status_qualification']
+        lines.append('- Funnel 证券状态资格：' + unknown['status'] + '；未知分类证券数：' + str(len(unknown['unknown_special_type'])) + '。结构/ADV20通过不构成该策略正式运行或退出资格。')
     if f.get('structure_preview', {}).get('status') == 'BLOCKED_STALE_MARKET_CATALOG':
         v = f['structure_preview']
         lines.append(f"- Funnel 结构及风险预览的原市场目录只到 {v['catalog_latest']}，需要 {v['required_date']}；未替换数据源、未生成 PREPARE_MANUAL。")
@@ -604,8 +688,14 @@ def main():
     parser.add_argument('--date', required=True, help='Exact local business date; never uses nearest older data')
     parser.add_argument('--output', required=True, help='New isolated directory under repository reports/')
     parser.add_argument('--previous-run', help='Explicit immutable local model run to continue; remains NOT_FORWARD')
+    parser.add_argument('--input-manifest', help='Explicit sealed input manifest; never changes a production pointer')
+    parser.add_argument('--pit-root', help='Manifest directory containing actual same-day preopen evidence')
+    parser.add_argument('--fresh-research', action='store_true', help='New empty retrospective research seed; never Forward')
+    parser.add_argument('--amount-unit-binding', help='Existing independently verified RQ CNY turnover evidence for Funnel')
     args = parser.parse_args()
-    result = run(args.date, args.output, args.previous_run)
+    result = run(args.date, args.output, args.previous_run, input_manifest=args.input_manifest,
+                 pit_root=args.pit_root, fresh_research=args.fresh_research,
+                 amount_unit_binding=args.amount_unit_binding)
     print(json.dumps({'status': result['status'], 'report': str(Path(args.output).resolve() / 'report.md')}, ensure_ascii=False))
     return 3 if result['status'] in ('BLOCKED_OUTPUTS_PRESENT', 'BOUNDARY_VALIDATION_FAILED') else 0
 

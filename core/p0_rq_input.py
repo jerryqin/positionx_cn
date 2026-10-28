@@ -322,6 +322,38 @@ class DailyInput:
                 'unit': self.meta['volume_unit'], 'asof': self.meta['asof'],
                 'availability': self.meta['availability'], 'version': self.meta['version']}
 
+    def benchmark_history(self, symbol, dates):
+        """Read exact native index observations from this seal, without SDK fallback."""
+        requested = [pd.Timestamp(d).date() for d in dates]
+        binding = self.meta.get('benchmark', {})
+        if (symbol != '000905.SH' or not requested or len(set(requested)) != len(requested)
+                or max(requested).isoformat() > self.meta['asof']
+                or binding.get('table') != 'benchmark' or binding.get('source') != 'RQDATA'
+                or binding.get('price_unit') != 'INDEX_POINTS'):
+            raise InputBlocked('RQ_BENCHMARK_BINDING_MISSING_OR_WRONG_REQUEST')
+        with duckdb.connect(str(self.db), read_only=True, config={'temp_directory': ''}) as con:
+            frame = con.execute('''SELECT * FROM benchmark WHERE order_book_id=?
+                AND CAST(date AS DATE) IN (SELECT unnest(?)) ORDER BY date''', [rq_id(symbol), requested]).df()
+        if (len(frame) != len(requested) or frame.date.duplicated().any()
+                or set(pd.to_datetime(frame.date).dt.date) != set(requested)
+                or not frame.source.eq('RQDATA').all() or not frame.price_unit.eq('INDEX_POINTS').all()):
+            raise InputBlocked('RQ_BENCHMARK_EXACT_ROWS_OR_PROVENANCE_MISSING')
+        bindings = binding.get('date_bindings') or {d: dict(
+            source_database_sha256=binding.get('source_database_sha256'), observed_at=binding.get('observed_at'))
+            for d in binding.get('dates', [])}
+        for row in frame.itertuples():
+            expected = bindings.get(pd.Timestamp(row.date).strftime('%Y%m%d'), {})
+            if (not expected or row.source_database_sha256 != expected.get('source_database_sha256')
+                    or row.observed_at != expected.get('observed_at')):
+                raise InputBlocked('RQ_BENCHMARK_EXACT_ROWS_OR_PROVENANCE_MISSING')
+        values = frame[['open', 'high', 'low', 'close', 'prev_close']].to_numpy(dtype=float)
+        if not np.isfinite(values).all() or (values <= 0).any():
+            raise InputBlocked('RQ_BENCHMARK_VALUES_INVALID')
+        frame.index = pd.to_datetime(frame.date).dt.strftime('%Y%m%d')
+        frame.attrs.update(source='RQDATA', price_unit='INDEX_POINTS', version=self.meta['version'],
+                           date_bindings={d.strftime('%Y%m%d'): bindings[d.strftime('%Y%m%d')] for d in requested})
+        return frame
+
     def histories(self, symbols, asof, bars, adjustment='none', min_bars=1, no_fill=False,
                   allow_incomplete=False):
         self.require_contract(adjustment)
@@ -515,8 +547,16 @@ def prior_close(symbols, signal_date):
 
 def full_market(signal_date):
     inputs = open_inputs(signal_date)
+    target = pd.Timestamp(signal_date).date().isoformat()
+    if inputs.meta.get('asof') != target or inputs.meta.get('business_date') != target:
+        raise InputBlocked('RQ_EXACT_DAY_IDENTITY_BINDING_MISSING')
     with duckdb.connect(str(inputs.db), read_only=True, config={'temp_directory': ''}) as con:
-        ids = con.execute('SELECT order_book_id FROM security_identity').fetchall()
+        tables = {r[0] for r in con.execute('SHOW TABLES').fetchall()}
+        if 'identity_observed_today' not in tables:
+            raise InputBlocked('RQ_EXACT_DAY_IDENTITY_MISSING')
+        ids = con.execute('SELECT order_book_id FROM identity_observed_today').fetchall()
+    if len(ids) != len({r[0] for r in ids}):
+        raise InputBlocked('RQ_DUPLICATE_EXACT_DAY_IDENTITY')
     symbols = sorted({qmt_id(r[0]) for r in ids})
     if len(symbols) < 3000:
         raise InputBlocked('RQ_FULL_MARKET_TOO_SMALL')
