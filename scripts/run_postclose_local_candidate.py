@@ -227,6 +227,112 @@ def require_details(details, symbols):
         raise ValueError('EXACT_DAY_INSTRUMENT_STATUS_MISSING:' + ','.join(missing[:20]))
 
 
+def reconstruct_ret120_session(base, recovery_root, day, source_ledger, out):
+    """Continue a copied ledger using dated historical facts, never original Forward."""
+    import copy
+    import math
+    import pandas as pd
+    from core import p0_rq_input as rq
+    from core.exchange_rule_evidence import resolve_rule
+    from scripts import run_ret120_csi500_forward as ret
+    recovery_root=Path(recovery_root).resolve()
+    manifest=read_json(recovery_root/'manifest.json')
+    db=recovery_root/'recovery.duckdb'
+    if (rq.sha(db)!=manifest['database_sha256'] or base.meta['version']!=manifest['source_version']
+            or rq.sha(base.root/'manifest.json')!=manifest['source_manifest_sha256']):
+        raise ValueError('RECONSTRUCTED_INPUT_BINDING_CHANGED')
+    snapshot=recovery_root/('inputs_'+manifest['database_sha256'][:16]+'.duckdb')
+    if not snapshot.exists():shutil.copyfile(db,snapshot)
+    if rq.sha(snapshot)!=manifest['database_sha256']:raise ValueError('RECONSTRUCTED_INPUT_SNAPSHOT_CHANGED')
+    db=snapshot
+    with read_db(db) as c:
+        members=c.execute('SELECT order_book_id FROM membership_reference WHERE business_date=?',[day]).df()
+        identity=c.execute('SELECT * FROM identity_recovered WHERE business_date=?',[day]).df()
+        if day<'20261020':
+            status=c.execute('SELECT * FROM suspension_recovered WHERE business_date=?',[day]).df()
+        else:
+            status=c.execute('SELECT * FROM execution_status_recovered WHERE business_date=?',[day]).df()
+    ids=set(members.order_book_id)
+    if len(members)!=500 or len(ids)!=500 or identity.order_book_id.duplicated().any():
+        raise ValueError('RECONSTRUCTED_MEMBERS_OR_IDENTITY_INVALID:'+day)
+    with read_db(source_ledger) as c:
+        row=c.execute('SELECT state_json FROM forward_state WHERE strategy_id=?',[ret.POLICY.strategy_id]).fetchone()
+        state=json.loads(row[0]);prior=state['last_processed_date']
+        busy=[r[0] for r in c.execute("""SELECT symbol FROM forward_positions WHERE strategy_id=?
+            UNION SELECT symbol FROM ret120_forward_signals WHERE strategy_id=? AND status='PENDING_ENTRY'""",
+            [ret.POLICY.strategy_id,ret.POLICY.strategy_id]).fetchall()]
+        marks=c.execute("SELECT symbol,min(last_price),max(last_price) FROM forward_positions WHERE strategy_id=? GROUP BY symbol",[ret.POLICY.strategy_id]).fetchall()
+        mark_values={s:float(lo) for s,lo,hi in marks if lo is not None and hi is not None and math.isclose(lo,hi,rel_tol=1e-12) and lo>0}
+        if len(mark_values)!=len(marks):raise ValueError('RECONSTRUCTED_PRIOR_MARK_CONFLICT')
+        for ledger,cash_key,equity_key in [('BASE20','base_cash','base_equity'),('SHADOW50','shadow_cash','shadow_equity')]:
+            mv=c.execute('SELECT coalesce(sum(shares*last_price),0) FROM forward_positions WHERE strategy_id=? AND ledger=?',[ret.POLICY.strategy_id,ledger]).fetchone()[0]
+            if not math.isclose(state[cash_key]+mv,state[equity_key],rel_tol=1e-10):
+                raise ValueError('RECONSTRUCTED_ORIGINAL_CASH_MARK_RECONCILIATION_FAILED')
+    required=ids|{rq.rq_id(s) for s in busy}
+    if (not required.issubset(set(identity.order_book_id)) or not required.issubset(set(status.order_book_id))
+            or status.order_book_id.duplicated().any() or status.status_suspended.isna().any()):
+        raise ValueError('RECONSTRUCTED_EXACT_DAY_IDENTITY_OR_STATUS_MISSING:'+day)
+    native=identity.set_index('order_book_id',drop=False).to_dict('index')
+    statuses=status.set_index('order_book_id').to_dict('index')
+    details={}
+    for obid in required:
+        r=native[obid];special=r['special_type']
+        name='ST' if special=='ST' else '*ST' if special=='StarST' else r['symbol'] if special=='Normal' else None
+        details[rq.qmt_id(obid)]=dict(InstrumentName=name,OpenDate=str(r['listed_date']).replace('-',''),
+            InstrumentStatus=int(statuses[obid]['status_suspended']),MinLimitOrderVolume=r['round_lot'])
+    view=copy.copy(base)
+    view.meta=dict(base.meta,asof=str(pd.Timestamp(day).date()),business_date=str(pd.Timestamp(day).date()),
+        availability=rq.clock().isoformat(),version='RECONSTRUCTED_'+day+'_'+manifest['database_sha256'][:12])
+    proof=dict(mode='RECONSTRUCTED',business_date=day,base_version=base.meta['version'],
+        recovery_database=str(db),recovery_database_sha256=manifest['database_sha256'],source_ledger_sha256=rq.sha(source_ledger),
+        data_acquired_at=manifest['actual_updated_at'],price_scale_anchors={})
+    class HistoricalInput:
+        reconstructed_historical=True
+        meta=view.meta
+        def lineage(self,adjustment):
+            return dict(view.lineage(adjustment),reconstruction=proof)
+        def histories(self,symbols,asof,*args,**kwargs):
+            if asof!=day:raise ValueError('RECONSTRUCTED_WRONG_DAY')
+            frames=view.histories(symbols,asof,*args,**kwargs)
+            for symbol,f in frames.items():
+                obid=rq.rq_id(symbol);s=statuses[obid]
+                f['status_suspended']=f.status_suspended.astype(object)
+                f.loc[day,'status_suspended']=bool(s['status_suspended'])
+                f.loc[day,'is_suspended']=bool(s['status_suspended'])
+                f.loc[day,'status_available_at']=s['acquired_at']
+                rule=resolve_rule(native[obid],day,decision=rq.clock())
+                f.loc[day,'rule_price_tick']=rule['price_tick']
+                f.loc[day,'tick_source']='EXCHANGE_RULE_DERIVED'
+                f.loc[day,'tick_rule_evidence']=json.dumps(dict(identity=rule['identity'],evidence=rule),default=str)
+                if symbol in mark_values:
+                    if prior not in f.index or not math.isfinite(float(f.loc[prior,'close'])) or f.loc[prior,'close']<=0:
+                        raise ValueError('RECONSTRUCTED_PRICE_SCALE_ANCHOR_MISSING:'+symbol)
+                    scale=mark_values[symbol]/float(f.loc[prior,'close'])
+                    proof['price_scale_anchors'][symbol]=dict(prior_date=prior,prior_ledger_mark=mark_values[symbol],scale=scale)
+                    for field in ('open','high','low','close','research_factor'):f[field]=f[field]*scale
+                    if not math.isclose(float(f.loc[prior,'close']),mark_values[symbol],rel_tol=1e-12):
+                        raise ValueError('RECONSTRUCTED_PRICE_SCALE_BRIDGE_FAILED')
+                f.attrs.update(self.lineage('back_ratio'))
+            return frames
+        def benchmark_history(self,symbol,dates):
+            if symbol!='000905.SH' or dates!=[day]:raise ValueError('RECONSTRUCTED_BENCHMARK_REQUEST_INVALID')
+            if day>='20261026':return base.benchmark_history(symbol,dates)
+            with read_db(db) as c:
+                f=c.execute('SELECT * FROM benchmark_recovered WHERE CAST(date AS DATE)=?',[pd.Timestamp(day).date()]).df()
+            if len(f)!=1 or not f.close.gt(0).all():raise ValueError('RECONSTRUCTED_BENCHMARK_MISSING')
+            f.index=pd.to_datetime(f.date).dt.strftime('%Y%m%d');f.attrs.update(source='RQDATA',reconstruction=proof)
+            return f
+    dates=sessions(ROOT/'config/ops/cn_exchange_calendar_2026.json',day)
+    require_next_session(state,dates,day)
+    out=output_path(out)
+    summary,curve=run_model('ret120',HistoricalInput(),{'segment_db':str(source_ledger)},
+        {'000905.SH':{rq.qmt_id(s) for s in ids}},details,dates,day,out)
+    summary['reconstruction']=proof
+    write_json(out/'summary.json',summary)
+    if rq.sha(source_ledger)!=proof['source_ledger_sha256']:raise ValueError('ORIGINAL_LEDGER_CHANGED')
+    return summary
+
+
 def copy_ledger(source_path, dest, strategy, policy_hash, dates, day):
     from core import p0_rq_input as rq
     with read_db(source_path) as con:
@@ -389,7 +495,8 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
             raise ValueError('ACTUAL_MODEL_REQUIRES_QUALIFIED_COMPLETE_SESSION')
         # Validate actual preopen evidence even if this helper is called directly.
         membership(profile, day)
-    data_kind = ('ACTUAL_QUALIFIED_POSTCLOSE' if actual_model_forward else
+    reconstructed=getattr(source,'reconstructed_historical',False) is True
+    data_kind = ('ACTUAL_QUALIFIED_POSTCLOSE' if actual_model_forward else 'RECONSTRUCTED' if reconstructed else
                  'SYNTHETIC_SAMPLE_NOT_MARKET' if sample else 'MODEL_RESEARCH_ONLY')
     artifacts = ret.verify_frozen_prerequisites() if kind == 'ret120' else None
     fingerprint = policy.fingerprint(artifacts) if artifacts else policy.fingerprint()
@@ -478,11 +585,14 @@ def run_model(kind, source, profile, sets, details, dates, day, out, *, settleme
                 if settlement_only:
                     signal_diag = {'new': 0, 'not_emitted': 'SETTLEMENT_SAMPLE_ONLY'}
                 else:
-                    ret.persist_snapshot(store, snapshot, 'ACTUAL_QUALIFIED_POSTCLOSE' if actual_model_forward else 'LOCAL_SEALED_REPLAY_NOT_FORWARD')
+                    snapshot_hash=ret.persist_snapshot(store, snapshot, 'ACTUAL_QUALIFIED_POSTCLOSE' if actual_model_forward else 'RECONSTRUCTED' if reconstructed else 'LOCAL_SEALED_REPLAY_NOT_FORWARD')
+                    if reconstructed:
+                        state['last_snapshot_sha256']=snapshot_hash
+                        state['last_universe_source']='RECONSTRUCTED'
                     signal_diag = ret.detect_signals(store, None, snapshot, day, dates, instrument_details=input_details)
                 signal_diag['entry'] = entry_diag
             state['last_processed_date'] = day
-            state['status'] = ('ACTUAL_MODEL_FORWARD' if actual_model_forward else
+            state['status'] = ('ACTUAL_MODEL_FORWARD' if actual_model_forward else 'RECONSTRUCTED' if reconstructed else
                                'SYNTHETIC_SAMPLE_NOT_FORWARD' if sample else 'ISOLATED_MODEL_REPLAY_NOT_FORWARD')
             module.state_counts(store, state)
             store.save_state(policy.strategy_id, fingerprint, state)
