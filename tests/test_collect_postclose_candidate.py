@@ -12,6 +12,20 @@ from scripts import collect_postclose_candidate as candidate
 
 
 class CandidateTests(unittest.TestCase):
+    def test_supplier_failure_has_exact_stage_before_any_identity_or_price_call(self):
+        from types import SimpleNamespace
+        problem=TimeoutError('SAFE_TEST_FAILURE')
+        out=self.root/'reports'/'candidate'
+        (self.root/'source_metadata.json').write_text('{}',encoding='utf-8')
+        with patch.object(candidate,'ROOT',self.root), \
+                patch.object(candidate.rq,'DailyInput',return_value=SimpleNamespace(meta={'asof':'2026-10-27'})), \
+                patch.object(candidate.local,'sessions',return_value=['20261028']), \
+                patch.object(candidate.old,'ready_receipt',side_effect=problem), \
+                patch.object(candidate,'capture_identity',side_effect=AssertionError('IDENTITY_NOT_ALLOWED')):
+            with self.assertRaises(TimeoutError):
+                candidate.run('20261028',self.base,out,provider=object(),scope='CORE_MODELS_V1')
+        self.assertEqual(candidate.SOURCE_STEP,{'method':'supplier_ready','date':'20261028'})
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

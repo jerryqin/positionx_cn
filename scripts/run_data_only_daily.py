@@ -312,7 +312,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--phase',choices=['preopen','postclose'],required=True)
     a=p.parse_args();day=rq.clock().strftime('%Y%m%d')
     lock=OPS/(a.phase+'.lock');OPS.mkdir(parents=True,exist_ok=True)
-    fd=None;locked=False
+    fd=None;locked=False;started_at=rq.clock().isoformat()
     try:
         try:rq.require_trading_date(day)
         except rq.InputBlocked:
@@ -332,9 +332,11 @@ def main():
             print(json.dumps(dict(date=day,phase=a.phase,status='RED',error='PREOPEN_LOCK_NOT_ACQUIRED')),flush=True)
             return 3
         r=failure_result(a.phase,day,e)
-        if a.phase=='preopen':
-            archive=OPS/(day+'_preopen_'+rq.clock().strftime('%H%M%S%f')+'_last_error.json')
-            if not archive.exists():local.write_json(archive,r)
+        r.update(actual_started_at=started_at,completed_at=rq.clock().isoformat(),exit_code=3)
+        if a.phase=='postclose':
+            r.update(source_step=dict(close.SOURCE_STEP),transport_details=getattr(e,'details',{}))
+        archive=OPS/(day+'_'+a.phase+'_'+rq.clock().strftime('%H%M%S%f')+'_last_error.json')
+        if not archive.exists():local.write_json(archive,r)
         error_path=OPS/(day+'_'+a.phase+'_last_error.json')
         # Preserve the original permanent failure instead of replacing its scope
         # with a later lock/error/blocked-attempt diagnostic.

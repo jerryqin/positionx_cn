@@ -9,6 +9,33 @@ from scripts import run_data_only_daily as daily
 
 
 class DataOnlyTests(unittest.TestCase):
+    def test_postclose_failures_keep_original_stage_and_times_across_retries(self):
+        import contextlib
+        import io
+        import pandas as pd
+        from core.rqdata_https import HTTPSTransportError
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t)
+            for stamp,stage,kind in [('16:10:00','supplier_ready','gaierror'),
+                                     ('16:40:00','get_price','IncompleteRead')]:
+                failure=HTTPSTransportError('HTTPS_TRANSPORT_'+kind,retryable=True,
+                                            details={'error_type':kind})
+                with patch.object(daily,'OPS',root),patch.object(daily,'result_files'), \
+                        patch.object(daily.rq,'clock',return_value=pd.Timestamp('2026-10-28T'+stamp+'+08:00')), \
+                        patch.object(daily.close,'SOURCE_STEP',{'method':stage}), \
+                        patch.object(daily,'run',side_effect=failure),patch.object(daily.msvcrt,'locking'), \
+                        patch('sys.argv',['entry','--phase','postclose']),contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(daily.main(),3)
+            archives=sorted(root.glob('20261028_postclose_*_last_error.json'))
+            self.assertEqual(len(archives),2)
+            first=daily.local.read_json(archives[0]);second=daily.local.read_json(archives[1])
+            self.assertEqual(first['source_step'],{'method':'supplier_ready'})
+            self.assertEqual(first['transport_details'],{'error_type':'gaierror'})
+            self.assertEqual(first['actual_started_at'],'2026-10-28T16:10:00+08:00')
+            self.assertEqual(second['source_step'],{'method':'get_price'})
+            self.assertEqual(second['exit_code'],3)
+            self.assertEqual(first['completed_at'],first['actual_started_at'])
+
     def test_nonretryable_source_failure_does_not_query_again(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t)

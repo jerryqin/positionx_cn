@@ -277,6 +277,8 @@ def run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', execu
 
 
 def _run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', execution_symbols=None):
+    SOURCE_STEP.clear()
+    SOURCE_STEP.update(method='preflight',date=day)
     if scope not in ('P0_COMPLETE','CORE_MODELS_V1'):
         raise ValueError('LIVE_CAPTURE_SCOPE_INVALID')
     core=scope=='CORE_MODELS_V1'
@@ -311,6 +313,7 @@ def _run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', exec
                 if not isinstance(path, int) and not Path(path).resolve().is_relative_to(out):
                     raise RuntimeError('CANDIDATE_WRITE_OUTSIDE_OUTPUT')
     sys.addaudithook(audit)
+    SOURCE_STEP.update(method='supplier_ready',date=day)
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         p = provider or bounded_provider()
         before = old.ready_receipt(p, day, rq.clock())
@@ -318,6 +321,7 @@ def _run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', exec
         raise ValueError('SUPPLIER_NOT_READY')
     db = out / 'increment.duckdb'
     def save(name, frame, append=False):
+        SOURCE_STEP.clear();SOURCE_STEP.update(method='persist',dataset=name,date=day)
         if frame.empty:
             return
         with duckdb.connect(str(db), config={'temp_directory':''}) as c:
@@ -329,6 +333,7 @@ def _run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', exec
             else:
                 c.execute('CREATE TABLE '+name+' AS SELECT * FROM new_frame')
     def cached(name):
+        SOURCE_STEP.clear();SOURCE_STEP.update(method='read_checkpoint',dataset=name,date=day)
         if not db.exists(): return pd.DataFrame()
         with local.read_db(db) as c:
             return c.execute('SELECT * FROM '+name).df() if name in {r[0] for r in c.execute('SHOW TABLES').fetchall()} else pd.DataFrame()
@@ -402,6 +407,7 @@ def _run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', exec
     factors = [factor_frame] if len(factor_frame) else []
     quality = {}
     for date in dates:
+        SOURCE_STEP.clear();SOURCE_STEP.update(method='validate_day',date=date)
         d = pd.Timestamp(date).date()
         expected = set(identity.loc[pd.to_datetime(identity.listed_date).dt.date.le(d), 'order_book_id'])
         b = bars.loc[pd.to_datetime(bars.date).dt.date.eq(d)]
@@ -430,6 +436,7 @@ def _run(day, base_manifest, output, provider=None, *, scope='P0_COMPLETE', exec
             or not set(pd.to_datetime(benchmark.date).dt.strftime('%Y%m%d')).issuperset(dates)
             or not benchmark.close.gt(0).all()):
         raise ValueError('EXACT_BENCHMARK_DATES_INVALID')
+    SOURCE_STEP.clear();SOURCE_STEP.update(method='supplier_ready_after',date=day)
     after = old.ready_receipt(p, day, rq.clock())
     if after['status'] != 'PASS':
         raise ValueError('SUPPLIER_COMPLETENESS_LOST')
