@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import pandas as pd
 from core import p0_rq_input as rq
+from core.rqdata_https import RQDataHTTPSProvider, HTTPSTransportError
+from core.rqdata_identity import _full_checkpoint
 from scripts import prepare_daily_data as prep, collect_postclose_candidate as close
 from scripts import run_postclose_local_candidate as local
 
@@ -28,12 +30,25 @@ def register_pit(source, day):
     local.membership({'pit_root':str(source)},day)
     original=sorted(source.glob(day+'T*_preopen.json'))[-1]
     m=local.read_json(original)
+    proof=Path(m['identity_capture']['manifest'])
+    _,identity=_full_checkpoint(proof,day)
+    src=Path(m['items'][0]['file_path'])
+    if (identity.attrs['identity_capture']!=m['identity_capture']
+            or rq.sha(src.parent/'identity.parquet')!=m['identity_sha256']
+            or pd.Timestamp(m['identity_capture']['observed_range']['last'])>pd.Timestamp(m['observed_at'])):
+        raise ValueError('PIT_IDENTITY_BINDING_INVALID')
     root=Path(rq.profile()['pit_root'])
+    ret_profile=local.read_json(ROOT/'config/ops/p0_core_recovery_v01.json')
+    if (root.resolve()!=root or Path(ret_profile['pit_root'])!=root/'manifests'
+            or rq.clock().strftime('%Y%m%d')!=day):
+        raise ValueError('PIT_PRODUCTION_DATE_OR_PATH_INVALID')
     capture=original.stem
     dest=root/'raw'/day/'preopen'/capture
+    if dest.resolve()!=dest or (root/'manifests').resolve()!=root/'manifests':
+        raise ValueError('PIT_PRODUCTION_PATH_REDIRECTED')
     dest.mkdir(parents=True,exist_ok=True)
-    src=Path(m['items'][0]['file_path'])
     target=dest/'index_membership_rqdata.parquet'
+    if target.resolve()!=target:raise ValueError('PIT_PRODUCTION_PATH_REDIRECTED')
     if target.exists():
         if rq.sha(target)!=rq.sha(src):raise ValueError('PIT_REGISTRATION_COLLISION')
     else:shutil.copyfile(src,target)
@@ -43,7 +58,60 @@ def register_pit(source, day):
     if out.exists():
         if local.read_json(out)!=m:raise ValueError('PIT_MANIFEST_COLLISION')
     else:local.write_json(out,m)
-    return local.membership({'pit_root':str(root/'manifests')},day)
+    sets,binding=local.membership(ret_profile,day)
+    universe=rq.current_universe()
+    if (Path(binding['manifest'])!=out or binding['sha256']!=rq.sha(src)
+            or universe.get('ok') is not True or set(universe['members'])!=sets['000905.SH']
+            or universe['source']!='RQDATA_COMPONENTS_PROVIDER|preopen_sha256='+binding['sha256']):
+        raise ValueError('RET120_REGISTERED_PIT_READ_MISMATCH')
+    return sets,binding
+
+
+def retryable_transport(details, retryable=False):
+    """Retry only transport failures, never malformed or unqualified data."""
+    return retryable or details.get('error_type') in (
+        'gaierror','TimeoutError','ConnectionRefusedError','ConnectionResetError',
+        'ConnectionAbortedError','BrokenPipeError','RemoteDisconnected','IncompleteRead')
+
+
+def legacy_transport_block(item):
+    """Recognize the old failed-checkpoint misclassification without rewriting it."""
+    day=item.get('date','')
+    if (item.get('phase')!='preopen' or item.get('transport')!=TRANSPORT
+            or item.get('source_block_scope')!='preopen'
+            or item.get('error_type')!='InputBlocked'
+            or item.get('error')!='IDENTITY_FULL_CHECKPOINT_CONTRACT_INVALID'
+            or len(day)!=8 or not day.isdecimal()):
+        return False
+    proof=ROOT/'reports'/('data_only_'+day)/'identity/full/checkpoint.json'
+    if not proof.is_file():return False
+    state=local.read_json(proof)
+    return (state.get('schema')=='RQDATA_IDENTITY_FULL_V1' and state.get('status')=='FAILED'
+            and state.get('business_date')==day and state.get('mode')=='FULL_HTTP_RESPONSE'
+            and state.get('method')=='all_instruments'
+            and state.get('parameters')==dict(type='CS',date=day,market='cn')
+            and state.get('error_type')=='HTTPSTransportError'
+            and retryable_transport(state.get('details',{})))
+
+
+def failure_result(phase, day, e):
+    safe_https=type(e).__module__=='core.rqdata_https' and type(e).__name__ in ('HTTPSNotReady','HTTPSContractError','HTTPSAuthError','HTTPSSecurityError','HTTPSTransportError')
+    error=str(e) if isinstance(e,(ValueError,rq.InputBlocked)) or safe_https else type(e).__name__
+    not_ready=type(e).__name__=='HTTPSNotReady' or error=='SUPPLIER_NOT_READY'
+    permanent=not not_ready and (type(e).__name__ in ('HTTPSContractError','HTTPSAuthError','HTTPSSecurityError') or any(k in error.lower() for k in ('auth','permission','license','schema','nonretryable','unsupported','contract','security')))
+    if phase=='preopen':
+        recoverable=isinstance(e,HTTPSTransportError) and retryable_transport(e.details,e.retryable)
+        # Time/date stops fail this run; they are not supplier contract failures.
+        window_stop=error in ('MISSED_PREOPEN','INSUFFICIENT_PREOPEN_TIME','PREOPEN_WINDOW_NOT_STARTED',
+            'ONLY_ACTUAL_CURRENT_DAY_CAPTURE_ALLOWED','ACTUAL_SAME_DAY_BEFORE_0920_REQUIRED',
+            'IDENTITY_CAPTURE_FINISHED_AFTER_0920','CAPTURE_FINISHED_AFTER_0920',
+            'IDENTITY_PHASE_DEADLINE_REACHED','HTTPS_OVERALL_DEADLINE_NO_RETRY')
+        permanent=not (not_ready or recoverable or window_stop)
+    shared=type(e).__name__ in ('HTTPSAuthError','HTTPSSecurityError')
+    if phase=='preopen' and not permanent:shared=False
+    return dict(date=day,phase=phase,status='NOT_READY' if not_ready else 'RED',error=error,
+                error_type=type(e).__name__,nonretryable=permanent,transport=TRANSPORT,
+                source_block_scope='all' if shared else phase,published_previous_version_retained=True)
 
 
 def result_files(r):
@@ -63,6 +131,8 @@ def source_block(phase, day):
     for path in sorted(OPS.glob('*_last_error.json'), reverse=True):
         item=local.read_json(path)
         if not item.get('nonretryable'):
+            continue
+        if legacy_transport_block(item):
             continue
         same_attempt=item.get('date',path.name[:8])==day and item.get('phase',path.name.split('_')[1])==phase
         same_transport=item.get('transport')==TRANSPORT
@@ -160,11 +230,35 @@ def run(phase, day=None):
     receipt=OPS/(day+'_'+phase+'.json')
     if phase=='preopen':
         require_source_allowed(phase,day)
+        now=rq.clock()
+        if now.strftime('%H%M')>='0920':raise ValueError('MISSED_PREOPEN')
+        if now.strftime('%Y%m%d')!=day:raise ValueError('ONLY_ACTUAL_CURRENT_DAY_CAPTURE_ALLOWED')
+        base=ROOT/'reports'/('data_only_'+day)
+        manifests=list((base/'pit/manifests').glob(day+'T*_preopen.json'))
+        manifests+=list((base/'attempts').glob('*/pit/manifests/'+day+'T*_preopen.json'))
+        if manifests:
+            source=max(manifests,key=lambda p:p.name).parent
+            r=dict(status='GREEN_PIT',reused=True)
+        else:
+            windows=[s for s in ('0820','0900','0910') if now.strftime('%H%M')>=s]
+            if not windows:raise ValueError('PREOPEN_WINDOW_NOT_STARTED')
+            out=base/'attempts'/windows[-1]
+            if out.resolve()!=out:raise ValueError('PREOPEN_OUTPUT_PATH_REDIRECTED')
+            if out.exists():
+                return dict(date=day,phase=phase,status='RED',error='PREOPEN_WINDOW_ALREADY_ATTEMPTED_WAIT_NEXT_WINDOW')
+            remaining=(now.replace(hour=9,minute=20,second=0,microsecond=0)-now).total_seconds()-5
+            if remaining<=0:raise ValueError('INSUFFICIENT_PREOPEN_TIME')
+            out.mkdir(parents=True,exist_ok=False)
+            provider=RQDataHTTPSProvider(output=out/'https',api_limit=3,total_seconds=min(240,remaining))
+            r=prep.preopen(day,out,provider=provider)
+            source=out/'pit/manifests'
         if rq.clock().strftime('%H%M')>='0920':raise ValueError('MISSED_PREOPEN')
-        out=ROOT/'reports'/('data_only_'+day)
-        r=prep.preopen(day,out)
-        register_pit(out/'pit/manifests',day)
-        return dict(r,date=day)
+        _,binding=register_pit(source,day)
+        if rq.clock().strftime('%H%M')>='0920':raise ValueError('MISSED_PREOPEN')
+        r=dict(r,date=day,phase=phase,production=True,version=Path(binding['manifest']).stem,
+               pit=binding,ret120_pit_readable=True)
+        local.write_json(receipt,r)
+        return r
     from scripts import run_postclose_daily as report_entry
     try:reader=report_entry.full_model_input(day,allow_core_models=True)
     except rq.InputBlocked as exc:
@@ -218,7 +312,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--phase',choices=['preopen','postclose'],required=True)
     a=p.parse_args();day=rq.clock().strftime('%Y%m%d')
     lock=OPS/(a.phase+'.lock');OPS.mkdir(parents=True,exist_ok=True)
-    fd=None
+    fd=None;locked=False
     try:
         try:rq.require_trading_date(day)
         except rq.InputBlocked:
@@ -227,20 +321,20 @@ def main():
         if os.fstat(fd).st_size==0:os.write(fd,b'1')
         os.lseek(fd,0,os.SEEK_SET)
         msvcrt.locking(fd,msvcrt.LK_NBLCK,1)
+        locked=True
         r=run(a.phase,day)
         local.write_json(OPS/'last_run.json',dict(r,completed_at=rq.clock().isoformat()))
         if r['status']=='NOT_READY':result_files(r)
         print(json.dumps(r,ensure_ascii=False,default=str),flush=True)
         return 0 if r['status'] in ('GREEN','GREEN_PIT') else 3
     except Exception as e:
-        safe_https=type(e).__module__=='core.rqdata_https' and type(e).__name__ in ('HTTPSNotReady','HTTPSContractError','HTTPSAuthError','HTTPSSecurityError','HTTPSTransportError')
-        error=str(e) if isinstance(e,(ValueError,rq.InputBlocked)) or safe_https else type(e).__name__
-        not_ready=type(e).__name__=='HTTPSNotReady' or error=='SUPPLIER_NOT_READY'
-        permanent=not not_ready and (type(e).__name__ in ('HTTPSContractError','HTTPSAuthError','HTTPSSecurityError') or any(k in error.lower() for k in ('auth','permission','license','schema','nonretryable','unsupported','contract','security')))
-        shared=type(e).__name__ in ('HTTPSAuthError','HTTPSSecurityError')
-        r=dict(date=day,phase=a.phase,status='NOT_READY' if not_ready else 'RED',error=error,
-               error_type=type(e).__name__,nonretryable=permanent,transport=TRANSPORT,
-               source_block_scope='all' if shared else a.phase,published_previous_version_retained=True)
+        if a.phase=='preopen' and not locked:
+            print(json.dumps(dict(date=day,phase=a.phase,status='RED',error='PREOPEN_LOCK_NOT_ACQUIRED')),flush=True)
+            return 3
+        r=failure_result(a.phase,day,e)
+        if a.phase=='preopen':
+            archive=OPS/(day+'_preopen_'+rq.clock().strftime('%H%M%S%f')+'_last_error.json')
+            if not archive.exists():local.write_json(archive,r)
         error_path=OPS/(day+'_'+a.phase+'_last_error.json')
         # Preserve the original permanent failure instead of replacing its scope
         # with a later lock/error/blocked-attempt diagnostic.
